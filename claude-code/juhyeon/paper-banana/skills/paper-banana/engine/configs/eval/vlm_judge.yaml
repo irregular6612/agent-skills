@@ -1,0 +1,8 @@
+# VLM-as-Judge evaluation config
+judge_model: gemini-3.6-flash   # NOTE: inert — no code reads judge_model; VLMJudge uses the VLM provider
+dimensions:
+  - faithfulness
+  - conciseness
+  - readability
+  - aesthetics
+score_range: [1, 10]

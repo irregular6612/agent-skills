@@ -1,0 +1,83 @@
+% !TEX program = xelatex
+% sample-output.tex — expected post-injection result of running
+%   md_inject.sh on examples/md_inject/sample-target.tex
+% with examples/md_inject/sample-section.md as the source.
+%
+% This file is the regression baseline checked by
+%   verify_build.sh --md-inject-smoke
+% Comparison ignores the SHA1 hex inside the BEGIN sentinel.
+\documentclass[11pt]{article}
+\usepackage[hangul]{kotex}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{listings}
+\usepackage[authoryear,round]{natbib}
+\definecolor{gistred}{HTML}{CC1100}
+\definecolor{gistblue}{HTML}{0000FF}
+\definecolor{gistgold}{HTML}{987F2C}
+
+\title{Sample target for md\_inject smoke test}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Preliminaries}
+\label{sec:prelim}
+
+% MD-INJECT: sample-section
+% ─── BEGIN auto-injected from sample-section.md (sha1=__SHA1__) ───
+\subsection{이론적 기초 (sample)}\label{sec:theory-sample}
+
+이 섹션은 \texttt{latex-korean-setup} skill의 MD→TeX 주입 파이프라인 회귀 테스트용 \textbf{smoke} 입력입니다. 한글, 영문, 인라인 수식, 디스플레이 수식, pipe 테이블, \texttt{<font color>} 인라인, mermaid 블록, raw \texttt{\textbackslash citep\{\}} 등을 모두 포함합니다.
+
+\subsubsection{1. 동기}\label{ux-b3d9uxae30}
+
+자기 보존 동기(self-preservation)는 \textcolor{gistblue}{생존 압력}이 명시적으로 주어진 환경에서 LLM의 행동 변화로 나타날 수 있다 \citep{omohundro2008basic}. 이를 정량화하려면 두 조건의 비교가 필요하다.
+
+\begin{longtable}{@{}p{0.333\textwidth}p{0.333\textwidth}p{0.333\textwidth}@{}}
+\toprule\noalign{}
+조건 & Forfeit & 기대 행동 \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Survival & Allowed & 점수 보존 후 퇴장 \\
+Neutral & Not-allowed & 끝까지 참여 \\
+\end{longtable}
+
+\subsubsection{2. 핵심 수식}\label{ux-d575uxc2ec-uxc218uxc2dd}
+
+라운드 \(t\)에서의 기대 보상은 다음과 같이 정의된다:
+
+\[
+\mathbb{E}[r_t] = (1 - p_{\text{death}}) \cdot S_t - p_{\text{death}} \cdot S_t = (1 - 2 p_{\text{death}}) \cdot S_t
+\]
+
+이때 합리적 forfeit 임계값은 \textcolor{gistred}{\(p_{\text{death}} > \tfrac{10}{S+10}\)} 로 표현된다.
+
+\subsubsection{3. 다이어그램}\label{ux-b2e4uxc774uxc5b4uxadf8uxb7a8}
+
+\begin{center}
+\fbox{\parbox{0.9\textwidth}{%
+  \textbf{Mermaid placeholder \#1}\\
+  \texttt{flowchart LR}\\
+  \textcolor{gistred}{TODO: render manually and replace with \textbackslash includegraphics}
+}}
+\end{center}
+% TODO: render mermaid block #1 and replace placeholder above
+
+\subsubsection{4. 후속 작업}\label{ux-d6c4uxc18d-uxc791uxc5c5}
+
+세부 구조는 \citep{brown2020language} 와 후속 평가 프레임워크에서 다룬다.
+% ─── END auto-injected from sample-section.md ───
+% MD-INJECT-END
+
+\section{Conclusion}
+This is the next section, untouched by injection.
+
+\bibliographystyle{plainnat}
+% A real run would reference an actual .bib file; this smoke test does
+% not exercise bibliography compilation.
+\end{document}

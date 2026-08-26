@@ -1,0 +1,24 @@
+% ─── MD-INJECT marker snippet ──────────────────────────────────
+% Paste one pair per section you want auto-filled from a Markdown source.
+% The text BETWEEN the two marker lines is what gets replaced by the
+% converted fragment on every `md_inject.sh` run. The marker lines
+% themselves are preserved so you can re-run indefinitely.
+%
+% The id after `MD-INJECT:` is a path relative to your --md-root,
+% with the `.md` extension omitted.
+%
+% Example: id "design/v3/02_theoretical_foundations" → looks for
+% <md-root>/design/v3/02_theoretical_foundations.md
+%
+% Overleaf-safe: % comments are stripped by every engine.
+% git-diff-friendly: fragment body diff is isolated between markers.
+
+% MD-INJECT: design/v3/02_theoretical_foundations
+\subsection{Theoretical Foundations}
+\label{sec:theory}
+
+[Placeholder — this paragraph will be replaced by the converted
+fragment. You may keep a stub here; after the first run this block is
+overwritten and the markers are kept intact.]
+
+% MD-INJECT-END

@@ -1,0 +1,122 @@
+{
+  "schema_version": 2,
+  "required_frontmatter": {
+    "common": [
+      "Reading-Status",
+      "Author",
+      "Journal/Conference",
+      "Published Year",
+      "Topic",
+      "Review-Date",
+      "Comment",
+      "URL",
+      "arXiv-ID",
+      "DOI",
+      "Evidence-Quality",
+      "Reproducibility",
+      "type"
+    ],
+    "ai_only": [
+      "Category",
+      "isTargetPaper",
+      "linked-bases"
+    ],
+    "preread_v2": [
+      "template-version",
+      "summary-mode",
+      "profile",
+      "source-coverage",
+      "quality-status",
+      "reading-decision",
+      "decision-confidence"
+    ]
+  },
+  "categories": [
+    "Architecture",
+    "Training",
+    "Benchmark/Evaluation",
+    "Application",
+    "Reasoning",
+    "Survey",
+    "Dataset",
+    "Optimization",
+    "Theory",
+    "AGI"
+  ],
+  "profiles": [
+    "empirical",
+    "theoretical",
+    "survey",
+    "position",
+    "dataset-benchmark",
+    "general-article"
+  ],
+  "source_coverage": [
+    "fulltext",
+    "section-extract",
+    "abstract-only",
+    "unknown"
+  ],
+  "summary_modes": [
+    "preread",
+    "deep"
+  ],
+  "reading_decisions": [
+    "read",
+    "skim",
+    "skip"
+  ],
+  "decision_confidence": [
+    "high",
+    "medium",
+    "low"
+  ],
+  "quality_status": [
+    "inbox",
+    "draft",
+    "review",
+    "ready",
+    "archived"
+  ],
+  "reading_status": [
+    "✅ Done",
+    "▶️ In progress",
+    "☑️ Not Started",
+    "Not Started"
+  ],
+  "grades": [
+    "A",
+    "B",
+    "C",
+    "D"
+  ],
+  "templates": {
+    "paper-preread-v2": {
+      "summary_mode": "preread",
+      "summary_callout": "> [!summary] 1분 요약",
+      "required_h2": [
+        "읽기 판단",
+        "핵심 아이디어",
+        "무엇을 했나",
+        "핵심 근거",
+        "어디까지 믿을까",
+        "원문 읽기 지도"
+      ],
+      "optional_h2": [
+        "읽기 전 용어",
+        "Wiki 연결",
+        "BibTeX"
+      ],
+      "max_claims": 5,
+      "max_terms": 3,
+      "reading_map_min_rows": 2,
+      "reading_map_max_rows": 4,
+      "max_body_non_whitespace_chars": 5500,
+      "mermaid_default": false
+    },
+    "paper-deep-v2": {
+      "summary_mode": "deep",
+      "mermaid_default": "conditional"
+    }
+  }
+}

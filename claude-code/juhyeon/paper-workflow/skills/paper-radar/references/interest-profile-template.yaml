@@ -1,0 +1,190 @@
+# Paper Radar — 관심 프로파일 초기값
+#
+# 이 파일을 {vault_root}/_wiki/radar/config.yaml 로 복사해 사용한다.
+# 사용자가 직접 편집하는 파일이다. paper-radar는 이 파일을 읽기만 하고,
+# 사용자가 명시적으로 요청했을 때만 수정한다.
+#
+# 규칙
+# - 지어내지 않는다: 트랙 키워드는 사용자가 실제로 관심 있다고 말한 것만 넣는다.
+# - unresolved_seeds 는 확정 전까지 정확 추적 대상이 아니다.
+
+version: 1
+owner_note: "개인 학습용. Public/ 로 옮기지 않는다."
+
+output:
+  language: ko                 # 워크플로 산문은 한국어, 기술 용어·식별자는 원문 보존
+  cards_default: 6
+  cards_max: 8                 # hard limit. 초과 요청은 8로 잘라내고 보고한다
+
+vault:
+  # 비워 두면 SKILL.md의 vault_root 해결 순서를 따른다.
+  # 1) 사용자 지정  2) $PAPER_RADAR_VAULT  3) 알려진 vault  4) CWD(_wiki/SCHEMA.md + Public/)  5) 질문
+  root: ""
+
+pools:
+  frontier:   {enabled: true,  target_share: 0.5,  window_days: 90}
+  curriculum: {enabled: true,  target_share: 0.33}   # 과거 논문·classic·전제 논문
+  graph:      {enabled: true,  target_share: 0.17}   # 선택했던 논문의 reference/citation 확장
+
+tracks:
+
+  - id: transformer-mech
+    label: "Transformer 메커니즘"
+    enabled: true
+    weight: 1.0
+    slot: "transformer mechanism/theory"
+    keywords:
+      - attention
+      - MLP / FFN
+      - residual stream
+      - normalization (LayerNorm, RMSNorm)
+      - positional representation (RoPE, ALiBi, NoPE)
+      - KV cache
+      - in-context learning
+      - induction head
+
+  - id: alt-theory
+    label: "대안적 이론 렌즈"
+    enabled: true
+    weight: 1.0
+    slot: "transformer mechanism/theory"
+    keywords:
+      - associative memory
+      - modern Hopfield network
+      - energy-based model / energy view
+      - dynamical systems, fixed point
+      - optimization view (implicit gradient descent, mesa-optimization)
+      - kernel view
+      - Bayesian view
+      - information-theoretic view
+      - program execution view
+
+  - id: brain-analogy
+    label: "인간/뇌 유비"
+    enabled: true
+    weight: 1.0
+    slot: "exploratory"
+    keywords:
+      - predictive coding
+      - working memory
+      - associative memory, episodic memory
+      - cortical hierarchy
+      - global workspace theory
+      - brain-model alignment (encoding/decoding, representational similarity)
+    # 이 트랙 전용 규칙
+    require_field: mapping_depth
+    mapping_depth_enum:
+      - metaphorical          # 용어만 빌려옴 — 감점 대상
+      - functional            # 기능적 대응
+      - representational      # 표현 수준 대응
+      - mathematical          # 수식 수준 대응
+      - empirically-tested    # 실측 데이터로 검증
+    penalize:
+      metaphorical: "표면적 생물학 비유는 risk 4로 감점하고, 근거 없으면 카드로 올리지 않는다"
+
+  - id: alt-arch
+    label: "Transformer 대안·하이브리드"
+    enabled: true
+    weight: 1.0
+    slot: "alternative/hybrid"
+    keywords:
+      - state space model, S4, Mamba
+      - RWKV
+      - Hyena
+      - RetNet
+      - linear attention, recurrent attention
+      - looped transformer, recurrent transformer
+      - memory-augmented model
+      - diffusion language model
+
+  - id: mech-interp
+    label: "Mechanistic interpretability"
+    enabled: true
+    weight: 1.2
+    # 이 트랙은 두 슬롯으로 나뉜다
+    subtracks:
+      - id: mech-interp-representation
+        slot: "mech-interp — representation"
+        keywords:
+          - sparse autoencoder (SAE)
+          - dictionary learning
+          - transcoder, crosscoder
+          - ICA
+          - superposition
+          - feature splitting, feature absorption
+          - logit lens, tuned lens, backward lens
+      - id: mech-interp-causal
+        slot: "mech-interp — causal/eval/control"
+        keywords:
+          - activation patching, path patching
+          - causal tracing
+          - attribution graph
+          - circuit analysis
+          - steering vector, persona vector
+          - interpretability evaluation, failure mode, illusion
+
+  - id: lab-watch
+    label: "Lab watch"
+    enabled: true
+    weight: 1.0
+    slot: "lab watch"
+    # 사용자가 자유롭게 편집한다.
+    labs:
+      - name: Anthropic
+        research_page: "https://www.anthropic.com/research"
+      - name: OpenAI
+        research_page: "https://openai.com/research"
+      - name: Meta FAIR
+        research_page: "https://ai.meta.com/research/"
+      - name: Google DeepMind
+        research_page: "https://deepmind.google/research/publications/"
+    attribution:
+      # 확신도는 이 순서로만 부여한다. 제목 키워드로 추정 금지.
+      high: "공식 publication 페이지 등재"
+      medium: "논문 본문/메타에 소속 명시"
+      low: "2차 소스(뉴스·블로그·소셜) 언급뿐"
+      unverified: "근거 없음 — 지어내지 말고 이 값을 쓴다"
+
+# 정체가 확정되지 않은 관심 seed.
+# URL 또는 canonical name(논문 제목 / 저자 / arXiv ID)이 채워지기 전에는
+# 정확 추적 대상으로 삼지 않으며, 추측 매칭한 후보를 카드로 올리지 않는다.
+unresolved_seeds:
+  - id: j-lens
+    raw: "J-Lens"
+    status: unresolved
+    needs: "URL 또는 canonical name"
+    note: "무엇을 가리키는지 확정되지 않았다. 이름이 비슷한 lens 계열 기법으로 임의 해석하지 않는다."
+
+# 랭킹 가중치 override. 자세한 정의는 references/ranking-rubric.md.
+ranking_weights:
+  interest_fit: 25
+  pedagogical: 20
+  novelty_vs_wiki: 15
+  evidence_quality: 12
+  bridge_value: 10
+  availability: 8
+  freshness: 10          # hard cap 10. 더 크게 적으면 10으로 clamp하고 보고한다
+  risk_overclaim: 15     # 감점
+
+diversity:
+  # 6개 슬롯 각각 최소 1장. 후보가 없으면 빈칸 + 사유. 다른 트랙으로 메우지 않는다.
+  slots:
+    - "transformer mechanism/theory"
+    - "alternative/hybrid"
+    - "mech-interp — representation"
+    - "mech-interp — causal/eval/control"
+    - "lab watch"
+    - "exploratory"
+  exploratory_slot_required: true    # filter bubble 방지. 어떤 경우에도 생략하지 않는다
+  exploratory_exempt_from_feedback: true
+
+noise_control:
+  exclude_venues: ["MDPI"]
+  exclude_kinds: ["workshop-abstract", "demo", "short-track"]
+  auto_park_after_shows: 3      # 3회 노출되고 액션 없으면 자동 park
+  blocked_keywords: []          # 사용자가 반복 제외한 키워드가 여기에 쌓인다
+
+feedback:
+  # feedback.yaml 의 신호를 랭킹 후처리 보정으로 적용한다. 원점수는 바꾸지 않는다.
+  enabled: true
+  file: "_wiki/radar/feedback.yaml"

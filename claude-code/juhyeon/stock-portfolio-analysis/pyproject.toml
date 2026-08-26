@@ -1,0 +1,30 @@
+[project]
+name = "stock-portfolio-analysis"
+version = "0.2.0"
+description = "Stock portfolio analysis skill — news + fundamentals + chart channels"
+requires-python = ">=3.12"
+dependencies = [
+    "pykrx>=1.2.8",
+    "yfinance>=0.2.40",
+    "pandas>=2.2",
+    "requests>=2.31",
+    "pyyaml>=6.0",
+    "mplfinance>=0.12.10b0",
+    "numpy>=1.24,<2.0",
+    "zigzag>=0.2.2,<0.4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = []
+
+[tool.uv]
+package = false

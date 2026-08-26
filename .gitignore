@@ -1,0 +1,30 @@
+# --- secrets: never commit ---
+.env
+.env.*
+!.env.example
+*.local.json
+credentials*.json
+storage_state.json
+
+# --- python ---
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# --- node ---
+node_modules/
+
+# --- generated / runtime artifacts ---
+outputs/
+*.log
+
+# --- macOS ---
+.DS_Store
+
+# vendored upstream clone — re-fetch instead of vendoring
+# https://github.com/karpathy/autoresearch
+claude-code/karpathy/autoresearch/
