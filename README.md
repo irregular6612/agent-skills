@@ -31,7 +31,7 @@ Four plugins are published from `claude-code/juhyeon/`:
 | `paper-workflow` | paper-radar, paper-driller, paper-understand | 7 | 2 |
 | `paper-writing` | paper-section-rewrite, paper-readability-review, paper-digest | – | – |
 | `paper-banana` | paper-banana | – | – |
-| `juhyeon-misc` | auto-code, humanize, iterative-academic-writer, autoresearch | 9 | – |
+| `juhyeon-misc` | auto-code, humanize, iterative-academic-writer, autoresearch, aha | 9 | – |
 
 Install:
 
@@ -62,6 +62,12 @@ The Codex mirror lags the Claude Code side — `paper-radar`, `paper-understand`
 `auto-code` and `autoresearch` have no Codex counterpart yet, and
 `codex/skills/paper-banana/` carries only `SKILL.md` because the 241 MB engine is
 already vendored under `claude-code/juhyeon/paper-banana/`.
+
+`aha` is mirrored in both runtimes. `codex/skills/aha/scripts/daily.py` drafts a
+KST-day post by default; `--publish` creates `aha/YYYY-MM-DD.md` in
+`irregular6612/blog-content` and dispatches the blog deployment. The macOS
+launchd template is `automation/com.juhyeon.aha.daily.plist`; it is not loaded
+merely by being present in this repository.
 
 `codex/agents/` mirrors only the subagents an owned skill actually dispatches.
 The other 20 `.toml` files under `~/.codex/agents/` belong to deleted skills or

@@ -1,8 +1,8 @@
 {
   "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
   "name": "juhyeon-misc",
-  "version": "0.1.0",
-  "description": "Personal authoring and engineering workflows: auto-code (idea → design → spec → plan pipeline), humanize (strip AI tells from KO/EN drafts), iterative-academic-writer (25-principle critic loop), autoresearch (autonomous measure-change-keep-or-revert experiment loop).",
+  "version": "0.1.1",
+  "description": "Personal authoring and engineering workflows: auto-code, humanize, iterative-academic-writer, autoresearch, and aha daily learning posts.",
   "author": {
     "name": "Juhyeon Bag",
     "email": "jhjh6612@gmail.com"
@@ -17,6 +17,7 @@
     "./skills/auto-code",
     "./skills/humanize",
     "./skills/iterative-academic-writer",
-    "./skills/autoresearch"
+    "./skills/autoresearch",
+    "./skills/aha"
   ]
 }

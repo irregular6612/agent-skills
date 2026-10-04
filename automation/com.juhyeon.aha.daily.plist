@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.juhyeon.aha.daily</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/python3</string>
+    <string>/Users/bagjuhyeon/Library/Mobile Documents/com~apple~CloudDocs/Workspace/agent-skills/codex/skills/aha/scripts/daily.py</string>
+    <string>--publish</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key><string>/Users/bagjuhyeon/.local/bin:/opt/homebrew/bin:/usr/bin:/bin</string>
+  </dict>
+  <key>StartCalendarInterval</key>
+  <dict><key>Hour</key><integer>23</integer><key>Minute</key><integer>30</integer></dict>
+  <key>StandardOutPath</key><string>/Users/bagjuhyeon/Library/Logs/aha-daily.log</string>
+  <key>StandardErrorPath</key><string>/Users/bagjuhyeon/Library/Logs/aha-daily.err</string>
+</dict>
+</plist>
