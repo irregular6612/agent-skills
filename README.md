@@ -43,6 +43,14 @@ No global Python package installation, paid API, launchd changes, or publishing.
 - Destinations are checked after Unicode NFD normalization and case folding,
   including overlapping paths. This portable conservative policy rejects aliases
   even on case-sensitive filesystems, without writing a probe into HOME.
+- Claude skills and slash-command wrappers share a native command namespace.
+  Managed names must be unique across both categories before any HOME/native writes.
+  `/humanize` remains the unchanged skill; use `/humanize-command` for the explicit
+  text/file wrapper and `/humanize-redo` for a second pass. Approved old
+  `commands/humanize.md` copies/links are backed up and retired, then restored with
+  their original bytes/link/mode/mtime on uninstall. The old command source stays
+  unchanged as an approval snapshot; modified copies/links fail before any writes.
+  Unknown/external assets outside those explicit managed paths remain untouched.
 - Claude native agent names must be unique. Three byte-identical prompt bodies
   share canonical definitions; the different DSLab reviewer is named
   `dslab-academic-reviewer`. `retired_links` backs up/removes approved old aliases

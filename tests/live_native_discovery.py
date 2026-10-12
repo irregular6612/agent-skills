@@ -70,23 +70,17 @@ try:
     response=wire.receive(lambda o:o.get('type')=='control_response' and o.get('response',{}).get('request_id')=='discovery-init')
     claude=response['response']['response']
 finally: wire.close()
-commands={c['name'] for c in claude['commands']}|{a for c in claude['commands'] for a in c.get('aliases',[])}
-native_agents=claude['agents']; definitions=[]
+from native_metadata import claude_entry, front
+native_agents=claude['agents']; definitions=[]; slash_definitions=[]
 for e in manifest['links']:
     if e['harness']!='claude': continue
     category=e['destination'].split('/')[0]
-    if category in {'skills','commands'}:
-        name=Path(e['destination']).name if category=='skills' else Path(e['destination']).stem
-        assert name in commands,(category,name)
-    if category=='agents':
-        front=(R/e['source']).read_text().split('---',2)[1]
-        name=json.loads(re.search(r'^name:\s*(.*?)\s*$',front,re.M)[1])
-        description=json.loads(re.search(r'^description:\s*(.*?)\s*$',front,re.M)[1])
-        matches=[a for a in native_agents if a['name']==name]
-        assert len(matches)==1,(name,matches)
-        # Claude expands literal backslash-n sequences in descriptions.
-        assert matches[0]['description']==description.replace('\\n','\n'),(name,matches[0])
-        definitions.append({'destination':e['destination'],'name':name,'description':description,'recognized':True})
+    if category not in {'skills','commands','agents'}: continue
+    row=claude_entry(R,e,claude)
+    assert row['recognized'],row
+    (definitions if category=='agents' else slash_definitions).append(row)
+assert Counter(r['category'] for r in slash_definitions)=={'skills':30,'commands':2}
+assert len({r['name'] for r in slash_definitions})==32
 assert len(definitions)==len({d['name'] for d in definitions})
 wire=Wire('codex',['codex','app-server','--stdio','--strict-config'])
 try:
@@ -101,12 +95,14 @@ assert not skills['errors'],skills['errors']
 paths={str(Path(s['path']).resolve()) for s in skills['skills']}
 for e in manifest['links']:
     if e['harness']=='codex' and e['destination'].startswith('skills/'):
-        assert str((R/e['source']/'SKILL.md').resolve()) in paths,e
+        path=R/e['source']/'SKILL.md'; meta=front(path)
+        found=[s for s in skills['skills'] if Path(s['path']).resolve()==path.resolve()]
+        assert len(found)==1 and found[0]['name']==meta['name'] and found[0]['description']==meta['description'],(e,found)
 roles=json.loads((R/'templates/codex-config.json').read_text())['agents']
 for name,role in roles.items():
     assert name in config['agents'],name
     assert config['agents'][name]['config_file']==role['config_file'].replace('${HOME}',str(H)),name
-result={'managed_links':len(manifest['links']),'claude_agent_definitions':definitions,'claude_native_name_collisions':{n:c for n,c in Counter(a['name'] for a in native_agents).items() if c>1},'claude_skills':sum(e['harness']=='claude' and e['destination'].startswith('skills/') for e in manifest['links']),'codex_skills':sum(e['harness']=='codex' and e['destination'].startswith('skills/') for e in manifest['links']),'codex_roles':len(roles),'model_turns_sent':0}
+result={'managed_links':len(manifest['links']),'claude_slash_definitions':slash_definitions,'claude_commands':sum(r['category']=='commands' for r in slash_definitions),'claude_agent_definitions':definitions,'claude_native_name_collisions':{n:c for n,c in Counter(a['name'] for a in native_agents).items() if c>1},'claude_skills':sum(e['harness']=='claude' and e['destination'].startswith('skills/') for e in manifest['links']),'codex_skills':sum(e['harness']=='codex' and e['destination'].startswith('skills/') for e in manifest['links']),'codex_roles':len(roles),'model_turns_sent':0}
 assert not result['claude_native_name_collisions']
 (E/'discovery.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
 run([str(R/'setup'),'--uninstall'],'uninstall')

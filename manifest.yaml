@@ -4,7 +4,8 @@
   "retired_links": [
     {"harness": "claude", "destination": "agents/claude-for-dslab/academic-planner.md", "source": "sources/agents/claude-for-dslab-academic-planner-claude.md", "canonical": "agents/academic-planner.md"},
     {"harness": "claude", "destination": "agents/claude-for-dslab/report-planner.md", "source": "sources/agents/claude-for-dslab-report-planner-claude.md", "canonical": "agents/report-planner.md"},
-    {"harness": "claude", "destination": "agents/claude-for-dslab/report-reviewer.md", "source": "sources/agents/claude-for-dslab-report-reviewer-claude.md", "canonical": "agents/report-reviewer.md"}
+    {"harness": "claude", "destination": "agents/claude-for-dslab/report-reviewer.md", "source": "sources/agents/claude-for-dslab-report-reviewer-claude.md", "canonical": "agents/report-reviewer.md"},
+    {"harness": "claude", "destination": "commands/humanize.md", "source": "sources/commands/command-humanize/command.md", "approved_link_sources": ["sources/commands/command-humanize/command.md"], "canonical": "commands/humanize-command.md"}
   ],
   "package": {
     "id": "agent-skills",
@@ -1094,11 +1095,11 @@
       "format": "markdown"
     },
     {
-      "id": "command-humanize",
+      "id": "command-humanize-command",
       "harness": "claude",
-      "destination": "commands/humanize.md",
-      "source": "sources/commands/command-humanize/command.md",
-      "origin": "sources/commands/command-humanize",
+      "destination": "commands/humanize-command.md",
+      "source": "sources/commands/command-humanize-command/command.md",
+      "origin": "sources/commands/command-humanize-command",
       "format": "markdown"
     },
     {

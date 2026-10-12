@@ -69,7 +69,7 @@ def load_contract(check_sources=True):
     manifest = json.loads((ROOT/'manifest.yaml').read_text())
     if manifest.get('schema_version') != 2 or manifest.get('contract') != 'item-symlink':
         raise ValueError('unsupported manifest contract')
-    seen=set(); agent_names=set()
+    seen=set(); agent_names=set(); command_names=set()
     for entry in manifest['links']:
         validate_destination(entry['harness'],entry['destination'])
         # Portable fail-closed policy: reject aliases even on case-sensitive disks.
@@ -90,6 +90,23 @@ def load_contract(check_sources=True):
                 raise ValueError('skill requires a directory containing SKILL.md: '+entry['source'])
             if category in {'agents','commands','prompts','CLAUDE.md','AGENTS.md'} and not entrypoint.is_file():
                 raise ValueError('native file entrypoint cannot be a directory: '+entry['destination'])
+            if entry['harness']=='claude' and category in {'skills','commands'}:
+                # Skills and slash-command wrappers share Claude's command namespace.
+                # Use the skill frontmatter name (not only its directory name).
+                name=destination.name if category=='skills' else destination.stem
+                if category=='skills':
+                    text=(entrypoint/'SKILL.md').read_text()
+                    if text.startswith('---\n'):
+                        names=re.findall(r'^name:[ \t]*(.*?)[ \t]*$',text.split('---',2)[1],re.M)
+                        if len(names)>1: raise ValueError('Claude skill requires at most one native name')
+                        if names:
+                            name=names[0]
+                            if name.startswith('"'): name=json.loads(name)
+                            elif name.startswith("'") and name.endswith("'"): name=name[1:-1].replace("''", "'")
+                if not isinstance(name,str) or not name or any(c in name for c in '/\\\r\n\t '): raise ValueError('unsafe Claude native command name')
+                key=unicodedata.normalize('NFD',name).casefold()
+                if key in command_names: raise ValueError('duplicate Claude skill/command native namespace: '+name)
+                command_names.add(key)
             if category=='agents' and entry['harness']=='claude':
                 text=entrypoint.read_text()
                 if not text.startswith('---\n'): raise ValueError('Claude agent requires frontmatter')
@@ -108,6 +125,7 @@ def load_contract(check_sources=True):
         if key in seen: raise ValueError('retired destination still active')
         if not source(entry['source']).is_file(): raise ValueError('retired alias requires approved original')
         if not any(e['harness']==entry['harness'] and e['destination']==entry['canonical'] for e in manifest['links']): raise ValueError('retired alias has no canonical definition')
+        for approved in entry.get('approved_link_sources',[]): source(approved)
     policy=json.loads(source(manifest['denylist']).read_text())
     if not DENIED.issubset(set(policy['ids'])): raise ValueError('denylist weakened')
     templates={h:json.loads(source(v).read_text()) for h,v in manifest['templates'].items()}
@@ -445,8 +463,11 @@ def main():
         for entry in manifest.get('retired_links',[]):
             rel='.'+entry['harness']+'/'+entry['destination']; path=engine.path(rel)
             if exists(path):
-                if not path.is_file() or path.read_bytes()!=source(entry['source']).read_bytes():
-                    raise ValueError('retired agent alias differs from approved original; review locally before setup: '+rel)
+                approved=source(entry['source'])
+                allowed_links=[source(s) for s in entry.get('approved_link_sources',[entry['source']])]
+                if (not path.is_file() or path.read_bytes()!=approved.read_bytes() or
+                        (path.is_symlink() and 'approved_link_sources' in entry and path.resolve() not in allowed_links)):
+                    raise ValueError('retired alias differs from approved original; review locally before setup: '+rel)
                 retirees.append(rel)
     from setup_plugins import NativePlugins
     native=NativePlugins(engine,ROOT,lock)

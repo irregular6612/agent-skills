@@ -36,6 +36,30 @@ Claude settings/installed_plugins/known_marketplaces와 Codex config를 기존 j
 
 실제 양 CLI의 dedicated + mixed + unrelated fixture에서 superpowers pin만 하나 남기고 unrelated local plugin 두 개와 mixed/unrelated marketplace를 유지했으며 uninstall 뒤 원본 registry bytes 및 native 등록을 복원했다. native bootstrap/log/cache 빈 디렉터리는 사용자 원본 복원과 구분한다. `.system` sentinel 변경은 기존 verifier가 native Codex initialize 자체의 동작으로 분리한 예외를 유지한다.
 
+## F7: skill/command namespace 및 개별 discovery
+
+`/humanize`는 기존 skill 이름과 내용을 유지한다. explicit text/file wrapper는
+`commands/humanize-command.md`의 `/humanize-command`로 분리한다. `/humanize-redo`는
+이름을 유지하고 신규 실행 안내만 새 wrapper를 가리킨다. 기존
+`sources/commands/command-humanize/command.md`는 승인 bytes 비교용 snapshot이며
+변경하지 않는다. Codex의 기존 reference prompt도 이 snapshot을 유지한다.
+
+기존 Claude `commands/humanize.md`의 승인 copy 또는 승인 source를 가리키는
+symlink는 backup/retire하며 uninstall에서 bytes/link/mode/mtime을 복원한다.
+사용자 수정 copy, 다른 target으로 바뀐 symlink(동일 bytes 포함), dangling link는
+모든 HOME/native 쓰기 전에 거부한다. 이 명시적 관리 경로 밖 unknown/external
+자산은 제거하지 않는다.
+
+Claude skill frontmatter name(없으면 destination 이름)과 command destination stem은
+하나의 native namespace로 검사한다. managed 중복은 source가 같더라도 보수적으로
+거부한다. agent와 Codex namespace는 분리한다. `tests/live_native_discovery.py`는
+각 skill30/command2/agent31의 독립 name/description을 실제 initialize 응답과
+비교한다. name 포함이나 alias 포함만으로 command 인식을 세지 않는다.
+description의 ` (user)` suffix와 agent의 literal `\\n` 확장만 정규화한다.
+command argumentHint는 native의 source bracket 제거 형식과 별도로 비교한다.
+원본과 raw 값 및 비교 결과를 JSON에 기록한다. oracle 회귀는 기존 shadowing,
+잘못된 description, duplicate 항목, hint 손실을 반드시 실패로 처리한다.
+
 ## 재현
 
 - `PYTHONDONTWRITEBYTECODE=1 /usr/bin/python3 -m unittest discover -s tests -p 'test_*.py' -v`

@@ -12,7 +12,7 @@ $ARGUMENTS
 
 ## 동작
 
-1. cwd `_workspace/`에서 최신 `run_id` 디렉토리 식별 (없으면 "이전 실행이 없습니다. `/humanize`로 시작하세요" 안내).
+1. cwd `_workspace/`에서 최신 `run_id` 디렉토리 식별 (없으면 "이전 실행이 없습니다. `/humanize-command`로 시작하세요" 안내).
 2. 직전 run의 언어·옵션 복원:
    - `00_meta.json` 존재 → 그대로 사용
    - 없음 (옛 v1.5 또는 이전 run) → `01_input.txt` 첫 500자로 언어 재추정, `_workspace/` 내 파일 존재로 모드 추정, 신규 `00_meta.json` 작성
@@ -28,6 +28,6 @@ $ARGUMENTS
 
 ## 참고
 
-- 풀 파이프라인 신규 실행은 [`/humanize`](./humanize.md) 사용.
+- 풀 파이프라인 신규 실행은 [`/humanize-command`](./humanize-command.md) 사용.
 - Redo 신호 파싱표: `references/modes.md §Redo 신호 파싱표`
 - `00_meta.json` 후방 호환: `references/workspace.md §후방 호환`
