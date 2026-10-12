@@ -15,29 +15,32 @@ Your knowledge of web performance metrics, thresholds, and tooling APIs may be o
 | Chrome DevTools docs | `https://developer.chrome.com/docs/devtools/performance` | Tooling APIs, trace analysis |
 | Lighthouse scoring | `https://developer.chrome.com/docs/lighthouse/performance/performance-scoring` | Score weights, metric thresholds |
 
-## FIRST: Verify MCP Tools Available
+## FIRST: Check Exposed Tools and Permissions
 
-**Run this before starting.** Try calling `navigate_page` or `performance_start_trace`. If unavailable, STOP—the chrome-devtools MCP server isn't configured.
+Inspect the current session's actual tool list and permissions before selecting an audit path. A skill description or a configured server name is not proof that its tools are exposed or authorized. Do not probe availability by calling an absent tool. Do not install or register chrome-devtools or any other MCP server automatically, and do not recommend installation as the default next step.
 
-Ask the user to add this to their MCP config:
+Choose one of these paths:
 
-```json
-"chrome-devtools": {
-  "type": "local",
-  "command": ["npx", "-y", "chrome-devtools-mcp@latest"]
-}
-```
+1. **Available retrieval and static analysis (default):** Use only exposed, authorized web/document retrieval tools to read the sources above. With authorized codebase access, inspect HTML, CSS, JavaScript, build output and cache configuration using the codebase phase below. These are static findings, not browser measurements. Do not assume that hermes-tools or node_repl exposes Chrome performance APIs.
+2. **Already installed, user-approved CLI:** If the project already provides a Lighthouse or browser audit command, inspect its help, project scripts, permissions and output location first. Run it only when the user has approved the command and target. Do not use an implicit package download such as npx to obtain missing tooling. Report its actual output, browser version and measurement conditions; a Lighthouse lab run does not establish field INP or real-user Core Web Vitals.
+3. **Conditional Chrome DevTools workflow:** Use the examples below only when every required API is present in the current exposed tool list and authentication, permissions and the target are authorized. Skip any phase whose required tools are absent. Tool names below are conditional API documentation, not availability probes or required calls.
+
+If no authorized measurement path exists, explicitly report that performance trace, measured Core Web Vitals and runtime accessibility measurement are unavailable. Continue only the retrieval/static scope the user requested; if measurement is required, stop that scope safely and ask for an existing trace/report or a decision about separately approved tooling. Never fabricate metric values, trace insights or accessibility results. A DOM/a11y snapshot alone cannot establish contrast compliance or a complete accessibility audit.
 
 ## Key Guidelines
 
 - **Be assertive**: Verify claims by checking network requests, DOM, or codebase—then state findings definitively.
 - **Verify before recommending**: Confirm something is unused before suggesting removal.
-- **Quantify impact**: Use estimated savings from insights. Don't prioritize changes with 0ms impact.
-- **Skip non-issues**: If render-blocking resources have 0ms estimated impact, note but don't recommend action.
+- **Quantify observed impact**: Use measured results or estimates from an actual retrieved report. If unavailable, label prioritization qualitative; do not invent savings.
+- **Skip measured non-issues**: If an actual report shows render-blocking resources have 0ms estimated impact, note but don't recommend action.
 - **Be specific**: Say "compress hero.png (450KB) to WebP" not "optimize images".
 - **Prioritize ruthlessly**: A site with 200ms LCP and 0 CLS is already excellent—say so.
 
-## Quick Reference
+## Conditional Chrome DevTools API Reference and Workflow
+
+This entire section, including phases 1–4, is conditional on the tool-list and permission check above. It is not the default workflow. Mark unavailable phases as not measured and do not execute their examples. Codebase analysis does not require these APIs.
+
+### Quick Reference
 
 | Task | Tool Call |
 |------|-----------|
@@ -195,7 +198,7 @@ Also check `package.json` for framework dependencies and build scripts.
 
 Present findings as:
 
-1. **Core Web Vitals Summary** - Table with metric, value, and rating (good/needs-improvement/poor)
-2. **Top Issues** - Prioritized list of problems with estimated impact (high/medium/low)
+1. **Core Web Vitals Summary** - Include only actual measured metrics with their source and conditions. Label missing metrics "not measured" and separate static findings from lab or field measurements; never fill missing values with estimates.
+2. **Top Issues** - Prioritized list of problems with measured impact where available, otherwise explicitly labeled qualitative hypotheses
 3. **Recommendations** - Specific, actionable fixes with code snippets or config changes
 4. **Codebase Findings** - Framework/bundler detected, optimization opportunities (omit if no codebase access)
