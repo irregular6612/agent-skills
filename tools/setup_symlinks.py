@@ -189,6 +189,39 @@ def toml_multiline_state(line,state):
         i+=1
     return state
 
+def validate_managed_toml(text, desired, tomllib):
+    """Check effective managed values, not merely syntactically valid output."""
+    if tomllib:
+        parsed=tomllib.loads(text)
+        for (table,key),value in desired.items():
+            node=parsed
+            for part in table:
+                node=node.get(part,{}) if isinstance(node,dict) else {}
+            if not isinstance(node,dict) or key not in node or node[key]!=value:
+                raise ValueError('managed TOML value readback failed: '+'.'.join(table+(key,)))
+        return
+    # Python 3.9: read back the supported explicit table/scalar subset only.
+    actual={}; table=(); multiline=None
+    for line in text.splitlines():
+        inside_multiline=multiline is not None
+        multiline=toml_multiline_state(line,multiline)
+        if inside_multiline: continue
+        array_header=re.match(r'^\s*\[\[(.*?)\]\]\s*(?:#.*)?$',line)
+        if array_header:
+            table=tuple(split_keys(array_header[1])); continue
+        header=re.match(r'^\s*\[(.*?)\]\s*(?:#.*)?$',line)
+        if header:
+            table=tuple(split_keys(header[1])); continue
+        assignment=re.match(r'^\s*('+KEY_PATH+r')\s*=\s*(.*)',line)
+        if not assignment: continue
+        keys=split_keys(assignment[1])
+        coordinate=(table,keys[0])
+        if len(keys)==1 and coordinate in desired:
+            if coordinate in actual: raise ValueError('duplicate managed TOML value')
+            actual[coordinate]=scalar_from_toml(assignment[2])
+    if actual!=desired: raise ValueError('managed TOML value readback failed')
+
+
 def merge_toml(text, template):
     """Surgical table edits preserve unknown keys/comments and machine-specific trust.
 
@@ -248,9 +281,14 @@ def merge_toml(text, template):
         else: new_tables.setdefault(tab,[]).append(row)
     for tab,rows in new_tables.items():
         insertions.setdefault(len(lines),[]).append('\n['+'.'.join(toml_key(x) for x in tab)+']\n'+''.join(rows))
-    for index in sorted(insertions,reverse=True): lines[index:index]=insertions[index]
+    for index in sorted(insertions,reverse=True):
+        rows=insertions[index]
+        # A final header/comment may not end in a newline. Never concatenate
+        # the new assignment onto that statement (or bury it in its comment).
+        if index and not lines[index-1].endswith('\n'): rows=['\n']+rows
+        lines[index:index]=rows
     result=''.join(lines)
-    if tomllib: tomllib.loads(result)
+    validate_managed_toml(result,desired,tomllib)
     return result
 
 class Installer:
@@ -371,7 +409,7 @@ class Installer:
             if exists(path): path.unlink()  # verified owned symlinks/configs only, never recursive delete
             if r['backup']: os.rename(self.state_dir/r['backup'],path)
             self.state['records'].remove(r); self.save()
-        if not self.dry:
+        if not self.dry and self.state['directories']:
             for rel in reversed(self.state['directories']):
                 path=self.home/rel; no_symlink_parents(path,True)
                 try: path.rmdir()
