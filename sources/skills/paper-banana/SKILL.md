@@ -43,6 +43,8 @@ ${SKILL_ROOT}/
 스킬 발견만으로 MCP 서버가 등록되거나 연결되지 않는다. 사용자가 local engine과
 API 설정을 준비하고 활성 harness에 등록한 뒤 실제 제공되는 도구 이름을 확인한다.
 아래 `mcp__paperbanana__...`는 Claude 이름 예시이며 Codex의 도구 이름을 가정하지 않는다.
+Codex는 아래 CLI 경로를 기본으로 사용한다. MCP는 실제 제공되는 경우에만 선택한다.
+CLI·MCP 생성/평가에는 유료 API가 필요할 수 있으므로 local engine/API 환경과 사용자 승인을 먼저 확인한다. 어느 경로도 준비되지 않았으면 생성·평가 기능을 사용할 수 없다고 알리고 중단한다.
 
 | MCP 도구 | 용도 |
 |---|---|
@@ -173,8 +175,7 @@ uv run --directory "$ENGINE" paperbanana generate -i fig.txt -c "..." \
 
 1. 사용자가 논문 텍스트나 PDF를 제공하면, figure로 만들 부분을 파악한다
 2. 적절한 caption(communicative intent)을 작성한다 — 이것이 그림의 핵심 메시지가 된다
-3. MCP 도구(`generate_diagram`)로 생성하고 결과 이미지를 사용자에게 보여준다
-   (셸 옵션이 필요하면 CLI `paperbanana generate`)
+3. 승인된 local engine/API 환경에서 CLI `paperbanana generate`로 생성하고 결과 이미지를 사용자에게 보여준다. Claude는 실제 제공되는 MCP 도구를 선택할 수 있지만, Codex는 CLI가 기본이며 MCP 등록을 가정하지 않는다.
 4. 피드백이 있으면 `--continue --feedback`으로 수정한다
 5. 최종 결과물을 workspace 폴더에 저장한다
 

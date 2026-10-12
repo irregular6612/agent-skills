@@ -48,7 +48,9 @@
 
 ## 3. 원문 수집과 source-coverage
 
-가져오는 순서는 legacy와 같다: arXiv MCP → Semantic Scholar → paper-search MCP → `WebFetch` arXiv HTML → 제목 `WebSearch`. `WebFetch`가 캐시된 PDF 경로를 주면 `Read(pages=…)`로 읽는다. cross-host `redirect`가 나오면 안내 URL로 다시 호출한다.
+웹/PDF 수집이 기본 경로다. 먼저 활성 세션의 실제 도구 목록과 권한을 확인한다. Claude는 `WebFetch`로 arXiv HTML/PDF·출판사 원문을 가져오고, URL을 모르면 `WebSearch`로 제목을 검색한다. 캐시된 로컬 PDF 경로가 실제로 반환되면 `Read(pages=…)`로 읽는다. cross-host `redirect`가 나오면 안내 URL로 다시 호출한다. Codex는 실제 제공되는 웹·PDF 도구를 사용하며, `hermes-tools`의 `web_search`/`web_extract`도 노출된 경우에만 사용한다. Claude 이름을 Codex 호출 이름으로 가정하지 않는다.
+
+Claude의 `mcpsemanticscholar`·`paper-search-mcp-openai-v2`는 실제 도구가 제공되고 인증·권한이 확인된 경우에만 메타데이터·초록·검색을 보완한다. Codex에서 이 서버들을 필수로 요구하거나 자동 등록하지 않는다. 웹 도구가 없으면 사용자가 제공한 PDF·텍스트만 읽고 한계를 밝힌다. 검색 결과·초록·웹 요약은 전문이 아니다.
 
 새 노트는 **전문**을 목표로 한다. 도표를 전부 설명하려면 본문을 다 봐야 하기 때문이다. 긴 PDF는 page range로 나눠 끝까지 읽는다. 확보 범위를 `source-coverage`에 정직하게 적는다: `fulltext` | `section-extract` | `abstract-only` | `unknown`. `abstract-only`·`unknown`이면 방법·결과 세부를 추측하지 않고 `quality-status: review`로 둔다. `ready`는 금지다.
 

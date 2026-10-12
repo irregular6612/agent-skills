@@ -3,8 +3,6 @@ name: paper-driller
 description: >-
   논문을 읽기 전 사용하는 근거 추적 가능한 프리리드 요약을 기본 생성한다. 명시적으로 요청받은 경우에만 섹션별 deep note를 만든다. TRIGGERS: 논문 요약, paper drill, arxiv 정리, 논문 노트, 논문 읽기 전 요약, deep paper analysis
 allowed-tools:
-  - mcp__arxiv__download_paper
-  - mcp__arxiv__read_paper
   - mcp__mcpsemanticscholar__get-paper-abstract
   - mcp__mcpsemanticscholar__search-paper-title
   - mcp__mcpsemanticscholar__paper-search-advanced
@@ -102,11 +100,9 @@ E. Wiki Integration
 
 ## Fetch fallback
 
-1. arXiv: `mcp__arxiv__download_paper` + `mcp__arxiv__read_paper`
-2. Semantic Scholar metadata/abstract
-3. paper-search MCP
-4. `WebFetch` arXiv HTML
-5. 제목 기반 `WebSearch`
+웹/PDF 수집이 기본 경로다. 활성 세션의 도구 목록과 권한을 확인한 뒤 `WebFetch`로 arXiv HTML/PDF·출판사 원문을 가져오고, URL을 모르면 `WebSearch`로 제목을 검색한다.
+
+등록된 `mcpsemanticscholar`·`paper-search-mcp-openai-v2`는 실제 도구가 제공되고 인증·권한이 확인된 경우에만 메타데이터·초록·검색을 보완한다. 웹 도구가 없으면 사용자가 제공한 PDF·텍스트만 읽고 한계를 밝힌다. 검색 결과·초록·웹 요약은 전문이 아니다.
 
 PDF URL에서 WebFetch가 전문 대신 **캐시된 PDF** 경로를 반환하면 orchestrator가 해당 로컬 경로를 `Read(pages=…)`로 읽는다. cross-host `redirect`가 나오면 안내 URL로 다시 호출한다.
 

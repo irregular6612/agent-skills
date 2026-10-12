@@ -3,13 +3,6 @@ name: paper-driller
 description: >-
   논문 1편을 원문 옆에 띄워 놓고 읽기 위한 근거 추적 노트를 만든다. 사용자가 고른 템플릿(기본 general-v1: paper-digest 개요 + 배경 + 지표 + 방법 + 결과 + take-home + 본문 도표 전부)로 쓴다. TRIGGERS: 논문 요약, paper drill, arxiv 정리, 논문 노트, 논문 읽기 전 요약, deep paper analysis
 allowed-tools:
-  - mcp__arxiv__download_paper
-  - mcp__arxiv__read_paper
-  - mcp__mcpsemanticscholar__get-paper-abstract
-  - mcp__mcpsemanticscholar__search-paper-title
-  - mcp__mcpsemanticscholar__paper-search-advanced
-  - mcp__paper-search-mcp-openai-v2__search_arxiv
-  - mcp__paper-search-mcp-openai-v2__search_semantic
   - WebFetch
   - WebSearch
   - Read
@@ -24,6 +17,12 @@ allowed-tools:
 `SKILL_ROOT` is the absolute directory containing this discovered `SKILL.md`. Resolve the installed item symlink before running commands. Supporting paths are relative to that directory; never infer the other harness HOME.
 
 Role names in this document describe workflows. Claude uses its registered Markdown agents/Agent tool; Codex uses its registered native TOML roles and supported subagent interface. Do not execute Claude API snippets or pass `haiku`/`sonnet`/`opus` model aliases to Codex. Follow the active surface permission rules; if separate review cannot run, report that limitation, never pretend it ran. AskUserQuestion means the active harness user-input interface, not a required literal API name.
+
+## 원문 수집 도구 (양 harness 공통)
+
+먼저 활성 세션의 실제 도구 목록과 권한을 확인한다. Claude는 `WebFetch`/`WebSearch`와 로컬 PDF의 `Read(pages=…)`를 사용한다. Codex는 실제 제공되는 웹·PDF 도구를 사용하며, `hermes-tools`의 `web_search`/`web_extract`도 노출된 경우에만 사용한다. Claude 이름을 Codex 호출 이름으로 가정하지 않는다.
+
+웹/PDF 수집이 기본 경로다. Claude의 `mcpsemanticscholar`·`paper-search-mcp-openai-v2`는 실제 도구가 제공되고 인증·권한이 확인된 경우에만 메타데이터·초록·검색을 보완한다. Codex에서 이 서버들을 필수로 요구하거나 자동 등록하지 않는다. 웹 도구가 없으면 사용자가 제공한 PDF·텍스트만 읽고 한계를 밝힌다. 검색 결과·초록·웹 요약은 전문이 아니다.
 
 
 # Paper Driller v3
@@ -49,7 +48,7 @@ Role names in this document describe workflows. Claude uses its registered Markd
 
 1. **중복 확인.** 원문 식별자는 frontmatter의 `URL` 하나다. `URL`에서 유도한 arXiv id(버전 제거)·DOI·정규화 URL이 같은 노트가 있으면 새로 만들지 않고 `update-existing`으로 간다. URL은 스킴·호스트 대소문자·`www.`·`#` 조각·끝 슬래시만 무시하고, 경로 대소문자와 query는 그대로 비교한다(`forum?id=A`와 `forum?id=B`는 다른 논문). 기존 템플릿을 유지하고 `AUTO:body` 안만 다시 쓴다. 사용자 필드·`USER:` 블록·H1 제목·마커 밖 내용은 글자 하나 바꾸지 않는다(YAML 들여쓰기·따옴표 포함). 사용자가 템플릿 전환을 명시적으로 승인한 경우에만 검증에 `--approved-switch`를 붙인다. 이 플래그는 이미 받은 동의의 기록이지 동의의 증거가 아니다.
 2. **템플릿 선택.** 새 논문이면 `references/templates/`의 목록을 이름·용도와 함께 보여 주고 **사용자가 고를 때까지 기다린다.** 하나뿐이어도 묻는다. 논문 성격상 새 전문 구조가 낫다고 보면 절 제목 목록과 저장할 id를 제안하고 **"만들어서 저장해도 됩니까?"** 동의를 받은 뒤에만 파일을 만든다. 동의하지 않으면 파일을 만들지 않는다. 이미 고른 템플릿이 있으면 그것으로 진행하고, 아직 고른 것이 없으면 목록을 다시 보여 주고 선택을 기다린다. 명시적 `auto`는 전문 템플릿 제안으로 멈추지 않고 `general-v1`로 바로 간다. 비대화형이면 "템플릿 선택 필요"를 출력하고 파일을 만들지 않는다.
-3. **원문 수집.** arXiv MCP → Semantic Scholar → paper-search MCP → `WebFetch` → `WebSearch` 순서. 캐시된 PDF 경로가 나오면 `Read(pages=…)`로 끝까지 읽는다. 확보 범위를 `source-coverage`(`fulltext|section-extract|abstract-only|unknown`)에 정직하게 적는다.
+3. **원문 수집.** 위 도구 규칙에 따라 arXiv HTML/PDF 또는 출판사 원문을 웹으로 확보하고, URL을 모르면 제목으로 검색한다. 로컬 PDF는 실제 PDF 읽기 도구로 끝까지 읽는다. Claude의 등록된 논문 MCP는 조건부 보완일 뿐 필수가 아니다. 확보 범위를 `source-coverage`(`fulltext|section-extract|abstract-only|unknown`)에 정직하게 적는다.
 4. **도표 manifest.** 노트를 쓰기 전에 원문에서 Figure/Table 목록을 임시 JSON으로 만든다. 항목마다 원문 라벨 그대로의 `id`, 본문 여부(`true|false|"unsure"`), 확인 상태(`viewed|caption-only|not-seen`)를 적는다. 부록·보충자료는 `false`. 노트에서 거꾸로 만들지 않는다.
 5. **작성.** 선택한 템플릿의 절을 순서대로 채운다. `general-v1`의 `## 개요`는 `paper-digest` 스킬 규칙으로 실제 작성한 결과를 그대로 넣는다. 본문 Figure/Table은 하나도 빠짐없이 `### Figure N` / `### Table N` 아래 각각 설명한다. 길이 상한은 없다.
 6. **검증.** Write 직후 아래 명령을 직접 실행한다. `SKIPPED:` 줄이 남아 있으면 완료가 아니다.

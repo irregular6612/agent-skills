@@ -33,30 +33,11 @@ description: 논문 텍스트에서 methodology diagram, architecture diagram, s
 > 그대로 남아 있다. 업스트림 업데이트가 필요하면 거기서 `git pull` 후, 변경된 소스를
 > `engine/`으로 다시 복사하고 `uv sync`를 돌린다.
 
-## 사용법 1 — MCP 도구 (Claude가 직접 호출, 기본 경로)
+## 도구 선택 — Codex는 CLI가 기본
 
-이 스킬이 활성화되면 Claude는 아래 MCP 도구를 **직접 호출**할 수 있다.
-별도 셸 명령 없이 도구 호출만으로 그림이 생성된다.
+스킬 발견만으로 MCP 서버가 등록되거나 연결되지 않는다. Codex는 아래 CLI 경로를 기본으로 사용한다. MCP는 실제 제공되는 경우에만 선택하며, Claude 도구 이름을 Codex 호출 이름으로 가정하지 않는다. 등록 방법은 canonical `sources/skills/paper-banana/engine/mcp_server/README.md`를 참고하고 별도 승인을 받는다.
 
-| MCP 도구 | 용도 |
-|---|---|
-| `mcp__paperbanana__generate_diagram` | 텍스트 → 방법론/아키텍처 다이어그램 |
-| `mcp__paperbanana__generate_plot` | JSON 데이터 → 통계 차트(Matplotlib) |
-| `mcp__paperbanana__evaluate_diagram` | 생성물 vs 참조 이미지 품질 평가 |
-| `mcp__paperbanana__download_references` | 확장 레퍼런스 세트(~294 예시) 다운로드 |
-
-MCP 등록(`~/.codex/config.toml`)은 새 경로를 가리킨다:
-
-```jsonc
-"paperbanana": {
-  "type": "stdio",
-  "command": "uv",
-  "args": ["--directory", "~/.codex/skills/paper-banana/engine", "run", "paperbanana-mcp"],
-  "env": { "GOOGLE_API_KEY": "<key>", "VLM_MODEL": "gemini-2.5-flash" }
-}
-```
-
-연결 확인: `claude mcp list | grep banana` → `✓ Connected`
+CLI·MCP 생성/평가에는 유료 API가 필요할 수 있으므로 local engine/API 환경과 사용자 승인을 먼저 확인한다. 어느 경로도 준비되지 않았으면 생성·평가 기능을 사용할 수 없다고 알리고 중단한다.
 
 ## 사용법 2 — CLI (셸에서 직접, 배치/PDF 등 고급 옵션)
 
@@ -126,8 +107,7 @@ uv sync --extra mcp          # 코어 + MCP(fastmcp)
 uv sync --extra mcp --extra pdf   # PDF 입력까지 쓰려면 (pymupdf, 네트워크 느릴 수 있음)
 ```
 
-API 키는 `engine/.env`(`GOOGLE_API_KEY=...`, gitignore)에 둔다.
-MCP 등록의 `env`에도 키가 있어 도구 호출 시엔 그쪽이 우선 적용된다.
+API 키는 `engine/.env`(`GOOGLE_API_KEY=...`, gitignore)에 둔다. MCP를 별도로 등록한 경우에만 해당 등록의 `env`가 적용될 수 있으며, 현재 등록이나 키 존재를 가정하지 않는다.
 
 ## 모델 (2026-05 기준)
 
@@ -151,8 +131,7 @@ uv run --directory "$ENGINE" paperbanana generate -i fig.txt -c "..." \
 
 1. 사용자가 논문 텍스트나 PDF를 제공하면, figure로 만들 부분을 파악한다
 2. 적절한 caption(communicative intent)을 작성한다 — 이것이 그림의 핵심 메시지가 된다
-3. MCP 도구(`generate_diagram`)로 생성하고 결과 이미지를 사용자에게 보여준다
-   (셸 옵션이 필요하면 CLI `paperbanana generate`)
+3. 승인된 local engine/API 환경에서 CLI `paperbanana generate`로 생성하고 결과 이미지를 사용자에게 보여준다. MCP는 실제 제공되는 경우에만 선택한다.
 4. 피드백이 있으면 `--continue --feedback`으로 수정한다
 5. 최종 결과물을 workspace 폴더에 저장한다
 

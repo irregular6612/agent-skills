@@ -2,13 +2,6 @@
 name: paper-driller
 description: 논문이나 긴 글을 spine 분석 후 심층 노트 또는 공유용 한 문단 요약으로 정리한다.
 allowed-tools:
-  - mcp__arxiv__download_paper
-  - mcp__arxiv__read_paper
-  - mcp__mcpsemanticscholar__get-paper-abstract
-  - mcp__mcpsemanticscholar__search-paper-title
-  - mcp__mcpsemanticscholar__paper-search-advanced
-  - mcp__paper-search-mcp-openai-v2__search_arxiv
-  - mcp__paper-search-mcp-openai-v2__search_semantic
   - WebFetch
   - WebSearch
   - Read
@@ -36,14 +29,11 @@ Legacy Claude invocation snippets in this skill should be interpreted as Codex s
 
 ## 외부 접근 (skill-local)
 
-**MCP/외부 fetch 권한은 오직 paper-driller skill에만 있다.** 모든 subagent는 MCP·WebFetch·WebSearch를 사용하지 않으며, paper-driller가 추출해 전달하는 텍스트(또는 이미 로컬에 받아둔 파일 경로)만 입력으로 받는다.
+**외부 수집은 paper-driller orchestrator만 수행한다.** 모든 subagent는 외부 도구를 사용하지 않으며, paper-driller가 추출해 전달하는 텍스트(또는 이미 로컬에 받아둔 파일 경로)만 입력으로 받는다.
 
-우선순위 (fallback chain):
-1. `mcp__arxiv__download_paper` + `mcp__arxiv__read_paper` — arXiv 논문 전문
-2. `mcp__mcpsemanticscholar__get-paper-abstract` — SemanticScholar 메타·abstract
-3. `mcp__paper-search-mcp-openai-v2__search_*` — 대체 검색
-4. `WebFetch(https://arxiv.org/abs/{id})` — 최후 fallback
-5. `WebSearch` — 제목 기반 마지막 시도
+웹/PDF 수집이 기본 경로다. 먼저 활성 세션의 실제 도구 목록과 권한을 확인한다. Codex는 실제 제공되는 웹·PDF 도구로 arXiv HTML/PDF·출판사 원문을 확보하고, URL을 모르면 제목으로 검색한다. `hermes-tools`의 `web_search`/`web_extract`도 노출된 경우에만 사용한다. 이 문서의 `WebFetch`/`WebSearch`/`Read`는 작업 종류이며 Claude 이름을 Codex 호출 이름으로 가정하지 않는다.
+
+Claude의 논문 MCP 이름을 Codex에서 필수로 요구하거나 자동 등록하지 않는다. 웹 도구가 없으면 사용자가 제공한 PDF·텍스트만 읽고 한계를 밝힌다. 검색 결과·초록·웹 요약은 전문이 아니다. 확보 범위는 `source-coverage`(`fulltext|section-extract|abstract-only|unknown`)로 기록한다.
 
 ## Available Agents (6) + 모델/effort
 
@@ -116,15 +106,15 @@ paper-spine의 SPINE 출력 `structure`와 `scholarly` 두 축을 **독립적으
 ## Phase A: 수집·정규화
 
 입력 형태별로 텍스트를 확보한다:
-- **arxiv ID/URL**: `mcp__arxiv__read_paper` → 실패 시 MCP/WebFetch fallback chain.
+- **arxiv ID/URL**: 위 웹/PDF 경로로 원문을 확보한다. 전문을 확보하지 못하면 초록을 전문으로 취급하지 않는다.
 - **일반 URL(HTML)**: `WebFetch`로 본문 추출.
-- **PDF URL / 저작권 학술 논문**: `WebFetch`는 소형 모델이 **전문을 요약하거나 저작권을 이유로 전문 재현을 거부**할 수 있다. 이때 WebFetch는 PDF 바이너리를 **로컬 tool-results 경로에 캐시**하므로, 그 **캐시된 PDF 경로를 orchestrator가 `Read`(pages=…)로 직접 읽어** `full_text`를 확보한다(네트워크 재fetch 아님). WebFetch 응답에 `redirect`가 감지되면 안내된 URL로 **재호출**한다(cross-host redirect는 자동 추적되지 않음).
+- **PDF URL / 저작권 학술 논문**: 실제 웹·PDF 도구로 읽는다. 웹 추출이 요약·초록만 반환하면 전문을 확보했다고 말하지 않는다. 실제 로컬 PDF 경로가 반환된 경우에만 PDF 읽기 도구로 그 파일을 읽는다. 도구가 `redirect`를 안내하면 안내 URL로 재호출한다.
 - **로컬 파일 경로**: `Read`.
 - **붙여넣은 텍스트**: 그대로 사용.
 확보한 텍스트를 `full_text`로 정규화한다. 10쪽 초과 PDF는 `Read`의 `pages`로 분할해 전부 읽는다. 이후:
 
 1. **(학술 문서 후보일 때만) 관련 문서 pre-fetch**: comparison agent용 3-5편. (Phase A는 spine 이전이므로 arxiv ID·저자/venue 단서로 추정하고, 확정은 Phase B의 `scholarly` 판정을 따른다.)
-2. **관련 논문 pre-fetch (comparison agent용)**: SemanticScholar `paper-search-advanced` 또는 related-papers API로 3-5편 후보 메타 수집.
+2. **관련 논문 pre-fetch (comparison agent용)**: 실제 제공되는 웹 검색·추출 도구로 3-5편 후보 메타 수집. 확인하지 못한 후보 수나 메타데이터는 만들어 채우지 않는다.
    - 각 원소: `{ title, year, venue, abstract, code_url?, relation_type }` (`direct` / `base` / `sota` / `alternative`).
    - 선정: 본 논문 제목·키워드로 유사도 상위, 같은 문제 다른 접근 우선.
 3. **코드 링크 감지**: 본문에서 `https://github.com/...` 패턴 추출 → evidence agent 입력.
