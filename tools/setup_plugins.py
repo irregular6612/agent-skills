@@ -57,13 +57,20 @@ class NativePlugins:
             for rel in REGISTRY[target]:
                 p=self.e.path(rel)
                 if p.is_symlink() or (p.exists() and not p.is_file()): raise ValueError('unsafe native registry: '+rel)
-            # Dry run does not invoke native CLIs, which can populate caches on read.
-            if self.e.dry: continue
+        # Dry run does not invoke native CLIs, which can populate caches on read.
+        if self.e.dry: return
+        # Resolve ambiguous Codex metadata before creating harness directories,
+        # journal entries, assets, or changing any native registrations. Metadata
+        # is evidence for refusal only; it never grants cache retirement ownership.
+        if 'codex' in self.spec and self.retired('codex',self.local_plugins('codex')):
+            self.before['codex']=self.plugins('codex')
+            self.verify_local_inventory('codex',self.before['codex'])
+        for target,spec in self.spec.items():
             harness_root = self.e.home/('.'+target)
             if not harness_root.exists():
                 print('MKDIR '+str(harness_root)); self.e.changed=True
                 self.e.mkdir(harness_root)
-            self.before[target]=self.plugins(target)
+            if target not in self.before: self.before[target]=self.plugins(target)
             for r in self.retired(target,self.before[target]):
                 self.cache_path(target,r)  # fail before any writes for unexpected paths
             for r in self.marketplaces(target):
@@ -72,6 +79,13 @@ class NativePlugins:
                     if not location and isinstance(r.get('marketplaceSource'),dict): location=r['marketplaceSource'].get('source')
                     # Existing marketplace must still reference this repo's metadata.
                     if not location or Path(location).resolve()!=spec['catalog'].resolve(): raise ValueError('pinned marketplace points elsewhere: '+str(location))
+    def verify_local_inventory(self,target,records):
+        """Refuse unowned retirement candidates, without touching their caches."""
+        if target!='codex': return
+        observed={r['_id'] for r in records}
+        missing=sorted({r['_id'] for r in self.retired(target,self.local_plugins(target))}-observed)
+        if missing:
+            raise ValueError('Codex retired metadata is absent from native inventory; preserved config/cache; refusing setup before retirement: '+', '.join(missing))
     def retired(self,target,records):
         selector=self.spec[target]['id']
         return [r for r in records if (r['_id'].split('@')[0]=='superpowers' and r['_id']!=selector) or r['_id']=='bagjuhyeon-agent-ssot@generated-local-cache']
@@ -215,7 +229,9 @@ class NativePlugins:
                 if not any(r['_id']==spec['id'] and r.get('version')==spec['version'] and r.get('enabled') for r in records):
                     print('NATIVE INSTALL '+target+' '+spec['id']+' version='+spec['version'])
                 self.e.changed=True; continue
-            records=self.plugins(target); markets=self.marketplaces(target)
+            records=self.plugins(target)
+            self.verify_local_inventory(target,records)
+            markets=self.marketplaces(target)
             obsolete=self.obsolete_markets(target,records,markets)
             if self.exact(target,records) and not self.retired(target,records) and not obsolete: continue
             self.e.changed=True
@@ -267,7 +283,9 @@ class NativePlugins:
                     self.e.save()
                     self.remove_market(target,name)
                     print('NATIVE RETIRE MARKETPLACE '+target+' '+name)
-                if not self.exact(target,self.plugins(target)): raise ValueError('superpowers uniqueness readback failed')
+                records=self.plugins(target)
+                self.verify_local_inventory(target,records)
+                if not self.exact(target,records): raise ValueError('superpowers uniqueness readback failed')
             finally:
                 self.update_registry_hashes(target)
     def uninstall(self,skip):
