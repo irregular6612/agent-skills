@@ -39,6 +39,9 @@ for target in ('claude','codex'):
     superpowers=[r for r in records if (r.get('id') or r.get('pluginId','')).split('@')[0]=='superpowers']
     assert len(superpowers)==1 and (superpowers[0].get('id') or superpowers[0].get('pluginId'))=='superpowers@ssot-pinned',superpowers
     print('unique native pin',target,superpowers[0]['version'])
+    markets=json.loads(run([target,'plugin','marketplace','list','--json']))
+    markets=markets if isinstance(markets,list) else markets['marketplaces']
+    assert {m['name'] for m in markets}=={'ssot-pinned'},markets
 before=metadata(); assert run([str(R/'setup'),'--dry-run'])=='','second dry-run reported changes'; assert before==metadata(),'second dry-run wrote files'
 before=metadata(); assert run([str(R/'setup')])=='','second setup reported changes'
 # Native CLIs may update bootstrap metadata on list, but controlled records must not change.
@@ -52,4 +55,7 @@ for target in ('claude','codex'):
     selectors=[r.get('id') or r.get('pluginId') for r in records]
     assert selectors==['superpowers@old-duplicate'],selectors
     print('original plugin restored',target,selectors)
+    markets=json.loads(run([target,'plugin','marketplace','list','--json']))
+    markets=markets if isinstance(markets,list) else markets['marketplaces']
+    assert {m['name'] for m in markets}=={'old-duplicate'},markets
 print('PASS: live duplicate cleanup, pin uniqueness, idempotence, read-only dry run, config/cache restore')

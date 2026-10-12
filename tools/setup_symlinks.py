@@ -10,6 +10,7 @@ import re
 import shlex
 import stat
 import sys
+import unicodedata
 
 ROOT = Path(__file__).resolve().parents[1]
 TARGETS = {'claude', 'codex'}
@@ -68,14 +69,18 @@ def load_contract(check_sources=True):
     manifest = json.loads((ROOT/'manifest.yaml').read_text())
     if manifest.get('schema_version') != 2 or manifest.get('contract') != 'item-symlink':
         raise ValueError('unsupported manifest contract')
-    seen=set()
+    seen=set(); agent_names=set()
     for entry in manifest['links']:
         validate_destination(entry['harness'],entry['destination'])
-        key=(entry['harness'],entry['destination'])
-        if key in seen: raise ValueError('duplicate destination: '+str(key))
+        # Portable fail-closed policy: reject aliases even on case-sensitive disks.
+        # No filesystem probe is needed, so a bad contract makes zero HOME writes.
+        normalized=unicodedata.normalize('NFD',entry['destination']).casefold()
+        key=(entry['harness'],normalized)
+        if key in seen: raise ValueError('duplicate destination (case/Unicode alias): '+str(key))
         destination=PurePosixPath(entry['destination'])
+        normalized_path=PurePosixPath(normalized)
         for harness,other in seen:
-            if harness==entry['harness'] and (PurePosixPath(other) in destination.parents or destination in PurePosixPath(other).parents):
+            if harness==entry['harness'] and (PurePosixPath(other) in normalized_path.parents or normalized_path in PurePosixPath(other).parents):
                 raise ValueError('overlapping item destinations: '+entry['destination'])
         seen.add(key)
         if check_sources:
@@ -85,8 +90,24 @@ def load_contract(check_sources=True):
                 raise ValueError('skill requires a directory containing SKILL.md: '+entry['source'])
             if category in {'agents','commands','prompts','CLAUDE.md','AGENTS.md'} and not entrypoint.is_file():
                 raise ValueError('native file entrypoint cannot be a directory: '+entry['destination'])
+            if category=='agents' and entry['harness']=='claude':
+                text=entrypoint.read_text()
+                if not text.startswith('---\n'): raise ValueError('Claude agent requires frontmatter')
+                names=re.findall(r'^name:\s*(.*?)\s*$',text.split('---',2)[1],re.M)
+                if len(names)!=1: raise ValueError('Claude agent requires one native name')
+                name=json.loads(names[0])  # approved originals use JSON-quoted YAML scalars
+                if not isinstance(name,str) or not re.fullmatch(r'[a-z0-9-]+',name): raise ValueError('unsafe Claude native name')
+                if name in agent_names: raise ValueError('duplicate Claude native name: '+name)
+                if entry.get('native_name',name)!=name: raise ValueError('manifest/native agent name mismatch')
+                agent_names.add(name)
         else: relative(entry['source'])
     lock=json.loads(source(manifest['dependencies']).read_text())
+    for entry in manifest.get('retired_links',[]):
+        validate_destination(entry['harness'],entry['destination'])
+        key=(entry['harness'],unicodedata.normalize('NFD',entry['destination']).casefold())
+        if key in seen: raise ValueError('retired destination still active')
+        if not source(entry['source']).is_file(): raise ValueError('retired alias requires approved original')
+        if not any(e['harness']==entry['harness'] and e['destination']==entry['canonical'] for e in manifest['links']): raise ValueError('retired alias has no canonical definition')
     policy=json.loads(source(manifest['denylist']).read_text())
     if not DENIED.issubset(set(policy['ids'])): raise ValueError('denylist weakened')
     templates={h:json.loads(source(v).read_text()) for h,v in manifest['templates'].items()}
@@ -127,8 +148,13 @@ def toml_scalar(value):
     if isinstance(value,list): return '['+', '.join(toml_scalar(v) for v in value)+']'
     raise ValueError('unsupported TOML template value')
 
+KEY_TOKEN=r'"(?:[^"\\]|\\.)*"|\x27[^\x27]*\x27|[A-Za-z0-9_-]+'
+KEY_PATH=r'(?:'+KEY_TOKEN+r')(?:\s*\.\s*(?:'+KEY_TOKEN+r'))*'
+
 def split_keys(value):
-    tokens=re.findall(r'"(?:[^"\\]|\\.)*"|\x27[^\x27]*\x27|[A-Za-z0-9_-]+',value)
+    if not re.fullmatch(r'\s*'+KEY_PATH+r'\s*',value):
+        raise ValueError('unsupported TOML key: '+value)
+    tokens=re.findall(KEY_TOKEN,value)
     return [json.loads(k) if k.startswith('"') else k[1:-1] if k.startswith("'") else k for k in tokens]
 
 
@@ -180,17 +206,30 @@ def merge_toml(text, template):
             if isinstance(v,dict): flatten(v,table+(k,))
             else: desired[(table,k)]=v
     flatten(template)
+    coordinates=[tab+(key,) for tab,key in desired]
+    def touches_managed(path):
+        return any(path[:len(c)]==c or c[:len(path)]==path for c in coordinates)
     lines=text.splitlines(keepends=True); table=(); found=set(); tables={():0}; insertions={}; multiline=None
     for i,line in enumerate(lines):
         inside_multiline=multiline is not None
         multiline=toml_multiline_state(line,multiline)
         if inside_multiline: continue
-        header=re.match(r'^\s*\[([^\[\]]+)\]\s*(?:#.*)?$',line)
+        array_header=re.match(r'^\s*\[\[(.*?)\]\]\s*(?:#.*)?$',line)
+        if array_header:
+            table=tuple(split_keys(array_header[1]))
+            if touches_managed(table): raise ValueError('managed TOML array table requires manual review')
+            continue
+        header=re.match(r'^\s*\[(.*?)\]\s*(?:#.*)?$',line)
         if header:
             table=tuple(split_keys(header[1])); tables[table]=i+1
-        assignment=re.match(r'^\s*("(?:[^"\\]|\\.)*"|[A-Za-z0-9_-]+)\s*=\s*(.*)',line)
+            if any(table[:len(c)]==c for c in coordinates):
+                raise ValueError('managed TOML scalar declared as table requires manual review')
+        assignment=re.match(r'^\s*('+KEY_PATH+r')\s*=\s*(.*)',line)
         if assignment:
-            key=split_keys(assignment[1])[0]; coordinate=(table,key)
+            keys=split_keys(assignment[1]); path=table+tuple(keys)
+            if touches_managed(path) and (len(keys)>1 or any(c[:len(path)]==path and c!=path for c in coordinates)):
+                raise ValueError('managed dotted/inline TOML assignment requires manual review: '+assignment[1])
+            key=keys[0]; coordinate=(table,key)
             if coordinate in desired:
                 # Do not misidentify multiline strings/arrays as a one-line value.
                 rhs=assignment[2].strip()
@@ -236,10 +275,11 @@ class Installer:
     def path(self, rel):
         p=PurePosixPath(rel)
         cache_retirement = bool(re.fullmatch(r'\.(claude|codex)/plugins/cache/[a-z0-9._-]+/(superpowers|bagjuhyeon-agent-ssot)', rel))
+        market_retirement = bool(re.fullmatch(r'\.(claude|codex)/plugins/marketplaces/[a-z0-9._-]+', rel))
         forbidden = blocked('/'.join(p.parts[1:])) and not cache_retirement
         if p.is_absolute() or '..' in p.parts or str(p)!=rel or p.parts[0] not in {'.claude','.codex'} or forbidden:
             raise ValueError('unsafe state destination: '+rel)
-        if not cache_retirement and rel not in {'.claude/settings.json','.codex/config.toml','.claude/plugins/installed_plugins.json','.claude/plugins/known_marketplaces.json'}:
+        if not cache_retirement and not market_retirement and rel not in {'.claude/settings.json','.codex/config.toml','.claude/plugins/installed_plugins.json','.claude/plugins/known_marketplaces.json'}:
             validate_destination(p.parts[0][1:], '/'.join(p.parts[1:]))
         path=self.home/rel; no_symlink_parents(path)
         return path
@@ -314,7 +354,11 @@ class Installer:
         if not exists(path): return
         print('RETIRE '+str(path)); self.changed=True
         if self.dry: return
-        self.backup(rel,'moved',None)
+        old=self.record(rel)
+        if old:
+            if old['kind']!='link' or not self.matches(path,old): raise ValueError('refusing to retire modified/non-link managed item: '+rel)
+            path.unlink(); old.update(kind='moved',installed=None); self.save()
+        else: self.backup(rel,'moved',None)
 
     def uninstall(self):
         for r in self.state['records']:
@@ -358,11 +402,20 @@ def main():
     engine=Installer(home,args.dry_run)
     # Validate every HOME destination and template/config before any changes.
     for entry in manifest['links']: engine.path('.'+entry['harness']+'/'+entry['destination'])
+    retirees=[]
+    if not args.uninstall:
+        for entry in manifest.get('retired_links',[]):
+            rel='.'+entry['harness']+'/'+entry['destination']; path=engine.path(rel)
+            if exists(path):
+                if not path.is_file() or path.read_bytes()!=source(entry['source']).read_bytes():
+                    raise ValueError('retired agent alias differs from approved original; review locally before setup: '+rel)
+                retirees.append(rel)
     from setup_plugins import NativePlugins
     native=NativePlugins(engine,ROOT,lock)
     if args.uninstall:
         native.uninstall(args.assets_only)
         engine.uninstall()
+        native.verify_restored()
     else:
         pending=[]
         for target in ('claude','codex'):
@@ -382,6 +435,7 @@ def main():
                 data=merge_toml(text,template).encode()
             pending.append((rel,data))
         native.preflight(args.assets_only)
+        for rel in retirees: engine.move(rel)
         for entry in manifest['links']:
             engine.link('.'+entry['harness']+'/'+entry['destination'],source(entry['source']))
         for rel,data in pending: engine.write(rel,data)

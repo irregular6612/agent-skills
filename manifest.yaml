@@ -1,6 +1,11 @@
 {
   "schema_version": 2,
   "contract": "item-symlink",
+  "retired_links": [
+    {"harness": "claude", "destination": "agents/claude-for-dslab/academic-planner.md", "source": "sources/agents/claude-for-dslab-academic-planner-claude.md", "canonical": "agents/academic-planner.md"},
+    {"harness": "claude", "destination": "agents/claude-for-dslab/report-planner.md", "source": "sources/agents/claude-for-dslab-report-planner-claude.md", "canonical": "agents/report-planner.md"},
+    {"harness": "claude", "destination": "agents/claude-for-dslab/report-reviewer.md", "source": "sources/agents/claude-for-dslab-report-reviewer-claude.md", "canonical": "agents/report-reviewer.md"}
+  ],
   "package": {
     "id": "agent-skills",
     "version": "0.2.0"
@@ -553,17 +558,10 @@
       "format": "markdown-frontmatter",
       "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
-    {
-      "id": "claude-for-dslab-academic-planner-claude",
-      "harness": "claude",
-      "destination": "agents/claude-for-dslab/academic-planner.md",
-      "source": "sources/agents/claude-for-dslab-academic-planner-claude.md",
-      "origin": "sources/agents/claude-for-dslab-academic-planner-claude",
-      "format": "markdown-frontmatter",
-      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
-    },
+
     {
       "id": "claude-for-dslab-academic-reviewer-claude",
+      "native_name": "dslab-academic-reviewer",
       "harness": "claude",
       "destination": "agents/claude-for-dslab/academic-reviewer.md",
       "source": "sources/agents/claude-for-dslab-academic-reviewer-claude.md",
@@ -571,24 +569,7 @@
       "format": "markdown-frontmatter",
       "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
-    {
-      "id": "claude-for-dslab-report-planner-claude",
-      "harness": "claude",
-      "destination": "agents/claude-for-dslab/report-planner.md",
-      "source": "sources/agents/claude-for-dslab-report-planner-claude.md",
-      "origin": "sources/agents/claude-for-dslab-report-planner-claude",
-      "format": "markdown-frontmatter",
-      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
-    },
-    {
-      "id": "claude-for-dslab-report-reviewer-claude",
-      "harness": "claude",
-      "destination": "agents/claude-for-dslab/report-reviewer.md",
-      "source": "sources/agents/claude-for-dslab-report-reviewer-claude.md",
-      "origin": "sources/agents/claude-for-dslab-report-reviewer-claude",
-      "format": "markdown-frontmatter",
-      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
-    },
+
     {
       "id": "code-cleanup-optimizer-claude",
       "harness": "claude",

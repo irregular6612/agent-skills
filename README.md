@@ -22,6 +22,8 @@ No global Python package installation, paid API, launchd changes, or publishing.
   Claude/Codex exact-match scientific skills share one original. Actual differing
   snapshots retain overlays; copied mtimes are not evidence of which is newer.
   See `docs/SYMLINK-INVENTORY.json` and `docs/HARNESS-VARIANTS.json`.
+  Current correction decisions and active counts are in `docs/SETUP-CORRECTIONS.md`;
+  historical inventories are provenance, not the current installation manifest.
 - `~/.claude/CLAUDE.md` and `~/.codex/AGENTS.md` link to `sources/instructions/`.
   The current inventory confirmed an empty Claude guideline; the existing repo
   Codex guideline is preserved. A different future machine's existing guidelines
@@ -32,10 +34,19 @@ No global Python package installation, paid API, launchd changes, or publishing.
 - `templates/claude-settings.json` shares owned paper hooks and permission rules;
   `templates/codex-config.json` shares agent/plugin declarations. Existing machine
   config, unknown keys, permissions, comments in TOML, and project trust stay local.
-  Config files remain regular files, never symlinks. TOML target multiline or
-  inline assignments that cannot be edited safely fail before asset changes.
+  Config files remain regular files, never symlinks. Single-quoted scalar keys
+  are supported. Managed dotted keys, inline tables, array tables, and target
+  multiline values fail before ANY HOME/native writes on Python 3.9 and 3.12.
+  Use explicit `[agents.role]` tables with scalar assignments for managed fields.
   Python 3.11+ additionally validates full TOML with tomllib. Both macOS-default
   Python 3.9.6/Bash 3.2 and Python 3.12 were exercised in this run.
+- Destinations are checked after Unicode NFD normalization and case folding,
+  including overlapping paths. This portable conservative policy rejects aliases
+  even on case-sensitive filesystems, without writing a probe into HOME.
+- Claude native agent names must be unique. Three byte-identical prompt bodies
+  share canonical definitions; the different DSLab reviewer is named
+  `dslab-academic-reviewer`. `retired_links` backs up/removes approved old aliases
+  and restores them on uninstall; modified aliases fail before any writes.
 - `.system`, unrelated plugin caches, external taste-skill links, agentcat-usage,
   lost-me and other unclassified assets are preserved. Exclusion is NOT deletion
   of a user's preexisting denylisted skills/plugins.
@@ -44,8 +55,11 @@ No global Python package installation, paid API, launchd changes, or publishing.
   as `superpowers@ssot-pinned`. Upstream plugin payloads live only in each
   harness's native cache, never vendored by setup into the repo. Other superpowers
   registrations and the old copied `bagjuhyeon-agent-ssot@generated-local-cache`
-  registration are backed up/retired through the native CLI. Unrelated marketplace
-  entries and unrelated plugins remain untouched.
+  registration are backed up/retired through the native CLI. Obsolete dedicated
+  catalogs containing only those plugins are also backed up/unregistered and read
+  back, even if their plugin is already gone. Mixed/unrelated catalogs and those
+  used by unrelated installed plugins remain untouched. Uninstall restores exact
+  registry bytes and native catalog caches, then reads back marketplace names/sources.
 - Auth/credentials/tokens, history, sessions, projects/memory, logs, cache, SQLite,
   `.DS_Store`, and the denylist are never imported from HOME. Only the explicit
   config/registry files needing reversible changes are backed up locally.
@@ -108,10 +122,12 @@ the prior README claim that it did not is obsolete.
 
 ```bash
 ./setup --validate
-PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -p test_setup.py -v
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -p 'test_*.py' -v
 # Isolated native CLI/network tests (no model calls or paid API):
 python3 tests/live_native_smoke.py
 python3 tests/live_native_duplicates.py
+python3 tests/live_native_marketplaces.py
+python3 tests/live_native_discovery.py
 ```
 
 Independent fresh-clone and actual-home release validation belong to the

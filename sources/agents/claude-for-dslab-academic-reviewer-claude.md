@@ -1,5 +1,5 @@
 ---
-name: "academic-reviewer"
+name: "dslab-academic-reviewer"
 description: "claude-for-dslab-academic-reviewer-claude"
 ---
 # Academic Reviewer Agent

@@ -13,7 +13,7 @@ REGISTRY={
 }
 class NativePlugins:
     def __init__(self,engine,root,lock):
-        self.e=engine; self.root=root; self.spec={}; self.before={}
+        self.e=engine; self.root=root; self.spec={}; self.before={}; self.restore_markets={}
         deps=lock['dependencies']
         if len(deps)!=1 or deps[0]['id']!='superpowers': raise ValueError('exactly one superpowers dependency required')
         d=deps[0]
@@ -75,6 +75,30 @@ class NativePlugins:
     def retired(self,target,records):
         selector=self.spec[target]['id']
         return [r for r in records if (r['_id'].split('@')[0]=='superpowers' and r['_id']!=selector) or r['_id']=='bagjuhyeon-agent-ssot@generated-local-cache']
+    def obsolete_markets(self,target,records,markets):
+        """Only dedicated catalogs of retired plugins, never mixed marketplaces."""
+        result=[]
+        for market in markets:
+            name=market.get('name')
+            if name=='ssot-pinned': continue
+            if not isinstance(name,str) or not re.fullmatch(r'[a-z0-9._-]+',name): continue  # unknown names stay untouched
+            if any(r['_id'].endswith('@'+name) and r not in self.retired(target,records) for r in records): continue
+            location=market.get('installLocation') or market.get('root') or market.get('path')
+            if not location: continue  # unknown catalog ownership: preserve
+            catalog=Path(location)
+            filename='.claude-plugin/marketplace.json' if target=='claude' else '.agents/plugins/marketplace.json'
+            path=catalog/filename
+            from setup_symlinks import no_symlink_parents
+            no_symlink_parents(path)
+            if path.is_symlink() or not path.is_file(): continue
+            payload=json.loads(path.read_text())
+            plugins=payload.get('plugins',[])
+            if not plugins or any(p.get('name') not in {'superpowers','bagjuhyeon-agent-ssot'} for p in plugins): continue
+            result.append(name)
+        return result
+    def remove_market(self,target,name):
+        self.run(target,['plugin','marketplace','remove',name,'--json']+(['--scope','user'] if target=='claude' else []))
+        if any(r.get('name')==name for r in self.marketplaces(target)): raise ValueError('marketplace removal readback failed: '+name)
     def cache_path(self,target,record):
         selector=record['_id']
         if not re.fullmatch(r'[a-z0-9._-]+@[a-z0-9._-]+',selector): raise ValueError('unsafe plugin selector')
@@ -130,28 +154,15 @@ class NativePlugins:
                     if item.get('scope','user')!='user': continue
                     records.append({'_id':selector,'version':item.get('version'),'enabled':enabled.get(selector,False)})
             return records
-        config=self.e.path('.codex/config.toml')
-        if not config.exists(): return []
-        try:
-            import tomllib
-        except ImportError:
-            from setup_symlinks import split_keys,toml_multiline_state,scalar_from_toml
-            data={'plugins':{}}; table=(); multiline=None
-            for line in config.read_text().splitlines():
-                inside=multiline is not None; multiline=toml_multiline_state(line,multiline)
-                if inside: continue
-                header=re.match(r'^\s*\[([^\[\]]+)\]\s*(?:#.*)?$',line)
-                if header: table=tuple(split_keys(header[1])); continue
-                assignment=re.match(r'^\s*("(?:[^"\\]|\\.)*"|\x27[^\x27]*\x27|[A-Za-z0-9_-]+)\s*=\s*(.*)',line)
-                if len(table)==2 and table[0]=='plugins' and assignment and split_keys(assignment[1])==['enabled']:
-                    data['plugins'].setdefault(table[1],{})['enabled']=scalar_from_toml(assignment[2])
-        else:
-            data=tomllib.loads(config.read_text())
+        data=self.local_codex_config()
         records=[]
         for selector,details in data.get('plugins',{}).items():
             if '@' not in selector: continue
             plugin,market=selector.split('@',1)
-            if not re.fullmatch(r'[a-z0-9._-]+',market) or plugin!='superpowers': continue
+            if not re.fullmatch(r'[a-z0-9._-]+',market): raise ValueError('unsafe plugin marketplace')
+            if plugin!='superpowers':
+                records.append({'_id':selector,'enabled':details.get('enabled',False)})
+                continue
             cache=self.e.home/'.codex/plugins/cache'/market/plugin
             from setup_symlinks import no_symlink_parents
             no_symlink_parents(cache,True)
@@ -162,26 +173,58 @@ class NativePlugins:
                 item=json.loads(manifest.read_text())
                 records.append({'_id':selector,'version':item.get('version'),'enabled':details.get('enabled',False)})
         return records
+    def local_codex_config(self):
+        config=self.e.path('.codex/config.toml')
+        if not config.exists(): return {}
+        try:
+            import tomllib
+        except ImportError:
+            from setup_symlinks import split_keys,toml_multiline_state,scalar_from_toml
+            data={'plugins':{},'marketplaces':{}}; table=(); multiline=None
+            for line in config.read_text().splitlines():
+                inside=multiline is not None; multiline=toml_multiline_state(line,multiline)
+                if inside: continue
+                header=re.match(r'^\s*\[([^\[\]]+)\]\s*(?:#.*)?$',line)
+                if header: table=tuple(split_keys(header[1])); continue
+                assignment=re.match(r'^\s*("(?:[^"\\]|\\.)*"|\x27[^\x27]*\x27|[A-Za-z0-9_-]+)\s*=\s*(.*)',line)
+                if len(table)==2 and table[0] in data and assignment:
+                    key=split_keys(assignment[1])[0]
+                    if key in {'enabled','source','source_type'}:
+                        data[table[0]].setdefault(table[1],{})[key]=scalar_from_toml(assignment[2])
+        else:
+            data=tomllib.loads(config.read_text())
+        return data
+    def local_marketplaces(self,target):
+        if target=='claude':
+            path=self.e.path('.claude/plugins/known_marketplaces.json')
+            data=json.loads(path.read_text()) if path.exists() else {}
+            return [dict(value,name=name) for name,value in data.items()]
+        return [{'name':name,'root':value.get('source')} for name,value in self.local_codex_config().get('marketplaces',{}).items() if value.get('source_type')=='local']
     def install(self,skip):
         if skip: return
         for target,spec in self.spec.items():
             if self.e.dry:
                 records=self.local_plugins(target)
-                if self.exact(target,records) and not self.retired(target,records): continue
+                obsolete=self.obsolete_markets(target,records,self.local_marketplaces(target))
+                if self.exact(target,records) and not self.retired(target,records) and not obsolete: continue
                 for record in self.retired(target,records):
                     print('NATIVE RETIRE '+target+' '+record['_id']+' (backup cache, unregister)')
+                for name in obsolete: print('NATIVE RETIRE MARKETPLACE '+target+' '+name+' (backup registry/catalog, unregister)')
                 if not any(r['_id']==spec['id'] and r.get('version')==spec['version'] and r.get('enabled') for r in records):
                     print('NATIVE INSTALL '+target+' '+spec['id']+' version='+spec['version'])
                 self.e.changed=True; continue
-            records=self.plugins(target)
-            if self.exact(target,records) and not self.retired(target,records): continue
+            records=self.plugins(target); markets=self.marketplaces(target)
+            obsolete=self.obsolete_markets(target,records,markets)
+            if self.exact(target,records) and not self.retired(target,records) and not obsolete: continue
             self.e.changed=True
             self.capture_registries(target)
             self.e.state['native'].setdefault(target,{'created_plugin':False,'created_marketplace':False})
+            flags=self.e.state['native'][target]
+            flags.setdefault('original_marketplaces',[{'name':r['name'],'location':r.get('installLocation') or r.get('root') or r.get('path')} for r in markets])
+            flags.setdefault('retired_marketplaces',[])
             self.e.save()
             try:
                 # Install/read back the pin before retiring other registrations.
-                markets=self.marketplaces(target)
                 if not any(x.get('name')=='ssot-pinned' for x in markets):
                     args=['plugin','marketplace','add',str(spec['catalog']),'--json']
                     if target=='claude': args+=['--scope','user']
@@ -214,6 +257,15 @@ class NativePlugins:
                         self.e.state.setdefault('quarantine',[]).append(str(destination.relative_to(self.e.state_dir)))
                         self.e.save()
                         print('BACKUP native orphan '+str(cache)+' -> '+str(destination))
+                for name in obsolete:
+                    # Original registry bytes restore the registration; move native
+                    # catalog caches out of reach of the CLI's recursive deletion.
+                    rel='.'+target+'/plugins/marketplaces/'+name
+                    self.e.move(rel)
+                    if name not in flags['retired_marketplaces']: flags['retired_marketplaces'].append(name)
+                    self.e.save()
+                    self.remove_market(target,name)
+                    print('NATIVE RETIRE MARKETPLACE '+target+' '+name)
                 if not self.exact(target,self.plugins(target)): raise ValueError('superpowers uniqueness readback failed')
             finally:
                 self.update_registry_hashes(target)
@@ -234,4 +286,16 @@ class NativePlugins:
                     self.run(target,['plugin','marketplace','remove','ssot-pinned','--json']+(['--scope','user'] if target=='claude' else []))
                     if any(r.get('name')=='ssot-pinned' for r in self.marketplaces(target)): raise ValueError('marketplace removal readback failed')
             finally: self.update_registry_hashes(target)
+            self.restore_markets[target]=flags.get('original_marketplaces',[])
             del self.e.state['native'][target]; self.e.save()
+    def verify_restored(self):
+        if self.e.dry: return
+        for target,originals in self.restore_markets.items():
+            actual={r['name']:r for r in self.marketplaces(target)}
+            names={r if isinstance(r,str) else r['name'] for r in originals}
+            if set(actual)!=names: raise ValueError('original marketplace restoration readback failed: '+target)
+            for r in originals:
+                if isinstance(r,str) or not r.get('location'): continue
+                item=actual[r['name']]
+                location=item.get('installLocation') or item.get('root') or item.get('path')
+                if location!=r['location']: raise ValueError('original marketplace source restoration readback failed: '+target+' '+r['name'])
