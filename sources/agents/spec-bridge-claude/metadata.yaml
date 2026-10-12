@@ -1,0 +1,6 @@
+description: 설계 브릿지 파이프라인 전용 에이전트. grilling 세션에서 굳힌 설계문서와 domain-modeling 산출물(CONTEXT.md·ADR)을
+  읽고 저장소를 조사해, 다음 구현 계획 단계가 소비 가능한 spec으로 변환한다. 아키텍처·데이터흐름·에러처리·테스트전략·Global
+  Constraints를 근거 표기와 함께 채우고, 근거 없는 항목은 OPEN_QUESTIONS로 승격해 반환한다. 단독 호출 금지 — 반드시 브릿지
+  계약을 제공하는 오케스트레이터를 통해 호출.
+tools: Read, Grep, Glob, Write, Bash
+model: sonnet

@@ -1,0 +1,37 @@
+# color-palette-map.yaml — maps HTML hex codes found in MD
+# `<font color="#XXXXXX">` inline tags to LaTeX color names defined in
+# your .sty. Unmapped hex codes fall through to \textcolor[HTML]{HEX}{...}
+# and get flagged as warnings by the auditor.
+#
+# Key:   uppercase 6-char hex WITHOUT leading '#'
+# Value: LaTeX color name (must be defined via \definecolor in your .sty)
+#
+# Extend this file for your project's palette. The GIST preprint template
+# defines gistred / gistblue / gistgold / gistdarkgray / gistlightgray.
+
+# ── GIST preprint palette (default) ────────────────────────────
+"0000FF": gistblue
+"0033CC": gistblue
+"2A6EE8": gistblue
+"CC1100": gistred
+"CE1100": gistred
+"D52B1E": gistred
+"FF0000": gistred
+"987F2C": gistgold
+"B8860B": gistgold
+"DAA520": gistgold
+"444444": gistdarkgray
+"666666": gistdarkgray
+"888888": gistlightgray
+"AAAAAA": gistlightgray
+
+# ── Common Markdown authoring colors ───────────────────────────
+# Obsidian default highlight yellow; map to a readable fallback.
+"FFFF00": gistgold
+"FFD700": gistgold
+# Green accents often used for "positive" — map to a neutral since the
+# preprint style does not define a gistgreen.
+# Uncomment and add a \definecolor{gistgreen}{HTML}{228B22} in your .sty
+# if you want to enable this mapping.
+# "228B22": gistgreen
+# "00AA00": gistgreen

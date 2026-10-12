@@ -1,0 +1,319 @@
+{
+  "schema_version": 4,
+  "frontmatter": {
+    "engine": "Public/_tools/paper_frontmatter.py (vault) — hook·CLI·validator가 같은 엔진을 쓴다",
+    "scope": "YAML `type: paper`로 명시된 노트 전부. 경로(Papers/)로 추론하지 않는다.",
+    "keys": [
+      "type",
+      "Reading-Status",
+      "Read-Depth",
+      "Author",
+      "Journal/Conference",
+      "Published Year",
+      "Topic",
+      "Review-Date",
+      "Comment",
+      "URL",
+      "Category",
+      "linked-bases",
+      "Lab"
+    ],
+    "rule": "정확히 위 13개 키만, 이 순서로. 빈 값(`Key:`)은 유효. 값 추론·별칭 병합·자동 채움 금지. 그 외 키(arXiv-ID, DOI, Evidence-Quality, Reproducibility, isTargetPaper, Benchmark-Type, template-version 등)는 YAML에 두지 않는다.",
+    "human_owned": [
+      "Reading-Status",
+      "Read-Depth"
+    ],
+    "human_owned_rule": "Read-Depth는 사람의 읽기 깊이다. 모델이 원문을 읽었다고 사용자가 읽은 것으로 표시하지 않는다. 새 노트는 Read-Depth를 비우고 Reading-Status는 비우거나 `☑️ Not Started`로 둔다.",
+    "new_note_defaults": {
+      "Reading-Status": "☑️ Not Started",
+      "Read-Depth": ""
+    },
+    "controlled_update_fields": [
+      "Review-Date"
+    ],
+    "value_rules_for_driller_notes": {
+      "Published Year": "4자리 정수",
+      "Review-Date": "YYYY-MM-DD",
+      "URL": "http(s):// 로 시작. 원문 식별자(arXiv/DOI)는 URL에서 유도한다",
+      "Category": "categories enum 중 하나 또는 빈 값",
+      "note": "기존 수동 노트에는 enum·형식 검사를 적용하지 않는다 (키 집합·YAML 유효성·값 자료형만)"
+    }
+  },
+  "driller_meta": {
+    "purpose": "템플릿·수집 범위·도표 확인 상태 등 생성 내부 메타데이터. YAML이 아니라 본문의 HTML 주석 블록에 둔다.",
+    "block_begin": "<!-- BEGIN DRILLER:meta",
+    "block_end": "END DRILLER:meta -->",
+    "line_format": "key: value (한 줄 스칼라만)",
+    "placement": "frontmatter 닫는 `---` 바로 뒤, H1 앞, AUTO:body 밖. 코드 펜스 안은 무시. 정확히 하나.",
+    "sidecar_flag": "--meta META.json — 블록이 없는 옛 노트를 v2/v3 규칙으로 검사할 때 명시적으로 준다",
+    "note_v3": [
+      "template-version",
+      "template-id",
+      "summary-mode",
+      "profile",
+      "source-coverage",
+      "quality-status",
+      "visual-check",
+      "visual-scope"
+    ],
+    "preread_v2": [
+      "template-version",
+      "summary-mode",
+      "profile",
+      "source-coverage",
+      "quality-status",
+      "reading-decision",
+      "decision-confidence"
+    ],
+    "optional": [
+      "audience-level",
+      "reading-decision",
+      "decision-confidence",
+      "visual-scope-note"
+    ],
+    "controlled_update_fields": [
+      "source-coverage",
+      "quality-status",
+      "visual-check",
+      "visual-scope",
+      "visual-scope-note",
+      "reading-decision",
+      "decision-confidence"
+    ],
+    "switch_only_fields": [
+      "template-version",
+      "template-id",
+      "summary-mode"
+    ]
+  },
+  "identity": {
+    "source_field": "URL",
+    "derived": "arxiv.org/abs/{id}[vN] 또는 arxiv.org/pdf/{id}[vN][.pdf] → arxiv (base, version); doi.org|dx.doi.org/{doi} → doi; 그 외 → 정규화 URL",
+    "url_normalisation": "scheme, host case, leading www., fragment and one trailing slash are ignored; path case and query are preserved (forum?id=A != forum?id=B)",
+    "dedup_rule": "같은 arxiv base → 같은 논문. 같은 doi → 같은 논문. 그 외 정규화 URL 완전 일치만 같은 논문."
+  },
+  "categories": [
+    "Architecture",
+    "Training",
+    "Benchmark/Evaluation",
+    "Application",
+    "Reasoning",
+    "Survey",
+    "Dataset",
+    "Optimization",
+    "Theory",
+    "AGI"
+  ],
+  "profiles": [
+    "empirical",
+    "theoretical",
+    "survey",
+    "position",
+    "dataset-benchmark",
+    "general-article"
+  ],
+  "source_coverage": [
+    "fulltext",
+    "section-extract",
+    "abstract-only",
+    "unknown"
+  ],
+  "summary_modes": [
+    "preread",
+    "deep"
+  ],
+  "reading_decisions": [
+    "read",
+    "skim",
+    "skip"
+  ],
+  "decision_confidence": [
+    "high",
+    "medium",
+    "low"
+  ],
+  "quality_status": [
+    "inbox",
+    "draft",
+    "review",
+    "ready",
+    "archived"
+  ],
+  "reading_status": [
+    "✅ Done",
+    "▶️ In progress",
+    "☑️ Not Started",
+    "Not Started"
+  ],
+  "read_depth_examples": [
+    "📕 Unread",
+    "📜 Abstract",
+    "📄 Summary",
+    "📖 Full paper"
+  ],
+  "templates": {
+    "paper-preread-v2": {
+      "summary_mode": "preread",
+      "summary_callout": "> [!summary] 1분 요약",
+      "required_h2": [
+        "읽기 판단",
+        "핵심 아이디어",
+        "무엇을 했나",
+        "핵심 근거",
+        "어디까지 믿을까",
+        "원문 읽기 지도"
+      ],
+      "optional_h2": [
+        "읽기 전 용어",
+        "Wiki 연결",
+        "BibTeX"
+      ],
+      "max_claims": 5,
+      "max_terms": 3,
+      "reading_map_min_rows": 2,
+      "reading_map_max_rows": 4,
+      "max_body_non_whitespace_chars": 5500,
+      "mermaid_default": false,
+      "audience_level": "intro",
+      "narrative_blocks": [
+        "READING_DECISION",
+        "ONE_MINUTE",
+        "CORE_IDEA",
+        "WHAT_THEY_DID",
+        "LIMITS",
+        "TERMS"
+      ],
+      "table_blocks": [
+        "KEY_EVIDENCE",
+        "READING_MAP"
+      ],
+      "max_sentence_words_narrative": 15,
+      "core_idea_analogy_count": 1,
+      "comment_max_chars": 80,
+      "comment_max_sentences": 2,
+      "one_minute_locators": false
+    },
+    "paper-deep-v2": {
+      "summary_mode": "deep",
+      "mermaid_default": "conditional",
+      "structure": "preread-v2 block (summary callout + 6 required_h2) followed by the extra section; no body length cap",
+      "required_extra_h2": "상세 독해 노트"
+    },
+    "paper-note-v3": {
+      "summary_mode": [
+        "preread",
+        "deep"
+      ],
+      "template_dir": "references/templates",
+      "template_id_pattern": "^[a-z0-9][a-z0-9-]{1,63}$",
+      "template_metadata_keys": {
+        "required": [
+          "id",
+          "title",
+          "description",
+          "required_h2",
+          "visual_section"
+        ],
+        "optional": [
+          "optional_h2"
+        ]
+      },
+      "auto_body_markers": [
+        "<!-- BEGIN AUTO:body template-id={template-id} -->",
+        "<!-- END AUTO:body -->"
+      ],
+      "user_block_markers": [
+        "<!-- BEGIN USER:notes -->",
+        "<!-- END USER:notes -->"
+      ],
+      "max_body_non_whitespace_chars": null,
+      "visual_item_heading": "### {manifest item id}",
+      "visual_check_rule": {
+        "none": "scan=complete, no user scope, zero main-body targets",
+        "viewed": "every target evidence=viewed",
+        "caption-only": "every target evidence=caption-only",
+        "mixed": "targets are a mix of viewed and caption-only",
+        "unverified": "any target evidence=not-seen, or scan=partial with zero targets"
+      },
+      "ready_requires": "scan=complete AND every target main_body=true AND visual-check in [viewed, none] AND source-coverage not in [abstract-only, unknown]",
+      "deep_extra_h2": "상세 독해 노트",
+      "deep_rule": "summary-mode=deep requires a non-empty `## 상세 독해 노트` inside AUTO:body after all required_h2",
+      "auto_begin_template_id_required": true,
+      "markers_inside_code_fences_are_text": true
+    }
+  },
+  "audience_levels": [
+    "intro"
+  ],
+  "template_versions": [
+    "paper-preread-v2",
+    "paper-deep-v2",
+    "paper-note-v3"
+  ],
+  "visual_check": [
+    "viewed",
+    "caption-only",
+    "mixed",
+    "none",
+    "unverified"
+  ],
+  "visual_scope": [
+    "main-body",
+    "user-narrowed"
+  ],
+  "switch_approval": "--approved-switch on the --previous check records that the user already approved the switch in conversation; it is not proof of approval and relaxes only driller_meta.switch_only_fields",
+  "update_frontmatter_comparison": "raw YAML segment per key (indentation, quotes, list layout); only frontmatter.controlled_update_fields may change; DRILLER:meta keys follow driller_meta.controlled_update_fields",
+  "manifest": {
+    "manifest_version": 1,
+    "top_level": {
+      "required": [
+        "manifest_version",
+        "doc_id",
+        "source",
+        "scan",
+        "items"
+      ],
+      "optional": [
+        "doc_version",
+        "scan_note",
+        "scope"
+      ]
+    },
+    "doc_id": "kind:value where kind in arxiv|doi|url; value must be well-formed; compared with identifiers derived from the note's URL after the same normalisation",
+    "url_normalisation": "scheme, host case, leading www., fragment and one trailing slash are ignored; path case and query are preserved (forum?id=A != forum?id=B)",
+    "doc_version_rule": "if doc_id embeds an arXiv version it must equal doc_version; manifest_version must be the exact integer 1",
+    "scan": [
+      "complete",
+      "partial"
+    ],
+    "item": {
+      "required": [
+        "id",
+        "main_body",
+        "evidence"
+      ],
+      "optional": [
+        "caption",
+        "locator",
+        "note"
+      ]
+    },
+    "main_body": [
+      true,
+      false,
+      "unsure"
+    ],
+    "evidence": [
+      "viewed",
+      "caption-only",
+      "not-seen"
+    ],
+    "scope": {
+      "requested_by_user": "verbatim user request",
+      "include": [
+        "item ids kept after user narrowed the scope"
+      ]
+    },
+    "source": "record of where the list came from (pdf:/path, url:...). Never executed."
+  }
+}

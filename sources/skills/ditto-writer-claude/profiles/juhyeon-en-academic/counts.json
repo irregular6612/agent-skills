@@ -1,0 +1,150 @@
+{
+ "lang": "en",
+ "n_words": 135,
+ "n_sents": 14,
+ "n_paras": 1,
+ "sent_len": {
+  "list": [
+   15,
+   13,
+   11,
+   4,
+   12,
+   10,
+   12,
+   8,
+   9,
+   8,
+   5,
+   9,
+   8,
+   11
+  ],
+  "mean": 9.6,
+  "sd": 2.9,
+  "cv": 0.3,
+  "min": 4,
+  "max": 15,
+  "short<=5": 2,
+  "long>=30": 0
+ },
+ "sents_per_para": [
+  14
+ ],
+ "punct_per100w": {
+  ",": 6.67,
+  ";": 0.0,
+  ":": 0.0,
+  "(": 0.74,
+  "—": 0.0,
+  "–": 0.0,
+  " - ": 0.0,
+  "...": 0.0,
+  "…": 0.0,
+  "!": 0.0,
+  "?": 0.74,
+  "\"": 0.0,
+  "“": 0.74,
+  "'": 0.0,
+  "’": 1.48
+ },
+ "questions": 1,
+ "missing_space_after_period": 1,
+ "no_space_before_paren": 1,
+ "sent_initial": [
+  [
+   "in",
+   2
+  ],
+  [
+   "my",
+   1
+  ],
+  [
+   "traditionally",
+   1
+  ],
+  [
+   "but",
+   1
+  ],
+  [
+   "let’s",
+   1
+  ],
+  [
+   "there",
+   1
+  ],
+  [
+   "can",
+   1
+  ],
+  [
+   "instead",
+   1
+  ],
+  [
+   "by",
+   1
+  ],
+  [
+   "this",
+   1
+  ],
+  [
+   "another",
+   1
+  ],
+  [
+   "we",
+   1
+  ]
+ ],
+ "repeated_3grams": [
+  "i want to"
+ ],
+ "function_words_per1000": {
+  "the": 37.0,
+  "of": 37.0,
+  "to": 29.6,
+  "in": 29.6,
+  "i": 22.2,
+  "an": 14.8,
+  "as": 14.8,
+  "not": 14.8,
+  "we": 14.8,
+  "my": 7.4,
+  "but": 7.4,
+  "can": 7.4,
+  "instead": 7.4,
+  "by": 7.4,
+  "and": 7.4,
+  "a": 7.4,
+  "this": 7.4,
+  "that": 7.4,
+  "also": 7.4,
+  "therefore": 7.4,
+  "might": 7.4,
+  "which": 7.4
+ },
+ "contractions_per100w": 0.74,
+ "first_person": {
+  "i": 3,
+  "my": 1,
+  "me": 0,
+  "we": 2,
+  "our": 0,
+  "us": 0,
+  "you": 0
+ },
+ "sent_initial_connectors": {
+  "traditionally": 1,
+  "but": 1,
+  "instead": 1,
+  "another": 1,
+  "in": 2,
+  "therefore": 1
+ },
+ "ai_signal_hits": {}
+}

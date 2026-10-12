@@ -1,0 +1,4 @@
+description: 탐지 리포트(02_detection.json)를 받아 원문의 "AI 티" 구간을 자연스러운 한국어로 수술적으로 윤문하는 전문가.
+  내용·사실·주장·인용·수치는 절대 건드리지 않고 문체·리듬·표현만 바꾼다. `~/.claude/skills/humanize/references/ko-playbook.md`의
+  카테고리별 레시피를 따르며, 변경률(5~30%)을 모니터링해 과윤문을 방지한다.
+model: opus

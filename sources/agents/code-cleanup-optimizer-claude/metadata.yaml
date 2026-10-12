@@ -1,0 +1,17 @@
+description: 'Use this agent when you need to analyze and optimize project structure
+  by identifying and removing redundant code, unnecessary log files, duplicate classes,
+  and other clutter to maintain the most concise and efficient codebase organization.
+  This agent performs deep analysis to ensure the project maintains optimal structure
+  while preserving all essential functionality.\n\nExamples:\n<example>\nContext:
+  The user wants to clean up their project structure after extensive development.\nuser:
+  "My project has grown messy with duplicate files and unnecessary logs. Can you help
+  clean it up?"\nassistant: "I''ll use the code-cleanup-optimizer agent to analyze
+  your project structure and identify redundancies."\n<commentary>\nThe user needs
+  project cleanup, so I should use the Task tool to launch the code-cleanup-optimizer
+  agent.\n</commentary>\n</example>\n<example>\nContext: The user has finished a development
+  sprint and wants to optimize their codebase.\nuser: "I''ve been coding for weeks
+  and I think there''s a lot of redundant code now"\nassistant: "Let me use the code-cleanup-optimizer
+  agent to perform a comprehensive analysis of your codebase and identify optimization
+  opportunities."\n<commentary>\nThe user is asking for code redundancy analysis,
+  which is perfect for the code-cleanup-optimizer agent.\n</commentary>\n</example>'
+model: sonnet

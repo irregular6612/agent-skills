@@ -1,0 +1,85 @@
+{
+  "status": "IMPLEMENTATION_SELF_TESTED_NOT_RELEASE_APPROVED",
+  "tests": [
+    {
+      "command": [
+        "/usr/bin/python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_setup.py",
+        "-v"
+      ],
+      "exit_code": 0,
+      "tests_run": 23,
+      "version": "Python 3.9.6"
+    },
+    {
+      "command": [
+        "/usr/local/bin/python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_setup.py",
+        "-v"
+      ],
+      "exit_code": 0,
+      "tests_run": 23,
+      "version": "Python 3.12.8"
+    },
+    {
+      "report": "docs/NATIVE-SMOKE.json",
+      "command_count": 5,
+      "exit_codes": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "report": "docs/DUPLICATE-NATIVE-SMOKE.json",
+      "command_count": 13,
+      "exit_codes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "runtime_dependencies": "none; stdlib only",
+  "source_base": "4e32046a17d8832c15ed69925cc6e8f1dd8dd9d5",
+  "next_task": "t_70718ee6",
+  "next_owner": "dev-verifier",
+  "real_home_changed": false,
+  "original_repo_changed": false,
+  "github_push": false,
+  "paid_api": false,
+  "launchd": false,
+  "limitations": [
+    "Fresh-clone recognition/release approval is the downstream verifier responsibility.",
+    "Historical reference trees remain inactive copies; genuine harness variants are documented, not guessed newest from mtimes.",
+    "Taste-skill immutable provenance and eight unclassified home assets remain preserved/excluded.",
+    "Codex global hook source is a reference/events adapter; no unsupported native hook registration is fabricated.",
+    "Native bootstrap state/orphan quarantine is intentionally preserved locally.",
+    "Journal is recoverable for ordinary failures but not a crash-proof filesystem transaction.",
+    "Python 3.9 uses a conservative targeted TOML editor, not whole-document validation."
+  ]
+}

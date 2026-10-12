@@ -1,0 +1,14 @@
+events:
+  claude:
+  - Notification
+  - PermissionRequest
+  - PostToolUse
+  - PreToolUse
+  - SessionEnd
+  - SessionStart
+  - Stop
+  - StopFailure
+  - SubagentStop
+  - UserPromptSubmit
+  codex: []
+command: target-adapter; see docs/coverage.md

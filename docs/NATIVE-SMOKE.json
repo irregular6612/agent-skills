@@ -1,0 +1,55 @@
+[
+  {
+    "command": [
+      "/Users/bagjuhyeon/.hermes/kanban/boards/agent-skills/workspaces/t_56a6df31/agent-skills/setup"
+    ],
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "/Users/bagjuhyeon/.hermes/kanban/boards/agent-skills/workspaces/t_56a6df31/agent-skills/setup"
+    ],
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "claude",
+      "plugin",
+      "list",
+      "--json"
+    ],
+    "exit_code": 0,
+    "plugins": [
+      {
+        "id": "superpowers@ssot-pinned",
+        "pluginId": null,
+        "version": "6.4.1",
+        "enabled": true
+      }
+    ]
+  },
+  {
+    "command": [
+      "codex",
+      "plugin",
+      "list",
+      "--json"
+    ],
+    "exit_code": 0,
+    "plugins": [
+      {
+        "id": null,
+        "pluginId": "superpowers@ssot-pinned",
+        "version": "6.4.2",
+        "enabled": true
+      }
+    ]
+  },
+  {
+    "command": [
+      "/Users/bagjuhyeon/.hermes/kanban/boards/agent-skills/workspaces/t_56a6df31/agent-skills/setup",
+      "--uninstall"
+    ],
+    "exit_code": 0
+  }
+]

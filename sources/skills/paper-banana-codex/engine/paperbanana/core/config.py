@@ -1,0 +1,271 @@
+"""Configuration management for PaperBanana."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any, ClassVar, Literal, Optional
+
+import yaml
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings
+
+OutputFormat = Literal["png", "jpeg", "webp"]
+ExemplarRetrievalMode = Literal["external_only", "external_then_rerank"]
+
+
+class VLMConfig(BaseSettings):
+    """VLM provider configuration."""
+
+    provider: str = "gemini"
+    model: str = "gemini-2.5-flash-lite"
+
+
+class ImageConfig(BaseSettings):
+    """Image generation provider configuration."""
+
+    provider: str = "google_imagen"
+    model: str = "gemini-3-pro-image-preview"
+
+
+class PipelineConfig(BaseSettings):
+    """Pipeline execution configuration."""
+
+    num_retrieval_examples: int = 10
+    refinement_iterations: int = 3
+    output_resolution: str = "2k"
+    diagram_type: str = "methodology"
+
+
+class ReferenceConfig(BaseSettings):
+    """Reference set configuration."""
+
+    path: str = "data/reference_sets"
+    guidelines_path: str = "data/guidelines"
+
+
+class OutputConfig(BaseSettings):
+    """Output configuration."""
+
+    dir: str = "outputs"
+    format: str = "png"
+    save_iterations: bool = True
+    save_prompts: bool = True
+    save_metadata: bool = True
+
+
+class Settings(BaseSettings):
+    """Main PaperBanana settings, loaded from env vars and config files."""
+
+    # Provider settings
+    vlm_provider: str = Field(default="gemini", alias="VLM_PROVIDER")
+    vlm_model: str = Field(default="gemini-2.5-flash-lite", alias="VLM_MODEL")  # was: gemini-2.0-flash (deprecated 2026-06-01)
+    image_provider: str = Field(default="google_imagen", alias="IMAGE_PROVIDER")
+    image_model: str = Field(default="gemini-3-pro-image-preview", alias="IMAGE_MODEL")
+
+    # Per-agent VLM model overrides (each falls back to vlm_model if None)
+    # 2026-05 recommendation: cheap-tier agents fall back, expensive agents pin specific tier.
+    vlm_model_optimizer: Optional[str] = Field(default=None, alias="VLM_MODEL_OPTIMIZER")
+    vlm_model_retriever: Optional[str] = Field(default=None, alias="VLM_MODEL_RETRIEVER")
+    vlm_model_stylist: Optional[str] = Field(default=None, alias="VLM_MODEL_STYLIST")
+    vlm_model_planner: Optional[str] = Field(default="gemini-3.1-pro-preview", alias="VLM_MODEL_PLANNER")
+    vlm_model_visualizer: Optional[str] = Field(default="gemini-2.5-flash", alias="VLM_MODEL_VISUALIZER")
+    vlm_model_critic: Optional[str] = Field(default="gemini-3.1-pro-preview", alias="VLM_MODEL_CRITIC")
+
+    # Pipeline settings
+    num_retrieval_examples: int = 10
+    refinement_iterations: int = 3
+    auto_refine: bool = False
+    max_iterations: int = 30
+    optimize_inputs: bool = False
+    output_resolution: str = "2k"
+    seed: Optional[int] = None
+    exemplar_retrieval_enabled: bool = False
+    exemplar_retrieval_endpoint: Optional[str] = None
+    exemplar_retrieval_mode: ExemplarRetrievalMode = "external_then_rerank"
+    exemplar_retrieval_top_k: int = 10
+    exemplar_retrieval_timeout_seconds: float = 20.0
+    exemplar_retrieval_max_retries: int = 2
+
+    # Reference settings
+    reference_set_path: str = "data/reference_sets"
+    guidelines_path: str = "data/guidelines"
+
+    # Cache settings
+    cache_dir: Optional[str] = Field(default=None, alias="PAPERBANANA_CACHE_DIR")
+
+    # Output settings
+    output_dir: str = "outputs"
+    output_format: OutputFormat = "png"
+    save_iterations: bool = True
+    save_prompts: bool = True
+
+    # API Keys (loaded from environment)
+    google_api_key: Optional[str] = Field(default=None, alias="GOOGLE_API_KEY")
+    openrouter_api_key: Optional[str] = Field(default=None, alias="OPENROUTER_API_KEY")
+    openai_api_key: Optional[str] = Field(default=None, alias="OPENAI_API_KEY")
+    anthropic_api_key: Optional[str] = Field(default=None, alias="ANTHROPIC_API_KEY")
+    google_base_url: Optional[str] = Field(default=None, alias="GOOGLE_BASE_URL")
+    google_vlm_model: Optional[str] = Field(default=None, alias="GOOGLE_VLM_MODEL")
+    google_image_model: Optional[str] = Field(default=None, alias="GOOGLE_IMAGE_MODEL")
+    openai_base_url: str = Field(default="https://api.openai.com/v1", alias="OPENAI_BASE_URL")
+    openai_vlm_model: Optional[str] = Field(default=None, alias="OPENAI_VLM_MODEL")
+    openai_image_model: Optional[str] = Field(default=None, alias="OPENAI_IMAGE_MODEL")
+
+    # AWS Bedrock settings
+    aws_region: str = Field(default="us-east-1", alias="AWS_REGION")
+    aws_profile: Optional[str] = Field(default=None, alias="AWS_PROFILE")
+    bedrock_vlm_model: Optional[str] = Field(default=None, alias="BEDROCK_VLM_MODEL")
+    bedrock_image_model: Optional[str] = Field(default=None, alias="BEDROCK_IMAGE_MODEL")
+
+    @property
+    def effective_vlm_model(self) -> str:
+        """Return the VLM model for the active provider."""
+        if self.vlm_provider == "gemini" and self.google_vlm_model:
+            return self.google_vlm_model
+        if self.vlm_provider == "openai" and self.openai_vlm_model:
+            return self.openai_vlm_model
+        if self.vlm_provider == "bedrock" and self.bedrock_vlm_model:
+            return self.bedrock_vlm_model
+        return self.vlm_model
+
+    @property
+    def effective_image_model(self) -> str:
+        """Return the image model for the active provider."""
+        if self.image_provider == "google_imagen" and self.google_image_model:
+            return self.google_image_model
+        if self.image_provider == "openai_imagen" and self.openai_image_model:
+            return self.openai_image_model
+        if self.image_provider == "bedrock_imagen" and self.bedrock_image_model:
+            return self.bedrock_image_model
+        return self.image_model
+
+    # SSL
+    skip_ssl_verification: bool = Field(default=False, alias="SKIP_SSL_VERIFICATION")
+
+    _AGENT_SLOTS: ClassVar[tuple[str, ...]] = (
+        "optimizer", "retriever", "stylist", "planner", "visualizer", "critic",
+    )
+
+    def resolved_vlm_model(self, agent: str) -> str:
+        """Return the model name to use for the given agent.
+
+        Resolution order:
+        1. The per-agent override ``vlm_model_<agent>`` if set
+        2. The global ``vlm_model`` (raw user-facing knob)
+
+        Note: this deliberately uses ``vlm_model`` rather than the
+        provider-resolved ``effective_vlm_model``. Per-agent overrides are
+        intended as a user-facing customization layer; provider-specific
+        overrides such as ``google_vlm_model`` apply only to the legacy
+        single-VLM path in :class:`ProviderRegistry.create_vlm`. If a future
+        feature needs per-agent + provider-resolved fallback, change this
+        method and update the pipeline injection in Task 4 together.
+        """
+        if agent not in self._AGENT_SLOTS:
+            raise ValueError(f"unknown agent {agent!r}; expected one of {self._AGENT_SLOTS}")
+        override = getattr(self, f"vlm_model_{agent}")
+        return override or self.vlm_model
+
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "extra": "ignore",
+        "populate_by_name": True,
+    }
+
+    @field_validator("output_format", mode="before")
+    @classmethod
+    def validate_output_format(cls, v: Any) -> str:
+        """Validate output_format is png, jpeg, or webp (case-insensitive)."""
+        if v is None:
+            return "png"
+        v = str(v).lower()
+        if v not in ("png", "jpeg", "webp"):
+            raise ValueError(f"output_format must be png, jpeg, or webp. Got: {v}")
+        return v
+
+    @field_validator("exemplar_retrieval_top_k")
+    @classmethod
+    def validate_exemplar_retrieval_top_k(cls, v: int) -> int:
+        """Validate exemplar_retrieval_top_k is positive."""
+        if v < 1:
+            raise ValueError("exemplar_retrieval_top_k must be >= 1")
+        return v
+
+    @field_validator("exemplar_retrieval_timeout_seconds")
+    @classmethod
+    def validate_exemplar_retrieval_timeout(cls, v: float) -> float:
+        """Validate exemplar_retrieval_timeout_seconds is positive."""
+        if v <= 0:
+            raise ValueError("exemplar_retrieval_timeout_seconds must be > 0")
+        return v
+
+    @field_validator("exemplar_retrieval_max_retries")
+    @classmethod
+    def validate_exemplar_retrieval_max_retries(cls, v: int) -> int:
+        """Validate exemplar_retrieval_max_retries is non-negative."""
+        if v < 0:
+            raise ValueError("exemplar_retrieval_max_retries must be >= 0")
+        return v
+
+    @classmethod
+    def from_yaml(cls, config_path: str | Path, **overrides: Any) -> Settings:
+        """Load settings from a YAML config file with optional overrides."""
+        config_path = Path(config_path)
+        if config_path.exists():
+            with open(config_path) as f:
+                yaml_config = yaml.safe_load(f) or {}
+        else:
+            yaml_config = {}
+
+        flat = _flatten_yaml(yaml_config)
+        flat.update(overrides)
+        return cls(**flat)
+
+
+def _flatten_yaml(config: dict, prefix: str = "") -> dict:
+    """Flatten nested YAML config into flat settings keys."""
+    flat = {}
+    key_map = {
+        "vlm.provider": "vlm_provider",
+        "vlm.model": "vlm_model",
+        "vlm.per_agent.optimizer": "vlm_model_optimizer",
+        "vlm.per_agent.retriever": "vlm_model_retriever",
+        "vlm.per_agent.stylist": "vlm_model_stylist",
+        "vlm.per_agent.planner": "vlm_model_planner",
+        "vlm.per_agent.visualizer": "vlm_model_visualizer",
+        "vlm.per_agent.critic": "vlm_model_critic",
+        "image.provider": "image_provider",
+        "image.model": "image_model",
+        "pipeline.num_retrieval_examples": "num_retrieval_examples",
+        "pipeline.refinement_iterations": "refinement_iterations",
+        "pipeline.auto_refine": "auto_refine",
+        "pipeline.max_iterations": "max_iterations",
+        "pipeline.optimize_inputs": "optimize_inputs",
+        "pipeline.output_resolution": "output_resolution",
+        "pipeline.seed": "seed",
+        "pipeline.exemplar_retrieval_enabled": "exemplar_retrieval_enabled",
+        "pipeline.exemplar_retrieval_endpoint": "exemplar_retrieval_endpoint",
+        "pipeline.exemplar_retrieval_mode": "exemplar_retrieval_mode",
+        "pipeline.exemplar_retrieval_top_k": "exemplar_retrieval_top_k",
+        "pipeline.exemplar_retrieval_timeout_seconds": "exemplar_retrieval_timeout_seconds",
+        "pipeline.exemplar_retrieval_max_retries": "exemplar_retrieval_max_retries",
+        "reference.path": "reference_set_path",
+        "reference.guidelines_path": "guidelines_path",
+        "output.dir": "output_dir",
+        "output.format": "output_format",
+        "output.save_iterations": "save_iterations",
+        "output.save_prompts": "save_prompts",
+    }
+
+    def _recurse(d: dict, prefix: str = "") -> None:
+        for k, v in d.items():
+            full_key = f"{prefix}.{k}" if prefix else k
+            if isinstance(v, dict):
+                _recurse(v, full_key)
+            else:
+                if full_key in key_map:
+                    flat[key_map[full_key]] = v
+
+    _recurse(config)
+    return flat

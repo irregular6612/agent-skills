@@ -1,0 +1,18 @@
+profile_name: juhyeon-en-academic
+owner: self                 # 스킬 사용자 본인
+default: true               # 영어 학술 글이면 먼저 제안
+created: 2026-10-02
+updated: 2026-10-02
+sample:
+  source: "Public/4-2/AGI/voice_rewrite/v0_context.md [2] (HW1 2쪽 도입 문단)"
+  genre: English academic homework (AGI course essay, 도입 문단)
+  language: en
+  writer_l1: ko
+  words: 135                # stage1_counts.py 기준. "약 170단어"로 전달됐으나 실측 135
+  sentences: 14
+  paragraphs: 1
+  edited_or_ai_assisted: no
+  holdout: none             # 300단어 미만 → 검증 불가
+analysis: "stage1 fable·gpt-6-astra·opus → 병합 fable / stage2 opus·gpt-6-astra → 조립 fable (길이 상한 적용 재조립)"
+reliability: low            # 135단어 단일 문단
+notes: "양의 습관은 대부분 T/O, 문단 구조 판단 불가. Never 목록이 가장 믿을 만함. 300단어 이상 본인 영어 글이 생기면 재분석."

@@ -1,0 +1,22 @@
+{
+  "name": "ssot-pinned",
+  "plugins": [
+    {
+      "name": "superpowers",
+      "version": "6.4.2",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/obra/superpowers.git",
+        "sha": "8ca22dba9a94f28898bbce59f2537ff4d87c747d"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ],
+  "interface": {
+    "displayName": "agent-skills pinned upstream"
+  }
+}

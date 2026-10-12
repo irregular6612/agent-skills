@@ -1,0 +1,17 @@
+{
+  "name": "ssot-pinned",
+  "plugins": [
+    {
+      "name": "superpowers",
+      "version": "6.4.1",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/obra/superpowers.git",
+        "sha": "5bf4e78011075bcfc0dc295f0724994cd123ee71"
+      }
+    }
+  ],
+  "owner": {
+    "name": "agent-skills"
+  }
+}

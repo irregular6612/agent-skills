@@ -1,0 +1,35 @@
+{
+  "by_harness": {
+    "claude": {
+      "CLAUDE.md": 1,
+      "agents": 34,
+      "commands": 2,
+      "hooks": 1,
+      "skills": 30
+    },
+    "codex": {
+      "AGENTS.md": 1,
+      "agents": 34,
+      "hooks": 1,
+      "prompts": 2,
+      "skills": 35
+    }
+  },
+  "denylisted_destinations": 0,
+  "invalid_sources": 0,
+  "link_count": 141,
+  "native_plugin_vendoring": false,
+  "shared_skill_names": [
+    "scientific-schematics",
+    "scientific-slides",
+    "scientific-writing"
+  ],
+  "source_count": 136,
+  "source_instruction_sha256": {
+    "AGENTS.md": "b1979127c731935573213a111cc0e38ec88b98c1dce7ae0969d67ce52af22163",
+    "CLAUDE.md": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "status": "CONTRACT_VALIDATED",
+  "stdlib_runtime": true,
+  "templates_have_no_machine_or_project_trust_keys": true
+}

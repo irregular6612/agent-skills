@@ -1,0 +1,70 @@
+{
+  "task": "t_8f75d661",
+  "status": "EXECUTION_VERIFIED_MIGRATION_INVENTORY_ONLY",
+  "original_goal_complete": false,
+  "repo_path": "/Users/bagjuhyeon/Workspace/agent-skills",
+  "repo_artifacts": "/Users/bagjuhyeon/Workspace/agent-skills/docs/inventory/t_8f75d661",
+  "summary": {
+    "asset_count": 149,
+    "by_harness_category": {
+      "claude/skills": 41,
+      "claude/agents": 36,
+      "claude/commands": 2,
+      "codex/skills": 36,
+      "codex/agents": 34
+    },
+    "ownership": {
+      "undetermined": 8,
+      "user_owned": 18,
+      "excluded_preserve": 1,
+      "external_dependency": 14,
+      "user_packaged_managed": 108
+    },
+    "broken_asset_symlinks": [],
+    "parity_same_name_count": 19,
+    "different_name_exact_skill_groups": 0
+  },
+  "managed_readback": {
+    "claude": {
+      "record_count": 507,
+      "matched": 507
+    },
+    "codex": {
+      "record_count": 850,
+      "matched": 850
+    }
+  },
+  "checks": {
+    "placeholder_count": 0,
+    "all_repo_file_hash_mode_mtime_links_preserved": true,
+    "preservation_snapshot": "migration completion before Git stat-cache refresh",
+    "post_migration_mutable_metadata": ".git/index stat cache changed; 433 stage mode/object/path entries equal HEAD; no content edits",
+    "git_equal": {
+      "branch": true,
+      "head": true,
+      "stash": true,
+      "refs": true,
+      "origin": true,
+      "origin_config": true,
+      "status": true,
+      "fsck": true
+    },
+    "home_assets_replaced_or_removed": false,
+    "superpowers_duplicates_untouched": true,
+    "config_registry_unchanged": true
+  },
+  "artifacts": {
+    "ICLOUD-MOVE-HOME-INVENTORY.md": "a50fe1647ade785bd56aaa0015fca8bd85f9f154b39d4fd2ddf715209d84b552",
+    "INDEX-REFRESH-READBACK.json": "ba651282ec07d6bf60047faa4e90f2f39b26f6cff107fcbb0dd5af1729bbb4b5",
+    "HOME-INVENTORY.json": "f352de123c6f1972cc0dabaffba1ff4f7018f7833574283e0f8f9f53249de526",
+    "NATIVE-PLUGIN-INVENTORY.json": "0cde1a4b2ef62592bf626b2fe0febacc99983e5502e32534aa212db25598c548",
+    "MANAGED-STATE-READBACK.json": "bfeccd0a3318759c12cf8c9267051db9daa667127a8bc6553548ea3ce5036006",
+    "MOVE-VERIFICATION.json": "afc433b6797bf202fb57a1bc7b627afcc902da4b7d1bc6b4bd5a031b7ebf520f",
+    "repo-audit-before.json": "3bc53889e2a14daf8f8c7ceb1edac53c5d37c356974537833e3730fd12b95124",
+    "repo-audit-after.json": "fa25a3cc97c12d3eb07fa90721dcb817fbbbc9713f828bfe129871c79f28e123"
+  },
+  "source_archive": "/Users/bagjuhyeon/.hermes/kanban/boards/agent-skills/attachments/t_064fc190/project-corrective-t064fc190.tar.gz",
+  "source_archive_sha256": "e719092b967e330253d7c776c538ed2fbb3cb08df592749d734d1ec7bee012c2",
+  "next_owner": "dev-engineer",
+  "next_task": "t_56a6df31"
+}

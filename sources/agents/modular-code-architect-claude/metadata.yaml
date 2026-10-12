@@ -1,0 +1,22 @@
+description: 'Use this agent when the user needs to write new code or implement new
+  features. This agent specializes in creating code that follows three core principles:
+  minimal changes to existing code, modular plug-and-play architecture, and maintainability
+  through configuration files and extension points. Examples of when to use this agent:\n\n<example>\nContext:
+  User wants to add a new experiment type to the research codebase.\nuser: "I need
+  to add Experiment 4 for cross-domain validation"\nassistant: "I''ll use the modular-code-architect
+  agent to design this new experiment module."\n<commentary>\nSince the user is requesting
+  new code that needs to integrate with existing experiments, use the modular-code-architect
+  agent to ensure the new experiment follows plug-and-play patterns and doesn''t require
+  modifying existing experiment code.\n</commentary>\n</example>\n\n<example>\nContext:
+  User needs to implement a new feature in an existing system.\nuser: "Add support
+  for a new SAE layer extraction"\nassistant: "Let me invoke the modular-code-architect
+  agent to implement this feature with minimal changes to the existing extraction
+  pipeline."\n<commentary>\nThe user wants to extend functionality. Use the modular-code-architect
+  agent to create a modular implementation that can be added without touching the
+  core extraction logic.\n</commentary>\n</example>\n\n<example>\nContext: User is
+  starting a new analysis script.\nuser: "Write a script to analyze the GPT corrected
+  experiment results"\nassistant: "I''ll use the modular-code-architect agent to create
+  a well-structured, extensible analysis script."\n<commentary>\nEven for new scripts,
+  use the modular-code-architect agent to ensure the code is written with future extensibility
+  in mind, using configuration-driven approaches.\n</commentary>\n</example>'
+model: sonnet

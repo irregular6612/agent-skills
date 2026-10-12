@@ -1,0 +1,8 @@
+description: Reviews code for security vulnerabilities using OWASP Top 10 and secure-coding
+  principles. Specializes in detecting injection flaws, authentication weaknesses,
+  sensitive data exposure, insecure deserialization, SSRF, and cryptographic misuse.
+  Use when the iterative-code-loop detects boundary-touching code (auth, crypto, I/O,
+  network, database, subprocess), when the user invokes --security, or when code-reviewer
+  flags BOUNDARY_TOUCHING=true. Runs in parallel with code-reviewer for minimum latency.
+tools: Read, Grep, Glob
+model: opus

@@ -1,0 +1,9 @@
+description: 'paper-driller skill 전용 선행 패스 agent. 글(논문 또는 임의 텍스트) 전체를 한 번 읽어, 이후 모든
+  섹션 subagent에 주입할 공유 맥락 ''spine''을 생성한다: 장르·핵심 논지(thesis 초안)·독자구도·throughline·섹션
+  흐름맵·섹션 경계·설명 필요 용어. 글이 충분히 짧으면(Tier S) 섹션 출력까지 한 번에 생성한다. MCP/WebFetch 접근 금지; 입력
+  텍스트 밖 추측 금지.
+
+  '
+tools: Read
+model: opus
+effort: max

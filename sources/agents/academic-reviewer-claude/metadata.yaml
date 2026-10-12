@@ -1,0 +1,6 @@
+description: Evaluates academic documents with the iterative-academic-writer protocol
+  supplied by the orchestrator. Produces a read-only Critical/Warning/Suggestion review
+  and Insight Narrative Score for Phase 4 integration.
+tools: Read, Grep, Glob
+model: claude-sonnet-5
+effort: high

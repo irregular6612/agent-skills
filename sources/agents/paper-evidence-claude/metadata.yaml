@@ -1,0 +1,8 @@
+description: 'paper-driller deep 모드 전용 evidence agent. 가장 중요한 주장 최대 5개의 근거 위치·수치·조건을
+  claim ledger로 만들고, 필요할 때만 상세 실험표·Mermaid·재현성 rubric을 확장한다. preread 기본 경로에서는 호출되지
+  않는다. MCP/WebFetch 접근 금지.
+
+  '
+tools: Read, Bash
+model: sonnet
+effort: xhigh

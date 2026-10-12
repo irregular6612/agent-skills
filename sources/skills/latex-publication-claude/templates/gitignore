@@ -1,0 +1,40 @@
+# === LaTeX build artifacts (3개 구 스킬 합집합) ===
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.log
+*.lot
+*.out
+*.run.xml
+*.synctex.gz
+*.toc
+
+# xelatex 2단계 중간 산출물 (latexmk -xelatex → .xdv → xdvipdfmx)
+*.xdv
+
+# === Beamer artifacts ===
+*.nav
+*.snm
+*.vrb
+
+# === PDF output (Overleaf/로컬에서 컴파일) ===
+# PDF를 포함하고 싶으면 아래 줄 주석 처리
+*.pdf
+
+# === md_inject cache (NOT for Overleaf — regenerated per run) ===
+build/
+.build/
+
+# === IDE local config (NOT for Overleaf — local Cursor/VSCode only) ===
+.vscode/
+.cursor/
+
+# === OS / Editor noise ===
+.DS_Store
+Thumbs.db
+*.swp
+*~

@@ -1,0 +1,21 @@
+{
+  "upstream": "t_064fc190 corrective approved snapshot; t_8f75d661 inventory",
+  "excluded": [
+    "agentcat-usage",
+    "brandkit",
+    "design-taste-frontend",
+    "full-output-enforcement",
+    "image-to-code",
+    "industrial-brutalist-ui",
+    "lost-me",
+    "minimalist-ui",
+    "redesign-existing-projects"
+  ],
+  "variant_policy": "Content differences retain harness overlays, not guessed newest from copied mtimes. Codex TOML native agents are explicit adapters. Exact full-tree equality shares one source.",
+  "links": 141,
+  "shared_skill_names": [
+    "scientific-schematics",
+    "scientific-slides",
+    "scientific-writing"
+  ]
+}

@@ -28,3 +28,19 @@ outputs/
 # vendored upstream clone — re-fetch instead of vendoring
 # https://github.com/karpathy/autoresearch
 claude-code/karpathy/autoresearch/
+
+# local installer/test state — never publish
+.test-tmp/
+.setup-venv/
+.agent-skills-setup/
+._*
+*.sqlite
+*.sqlite3
+*.db
+auth.json
+history.jsonl
+sessions/
+projects/
+memory/
+cache/
+logs/

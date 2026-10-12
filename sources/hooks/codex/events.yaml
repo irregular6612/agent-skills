@@ -1,0 +1,6 @@
+events:
+  claude: []
+  codex:
+  - PermissionRequest
+  - Stop
+command: target-adapter; see docs/coverage.md

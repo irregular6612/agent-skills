@@ -1,0 +1,4 @@
+description: humanize 스킬 Strict 모드 전용 — 원문과 윤문본을 의미 단위로 대조해 "내용이 보존됐는가"를 검증. KO/EN
+  모두 지원 (language 파라미터로 분기). 사실·주장·수치·고유명사·인용·인과관계·순서가 한 글자라도 훼손됐는지 탐지해 edit 단위로 롤백
+  지시. 윤문가의 철칙(의미 불변)을 수호하는 최후의 방어선. 단독 호출 금지 — 반드시 humanize 스킬 orchestrator를 통해 호출.
+model: opus

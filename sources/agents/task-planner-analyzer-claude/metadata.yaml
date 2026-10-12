@@ -1,0 +1,22 @@
+description: 'Use this agent when the user provides a new task request that requires
+  planning before execution. This includes feature development, bug fixes, refactoring,
+  or any complex coding task. The agent should be invoked BEFORE starting actual implementation
+  to ensure all requirements and constraints are understood.\n\nExamples:\n<example>\nContext:
+  User requests a new feature implementation.\nuser: "Add a caching layer to the API
+  endpoints"\nassistant: "I''ll use the task-planner-analyzer agent to analyze the
+  codebase structure and create a comprehensive todo list with constraints before
+  implementing."\n<commentary>\nSince this is a new feature request that requires
+  understanding the existing codebase structure and identifying constraints, use the
+  task-planner-analyzer agent first.\n</commentary>\n</example>\n<example>\nContext:
+  User asks for a complex refactoring task.\nuser: "Refactor the data pipeline to
+  support streaming"\nassistant: "Let me invoke the task-planner-analyzer agent to
+  scan the project structure, identify all affected files, and list out the constraints
+  and dependencies we need to consider."\n<commentary>\nRefactoring tasks need thorough
+  planning. The task-planner-analyzer will examine the folder structure, identify
+  related components, and create a checklist of requirements.\n</commentary>\n</example>\n<example>\nContext:
+  User describes a multi-step implementation task.\nuser: "새로운 실험을 위해 experiment_4.py를
+  만들어줘"\nassistant: "먼저 task-planner-analyzer agent를 사용해서 기존 실험 파일들의 구조를 분석하고, 필요한
+  제약조건과 todo list를 정리하겠습니다."\n<commentary>\nWhen creating new files that need to follow
+  existing patterns, the task-planner-analyzer should first examine similar files
+  and establish constraints.\n</commentary>\n</example>'
+model: sonnet

@@ -1,0 +1,168 @@
+# Paper Understand — state.yaml 스키마
+#
+# 저장 위치: {vault_root}/_wiki/study/papers/{paper-slug}/state.yaml   (비공개)
+#
+# 목적: 다음 세션이 이 파일만 읽고 정확히 이어갈 수 있게 한다.
+# 원칙
+# - 전체 대화록을 넣지 않는다. 상태 재구성에 필요한 압축 정보만.
+# - mastery 승격에는 evidence 가 반드시 있어야 한다.
+# - 확인하지 못한 값은 지어내지 말고 "N/A" 또는 "[위치 미확인]".
+# - notebooklm 블록에 쿠키·토큰·전체 응답 본문을 넣지 않는다. 압축 provenance만.
+
+schema: paper-understand-state
+version: 1
+
+required:
+  - paper
+  - session
+  - objectives
+  - mastery
+  - next
+
+# ---------------------------------------------------------------
+paper:
+  slug: "example-paper-slug"          # 디렉터리 이름과 동일
+  title: "Example Title As Printed"   # 원문 그대로
+  note_path: "Public/AI/Papers/Example Title.md"   # vault_root 상대. 없으면 "N/A"
+  arxiv_id: "2607.01234"              # 없으면 "N/A"
+  doi: "N/A"
+  url: "https://arxiv.org/abs/2607.01234"
+  source_coverage: fulltext           # fulltext | section-extract | abstract-only | unknown
+  source_coverage_note: "노트 frontmatter 값 그대로. 임의로 올리지 않는다."
+  fulltext_available: true            # 원문을 실제로 열 수 있는가
+  radar_id: "R-a1b2c3d4"              # paper-radar handoff로 왔을 때만. 아니면 "N/A"
+
+# ---------------------------------------------------------------
+session:
+  goal: "사용자가 말한 학습 목적 (원문 그대로)"
+  mode: standard                      # quick | standard | deep
+  started: "2026-08-02"
+  last_updated: "2026-08-02"
+  sessions_count: 1
+  status: paused                      # paused | completed-for-mode | blocked-by-source
+  blocked_reason: "N/A"               # status가 blocked-by-source일 때 필수
+  phase: 4                            # 1..8
+
+# ---------------------------------------------------------------
+objectives:                           # 3–7개. 선수 관계 순서대로.
+  - id: obj-1
+    statement: "…를 설명할 수 있다"    # 검증 가능한 문장
+    prereq: []                        # 선수 objective id 목록
+    source_location: "Section 3.1"    # 확인 불가면 "[위치 미확인]"
+  - id: obj-2
+    statement: "…와 …를 구별할 수 있다"
+    prereq: [obj-1]
+    source_location: "Figure 4"
+
+# ---------------------------------------------------------------
+mastery:
+  # 상태는 순서가 있다:
+  #   unseen → recognized → explained → discriminated → applied → retained
+  # 승격 규칙
+  #   explained      : teach-back 통과 (사용자 자신의 말)
+  #   discriminated  : 인접 개념과의 구별 질문 통과
+  #   applied        : 논문에 없는 새 상황의 전이 질문 통과
+  #   retained       : 이후 다른 세션의 인출 질문에서 재차 통과 (같은 세션 내 승격 금지)
+  # evidence 없는 승격은 금지. 애매하면 낮은 상태로 둔다.
+  - objective: obj-1
+    state: applied
+    evidence: "사용자가 KV cache가 커지는 이유를 자기 말로 설명하고, batch 크기가 바뀌는 새 상황에 적용함"
+    evidence_turn: "2026-08-02 세션 4번째 응답"
+    attempts: 2
+    last_reviewed: "2026-08-02"
+  - objective: obj-2
+    state: explained
+    evidence: "teach-back 통과. 구별 질문은 아직"
+    attempts: 1
+    last_reviewed: "2026-08-02"
+
+# ---------------------------------------------------------------
+misconceptions:
+  - id: mc-1
+    objective: obj-2
+    what: "사용자가 믿고 있던 잘못된 모델 (구체적으로)"
+    correction: "실제로는 무엇인가"
+    source_location: "Section 4.2"     # 확인 불가면 "[위치 미확인]"
+    status: open                       # open | addressed | resolved
+    # resolved 는 나중 세션에서 다시 확인했을 때만 준다
+
+# ---------------------------------------------------------------
+open_questions:
+  - id: oq-1
+    question: "논문도 답하지 않은 질문"
+    origin: paper                      # paper | tutor | user
+    # origin 을 반드시 구분한다. 튜터가 만든 질문을 논문의 열린 질문으로 기록하지 않는다.
+
+# ---------------------------------------------------------------
+evidence_audit:                        # Phase 5 결과. abstract-only 면 빈 목록 + skipped_reason
+  skipped_reason: "N/A"
+  items:
+    - claim: "저자의 주장 (원문 표현 기준)"
+      location: "Table 2"              # 확인 불가면 "[위치 미확인]"
+      observation: "표가 실제로 보여주는 것"
+      interpretation: "저자가 그것으로 주장하는 것"
+      claim_origin: author-stated      # author-stated | tutor-inference | unknown
+      user_assessment: "사용자가 근거 강도를 평가한 말의 요지"
+
+# ---------------------------------------------------------------
+next:
+  last_question: "직전에 사용자에게 던진 질문 원문"
+  awaiting_answer: true
+  next_step: "obj-2의 구별 질문부터"
+  resume_command: "/paper-understand Public/AI/Papers/Example Title.md"
+
+# ---------------------------------------------------------------
+review_prompts:
+  # 나중 인출용. 자동 스케줄링은 없다 — 다음 세션 시작 시 여기서 꺼내 낸다.
+  - id: rp-1
+    objective: obj-1
+    prompt: "정의 재생이 아니라 적용·구별·반례를 묻는 문제"
+    answer_sketch: "정답의 요지"
+    source_location: "Section 3.1"
+    asked_count: 0
+    last_result: "N/A"                 # correct | incomplete | wrong | N/A
+    # last_result가 correct이고 이전 세션에서 만들어진 문제라면
+    # 해당 objective를 retained 로 승격할 수 있다.
+
+# ---------------------------------------------------------------
+wiki_links:                            # 대조·전이에 쓴 관련 노트
+  - path: "Public/AI/Papers/Related Note.md"
+    relation: "같은 메커니즘의 다른 설명"
+
+# ---------------------------------------------------------------
+consent:
+  # 기본은 전부 false. 사용자가 명시적으로 허락했을 때만 true.
+  update_reading_status: false
+  write_to_public_note: false
+  # true 로 바꾼 근거(사용자 발화)를 함께 남긴다
+  granted_note: "N/A"
+
+# ---------------------------------------------------------------
+notebooklm:
+  # 선택적 가속기. 계약은 references/notebooklm-integration.md.
+  # 이 블록이 없거나 mode: off 여도 튜터링은 정상 동작한다.
+  mode: auto                           # auto | on | off   (기본 auto)
+  backend: notebooklm-py-unofficial    # 비공식·문서화되지 않은 웹 API 클라이언트
+  client_version: "0.8.0rc1 (7d0aa42c)"
+  auth_verified_at: "N/A"              # auth check --test --json 이 status ok + token_fetch true 였던 시각
+  notebook_id: "N/A"
+  notebook_title: "N/A"                # "Paper — {제목} [{canonical_key}]"
+  canonical_key: "N/A"                 # arxiv_id → doi → 정규화 제목 sha256 앞 12자리
+  preread_source_id: "N/A"
+  preread_sha256: "N/A"                # 재업로드 dedup 판정용
+  original_source_id: "N/A"
+  original_sha256_or_url: "N/A"        # 로컬 PDF면 sha256, 검증된 canonical URL이면 URL 원문
+  source_sync_status: disabled         # complete | preread-only | pending | failed | disabled
+  #   complete      : preread + 원문 두 소스가 모두 ready
+  #   preread-only  : 원문을 보수적으로 해결하지 못함. 원문이 있다고 말하지 않는다
+  #   pending       : source wait 미완(exit 2 포함). 질의 금지
+  #   failed        : 업로드/처리 실패
+  #   disabled      : mode off 이거나 CLI/인증 없음
+  last_synced_at: "N/A"
+  last_query_at: "N/A"
+  conversation_id: "N/A"               # ask --json 의 conversation_id
+  last_error: "N/A"                    # redact 된 한 줄 사유. 쿠키·토큰·응답 본문 금지
+  cited_source_ids: []                 # 마지막 질의가 참조한 source ID (스니펫 전문 아님)
+  unresolved: []                       # 원문 재확인이 필요한 NotebookLM 합성 항목 요지
+  # 업로드 대상은 정확히 둘뿐이다: 해당 논문 원문 + 그 논문의 canonical preread.
+  # learner-profile / state.yaml / 세션 노트 / 사용자 답변 / 다른 Wiki 노트는 업로드 금지.

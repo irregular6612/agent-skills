@@ -1,0 +1,315 @@
+{
+  "limitations": [
+    "Historical reference trees remain non-active copies; only manifest-listed sources are installed.",
+    "Semantic unification of genuinely different harness snapshots is not asserted.",
+    "External taste-skill immutable provenance remains unresolved and existing links are preserved."
+  ],
+  "variants": [
+    {
+      "changed_files": [
+        "SKILL.md"
+      ],
+      "decision": "retain explicit harness overlay: approved snapshot content differs; use corrective archive provenance rather than copied mtime to select latest approved variant",
+      "harness_path_and_label_only": false,
+      "name": "autoskill",
+      "shared_original": false,
+      "skill_md_equal": false,
+      "sources": {
+        "claude": "sources/skills/autoskill-claude",
+        "codex": "sources/skills/autoskill-codex"
+      }
+    },
+    {
+      "changed_files": [
+        "SKILL.md"
+      ],
+      "decision": "retain explicit harness overlay: approved snapshot content differs; use corrective archive provenance rather than copied mtime to select latest approved variant",
+      "harness_path_and_label_only": false,
+      "name": "citation-management",
+      "shared_original": false,
+      "skill_md_equal": false,
+      "sources": {
+        "claude": "sources/skills/citation-management-claude",
+        "codex": "sources/skills/citation-management-codex"
+      }
+    },
+    {
+      "changed_files": [
+        "SKILL.md",
+        "agents/humanize-fidelity-auditor.md",
+        "agents/humanize-ko-detector.md",
+        "agents/humanize-ko-monolith.md",
+        "agents/humanize-ko-rewriter.md",
+        "agents/humanize-naturalness-reviewer.md",
+        "agents/humanize-taxonomist.md",
+        "agents/humanize-web-architect.md",
+        "references/workspace.md"
+      ],
+      "decision": "retain explicit harness overlay: approved snapshot content differs; use corrective archive provenance rather than copied mtime to select latest approved variant",
+      "harness_path_and_label_only": false,
+      "name": "humanize",
+      "shared_original": false,
+      "skill_md_equal": false,
+      "sources": {
+        "claude": "sources/skills/humanize-claude",
+        "codex": "sources/skills/humanize-codex"
+      }
+    },
+    {
+      "changed_files": [
+        "SKILL.md"
+      ],
+      "decision": "retain explicit harness overlay: approved snapshot content differs; use corrective archive provenance rather than copied mtime to select latest approved variant",
+      "harness_path_and_label_only": false,
+      "name": "hwpx",
+      "shared_original": false,
+      "skill_md_equal": false,
+      "sources": {
+        "claude": "sources/skills/hwpx-claude",
+        "codex": "sources/skills/hwpx-codex"
+      }
+    },
+    {
+      "changed_files": [
+        "SKILL.md",
+        "evals/check_sync.sh",
+        "evals/evals.json",
+        "references/changelog.md",
+        "references/critic-review-protocol.md",
+        "references/fact-checking-guide.md",
+        "references/section-writing-guide.md"
+      ],
+      "decision": "retain explicit harness overlay: approved snapshot content differs; use corrective archive provenance rather than copied mtime to select latest approved variant",
+      "harness_path_and_label_only": false,
+      "name": "iterative-academic-writer",
+      "shared_original": false,
+      "skill_md_equal": false,
+      "sources": {
+        "claude": "sources/skills/iterative-academic-writer-claude",
+        "codex": "sources/skills/iterative-academic-writer-codex"
+      }
+    },
+    {
+      "changed_files": [
+        "SKILL.md"
+      ],
+      "decision": "retain explicit harness overlay: approved snapshot content differs; use corrective archive provenance rather than copied mtime to select latest approved variant",
+      "harness_path_and_label_only": false,
+      "name": "latex-posters",
+      "shared_original": false,
+      "skill_md_equal": false,
+      "sources": {
+        "claude": "sources/skills/latex-posters-claude",
+        "codex": "sources/skills/latex-posters-codex"
+      }
+    },
+    {
+      "changed_files": [
+        "SKILL.md",
+        "agents/md-fragment-converter-coordinator.md",
+        "agents/md-tex-injection-planner.md",
+        "agents/tex-fragment-format-auditor.md",
+        "commands/build.md",
+        "commands/inject.md",
+        "commands/setup.md",
+        "commands/structure.md",
+        "evals/evals.json",
+        "examples/korean-test.tex",
+        "references/bibtex-rules.md",
+        "references/common-issues.md",
+        "references/engine-selection.md",
+        "references/korean-package-comparison.md",
+        "references/multi-project-layout.md",
+        "references/overleaf-compat-checklist.md",
+        "references/overleaf-parity.md",
+        "scripts/compile.sh",
+        "scripts/diagnose.py",
+        "scripts/gen_vscode_settings.sh",
+        "scripts/structure_split.py",
+        "scripts/sync_plugin.sh",
+        "scripts/texlive_env.sh",
+        "scripts/verify_build.sh",
+        "templates/claude-md-snippet.md",
+        "templates/gitignore",
+        "templates/latexmkrc",
+        "templates/settings.json"
+      ],
+      "decision": "retain explicit harness overlay: approved snapshot content differs; use corrective archive provenance rather than copied mtime to select latest approved variant",
+      "harness_path_and_label_only": false,
+      "name": "latex-publication",
+      "shared_original": false,
+      "skill_md_equal": false,
+      "sources": {
+        "claude": "sources/skills/latex-publication-claude",
+        "codex": "sources/skills/latex-publication-codex"
+      }
+    },
+    {
+      "changed_files": [
+        "SKILL.md"
+      ],
+      "decision": "retain explicit harness overlay: approved snapshot content differs; use corrective archive provenance rather than copied mtime to select latest approved variant",
+      "harness_path_and_label_only": false,
+      "name": "literature-review",
+      "shared_original": false,
+      "skill_md_equal": false,
+      "sources": {
+        "claude": "sources/skills/literature-review-claude",
+        "codex": "sources/skills/literature-review-codex"
+      }
+    },
+    {
+      "changed_files": [
+        "SKILL.md"
+      ],
+      "decision": "retain explicit harness overlay: approved snapshot content differs; use corrective archive provenance rather than copied mtime to select latest approved variant",
+      "harness_path_and_label_only": false,
+      "name": "markdown-mermaid-writing",
+      "shared_original": false,
+      "skill_md_equal": false,
+      "sources": {
+        "claude": "sources/skills/markdown-mermaid-writing-claude",
+        "codex": "sources/skills/markdown-mermaid-writing-codex"
+      }
+    },
+    {
+      "changed_files": [
+        "SKILL.md",
+        "engine/.env.example",
+        "engine/README.md",
+        "engine/configs/config.yaml",
+        "engine/configs/eval/benchmark.yaml",
+        "engine/configs/eval/vlm_judge.yaml",
+        "engine/configs/provider/image/google_imagen.yaml",
+        "engine/paperbanana/core/config.py"
+      ],
+      "decision": "retain explicit harness overlay: approved snapshot content differs; use corrective archive provenance rather than copied mtime to select latest approved variant",
+      "harness_path_and_label_only": false,
+      "name": "paper-banana",
+      "shared_original": false,
+      "skill_md_equal": false,
+      "sources": {
+        "claude": "sources/skills/paper-banana-claude",
+        "codex": "sources/skills/paper-banana-codex"
+      }
+    },
+    {
+      "changed_files": [
+        "SKILL.ko.md",
+        "SKILL.md"
+      ],
+      "decision": "retain explicit harness overlay: approved snapshot content differs; use corrective archive provenance rather than copied mtime to select latest approved variant",
+      "harness_path_and_label_only": false,
+      "name": "paper-digest",
+      "shared_original": false,
+      "skill_md_equal": false,
+      "sources": {
+        "claude": "sources/skills/paper-digest-claude",
+        "codex": "sources/skills/paper-digest-codex"
+      }
+    },
+    {
+      "changed_files": [
+        "SKILL.md",
+        "readme.html",
+        "references/insight-digest-spec.md",
+        "references/legacy-workflow.md",
+        "references/paper-schema.json",
+        "references/preread-v2-spec.md",
+        "references/readability-spec.md",
+        "references/templates/general-v1.md",
+        "references/workflow.md",
+        "references/zettelkasten-guide.md",
+        "scripts/validate-driller.sh"
+      ],
+      "decision": "retain explicit harness overlay: approved snapshot content differs; use corrective archive provenance rather than copied mtime to select latest approved variant",
+      "harness_path_and_label_only": false,
+      "name": "paper-driller",
+      "shared_original": false,
+      "skill_md_equal": false,
+      "sources": {
+        "claude": "sources/skills/paper-driller-claude",
+        "codex": "sources/skills/paper-driller-codex"
+      }
+    },
+    {
+      "changed_files": [
+        "SKILL.md",
+        "build_review_pdf.py"
+      ],
+      "decision": "retain explicit harness overlay: approved snapshot content differs; use corrective archive provenance rather than copied mtime to select latest approved variant",
+      "harness_path_and_label_only": false,
+      "name": "paper-readability-review",
+      "shared_original": false,
+      "skill_md_equal": false,
+      "sources": {
+        "claude": "sources/skills/paper-readability-review-claude",
+        "codex": "sources/skills/paper-readability-review-codex"
+      }
+    },
+    {
+      "changed_files": [
+        "SKILL.md"
+      ],
+      "decision": "retain explicit harness overlay: approved snapshot content differs; use corrective archive provenance rather than copied mtime to select latest approved variant",
+      "harness_path_and_label_only": false,
+      "name": "paper-section-rewrite",
+      "shared_original": false,
+      "skill_md_equal": false,
+      "sources": {
+        "claude": "sources/skills/paper-section-rewrite-claude",
+        "codex": "sources/skills/paper-section-rewrite-codex"
+      }
+    },
+    {
+      "changed_files": [
+        "SKILL.md"
+      ],
+      "decision": "retain explicit harness overlay: approved snapshot content differs; use corrective archive provenance rather than copied mtime to select latest approved variant",
+      "harness_path_and_label_only": false,
+      "name": "peer-review",
+      "shared_original": false,
+      "skill_md_equal": false,
+      "sources": {
+        "claude": "sources/skills/peer-review-claude",
+        "codex": "sources/skills/peer-review-codex"
+      }
+    },
+    {
+      "changed_files": [],
+      "decision": "exact full-tree equality: one shared original",
+      "harness_path_and_label_only": true,
+      "name": "scientific-schematics",
+      "shared_original": true,
+      "skill_md_equal": true,
+      "sources": {
+        "claude": "sources/skills/scientific-schematics",
+        "codex": "sources/skills/scientific-schematics"
+      }
+    },
+    {
+      "changed_files": [],
+      "decision": "exact full-tree equality: one shared original",
+      "harness_path_and_label_only": true,
+      "name": "scientific-slides",
+      "shared_original": true,
+      "skill_md_equal": true,
+      "sources": {
+        "claude": "sources/skills/scientific-slides",
+        "codex": "sources/skills/scientific-slides"
+      }
+    },
+    {
+      "changed_files": [],
+      "decision": "exact full-tree equality: one shared original",
+      "harness_path_and_label_only": true,
+      "name": "scientific-writing",
+      "shared_original": true,
+      "skill_md_equal": true,
+      "sources": {
+        "claude": "sources/skills/scientific-writing",
+        "codex": "sources/skills/scientific-writing"
+      }
+    }
+  ]
+}

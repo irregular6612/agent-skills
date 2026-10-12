@@ -1,86 +1,116 @@
-# agent-skills
+# agent-skills: item-symlink SSOT
 
-Personal agent configuration for Claude Code and Codex, kept in one repository.
-
-Source of truth for skills, subagents, hooks and commands that I author and
-maintain. Third-party skills installed from other marketplaces are deliberately
-not mirrored here.
-
-Repository: https://github.com/irregular6612/agent-skills
-
-## Layout
-
-```
-.claude-plugin/marketplace.json   Claude Code marketplace manifest (4 plugins)
-claude-code/
-  juhyeon/                        my own plugins and skills
-  karpathy/                       third-party, kept for reference
-  K-dense-AI/                     third-party, kept for reference
-codex/
-  skills/                         Codex mirrors of the same skills
-  agents/                         Codex subagent definitions (.toml)
-  AGENTS.md                       global Codex instructions
-```
-
-## Claude Code
-
-Four plugins are published from `claude-code/juhyeon/`:
-
-| Plugin | Skills | Subagents | Hooks |
-|---|---|---|---|
-| `paper-workflow` | paper-radar, paper-driller, paper-understand | 7 | 2 |
-| `paper-writing` | paper-section-rewrite, paper-readability-review, paper-digest | – | – |
-| `paper-banana` | paper-banana | – | – |
-| `juhyeon-misc` | auto-code, humanize, iterative-academic-writer, autoresearch, aha | 9 | – |
-
-Install:
+Install from a durable checkout outside iCloud:
 
 ```bash
-claude plugin marketplace add irregular6612/agent-skills
-claude plugin install paper-workflow@juhyeon
+git clone https://github.com/irregular6612/agent-skills ~/Workspace/agent-skills
+cd ~/Workspace/agent-skills
+./setup --dry-run
+./setup
 ```
 
-Enable or disable a single plugin without reinstalling:
+`./setup` uses macOS Bash and Python 3 stdlib. It requires the Claude and Codex
+native plugin CLIs on PATH for a full installation; missing CLIs fail explicitly.
+No global Python package installation, paid API, launchd changes, or publishing.
+`--assets-only` is an explicit offline asset test mode, NOT a complete plugin setup.
+
+## Contract
+
+- `manifest.yaml` (JSON-compatible YAML) enumerates item symlinks. The complete
+  `skills`, `agents`, `commands`, or `prompts` roots are never linked wholesale.
+- `sources/` contains approved canonical originals and explicit harness variants.
+  Claude/Codex exact-match scientific skills share one original. Actual differing
+  snapshots retain overlays; copied mtimes are not evidence of which is newer.
+  See `docs/SYMLINK-INVENTORY.json` and `docs/HARNESS-VARIANTS.json`.
+- `~/.claude/CLAUDE.md` and `~/.codex/AGENTS.md` link to `sources/instructions/`.
+  The current inventory confirmed an empty Claude guideline; the existing repo
+  Codex guideline is preserved. A different future machine's existing guidelines
+  are backed up, never silently imported into or used to overwrite the checkout.
+- Codex TOML agents link individually and their `config_file` entries are merged
+  into config.toml. Claude commands are exposed as Codex reference prompts;
+  this is not a claim that every Claude command is natively executable in Codex.
+- `templates/claude-settings.json` shares owned paper hooks and permission rules;
+  `templates/codex-config.json` shares agent/plugin declarations. Existing machine
+  config, unknown keys, permissions, comments in TOML, and project trust stay local.
+  Config files remain regular files, never symlinks. TOML target multiline or
+  inline assignments that cannot be edited safely fail before asset changes.
+  Python 3.11+ additionally validates full TOML with tomllib. Both macOS-default
+  Python 3.9.6/Bash 3.2 and Python 3.12 were exercised in this run.
+- `.system`, unrelated plugin caches, external taste-skill links, agentcat-usage,
+  lost-me and other unclassified assets are preserved. Exclusion is NOT deletion
+  of a user's preexisting denylisted skills/plugins.
+- `dependencies/lock.yaml` pins superpowers at immutable upstream commits:
+  Claude v6.4.1 and Codex v6.4.2. Metadata-only native catalogs select those commits
+  as `superpowers@ssot-pinned`. Upstream plugin payloads live only in each
+  harness's native cache, never vendored by setup into the repo. Other superpowers
+  registrations and the old copied `bagjuhyeon-agent-ssot@generated-local-cache`
+  registration are backed up/retired through the native CLI. Unrelated marketplace
+  entries and unrelated plugins remain untouched.
+- Auth/credentials/tokens, history, sessions, projects/memory, logs, cache, SQLite,
+  `.DS_Store`, and the denylist are never imported from HOME. Only the explicit
+  config/registry files needing reversible changes are backed up locally.
+
+## Backup, restore, and editing
+
+Real conflicting items, including dangling or external symlinks, are moved (not
+recursively deleted) into `$HOME/.agent-skills-setup/backups/`. The journal maps
+original locations to backups. Each move and the restore command are printed.
+The state and backups are local-only; never add them to Git.
 
 ```bash
-claude plugin disable paper-workflow@juhyeon
-claude plugin enable  paper-workflow@juhyeon
+./setup --uninstall
 ```
 
-Inspect what a plugin contributes and what it costs in context:
+Uninstall removes only links this checkout created and restores exact original
+files/symlinks/configs/plugin caches. Already-correct preexisting symlinks are not
+claimed and remain after uninstall. User edits to managed local config or a
+replaced link fail closed before further writes; save your local edits, restore
+that managed file/link to its installed state, then retry uninstall. Repo edits
+are immediately visible through the item links without reinstalling. Add a new
+manifest item and rerun setup to create a new link.
+
+Native Claude can rehydrate a cache while uninstalling it and leave an orphaned
+copy. Setup preserves that generated copy under local `quarantine/` separately
+from the ORIGINAL backup; it is not restored over the original. Native-generated
+bootstrap state (e.g. `.claude.json`, CLI logs, or empty cache directories) is
+harness-owned and is deliberately not collected, deleted, or byte-restored.
+Uninstall restores controlled config/registrations and original conflict items,
+not the entire HOME snapshot. The rollback journal is not a crash-proof filesystem
+transaction; interrupted I/O/native commands may need inspection of the printed
+backups before retry. Never delete backups merely to bypass a conflict.
+
+`--dry-run` reads local metadata only and makes no filesystem/network/native CLI
+changes. It prints only proposed changes, and prints nothing on an already fully
+installed fixture. Network/plugin errors return nonzero, never fabricated success.
+A partial native installation retains a journal for `--uninstall`.
+
+## Layout and verification
+
+```text
+setup                           single command entrypoint
+tools/setup_symlinks.py          path checks, journal, links, config merge/restore
+tools/setup_plugins.py           native pin, duplicate cleanup/readback/restore
+manifest.yaml                   item destinations + provenance
+sources/{skills,agents,commands,instructions,hooks}/
+templates/                      whitelisted shared config only
+dependencies/lock.yaml           immutable plugin coordinates + unresolved packs
+dependencies/marketplaces/       native catalog metadata, no plugin payload
+policy/denylist.yaml             matt-pocock/mattpocock/auto-code exclusions
+docs/inventory/t_8f75d661/        upstream read-only migration/inventory evidence
+```
+
+The historical `claude-code/` and `codex/` trees remain reference material for the
+previous marketplace layout. They are NOT setup inputs; only manifest sources
+are active SSOT originals. The denylisted legacy auto-code tree is removed from
+the current checkout/package (history remains). No old marketplace installation
+is needed for owned direct-link assets. Codex now has a native plugin system;
+the prior README claim that it did not is obsolete.
 
 ```bash
-claude plugin details paper-workflow
+./setup --validate
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -p test_setup.py -v
 ```
 
-## Codex
-
-Codex has no plugin system. `codex/skills/` and `codex/agents/` mirror the same
-material as flat directories; copy or symlink them into `~/.codex/`.
-
-The Codex mirror lags the Claude Code side — `paper-radar`, `paper-understand`,
-`auto-code` and `autoresearch` have no Codex counterpart yet, and
-`codex/skills/paper-banana/` carries only `SKILL.md` because the 241 MB engine is
-already vendored under `claude-code/juhyeon/paper-banana/`.
-
-`aha` is mirrored in both runtimes. `codex/skills/aha/scripts/daily.py` drafts a
-KST-day post by default; `--publish` creates `aha/YYYY-MM-DD.md` in
-`irregular6612/blog-content` and dispatches the blog deployment. The macOS
-launchd template is `automation/com.juhyeon.aha.daily.plist`; it is not loaded
-merely by being present in this repository.
-
-`codex/agents/` mirrors only the subagents an owned skill actually dispatches.
-The other 20 `.toml` files under `~/.codex/agents/` belong to deleted skills or
-to the flat directories kept for reference, and are deliberately not tracked.
-
-## Conventions
-
-- Directories under `claude-code/` are grouped by original author. `juhyeon/` is
-  mine; the others are vendored copies kept for reference and are not published
-  as plugins.
-- Subagents that a plugin owns live in `<plugin>/agents/`. Claude Code registers
-  them namespaced as `<plugin>:<agent>`, so dispatch by the prefixed name.
-- Hooks live in `<plugin>/hooks/hooks.json` and address their handlers through
-  `${CLAUDE_PLUGIN_ROOT}` rather than an absolute path.
-- Secrets never enter the repository. `.env` files, virtualenvs and generated
-  outputs are excluded in `.gitignore`.
+Independent fresh-clone and actual-home release validation belong to the
+pre-created dev-verifier/dev-operator cards. Do not treat these implementation
+self-tests as release approval, and do not push this implementation automatically.

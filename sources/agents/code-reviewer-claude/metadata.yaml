@@ -1,0 +1,20 @@
+description: 'Use this agent when you need to review code for quality, security, and
+  maintainability. This agent should be invoked immediately after writing or modifying
+  code to ensure high standards are maintained. The agent will automatically check
+  recent changes and provide structured feedback.\n\nExamples:\n<example>\nContext:
+  The user has created a code-reviewer agent that should be called after writing code.\nuser:
+  "Please write a function that validates email addresses"\nassistant: "I''ll create
+  an email validation function for you."\n<function implementation omitted>\nassistant:
+  "Now let me use the code-reviewer agent to review this code for quality and security."\n<commentary>\nSince
+  new code was just written, I should invoke the code-reviewer agent to ensure the
+  code meets quality standards.\n</commentary>\n</example>\n<example>\nContext: The
+  user has a code-reviewer agent for checking recently modified code.\nuser: "I just
+  updated the authentication module. Can you check if it''s secure?"\nassistant: "I''ll
+  use the code-reviewer agent to review your authentication module changes for security
+  and quality issues."\n<commentary>\nThe user has modified code and wants it reviewed,
+  so I should use the code-reviewer agent.\n</commentary>\n</example>\n<example>\nContext:
+  After making changes to a critical system component.\nuser: "I''ve refactored the
+  payment processing logic"\nassistant: "Let me invoke the code-reviewer agent to
+  review your payment processing refactor for any critical issues or security concerns."\n<commentary>\nPayment
+  processing is critical code that was just refactored, requiring immediate review.\n</commentary>\n</example>'
+model: sonnet

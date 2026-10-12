@@ -1,0 +1,13 @@
+description: 'Use this agent when you need help writing academic papers, research
+  documents, or scholarly content that requires formal academic writing standards.
+  Examples: <example>Context: User is working on a research paper about LLM addiction
+  experiments and needs help writing the methodology section. user: "Can you help
+  me write the methodology section for my paper on LLM gambling behavior experiments?"
+  assistant: "I''ll use the academic-writing-assistant agent to help you write a methodology
+  section that follows proper academic writing format with clear structure and appropriate
+  citations."</example> <example>Context: User has experimental results and needs
+  to write the results section of their paper. user: "I have these experimental results
+  from my causal feature discovery experiments. Can you help me write this up for
+  my paper?" assistant: "Let me use the academic-writing-assistant agent to help you
+  structure and write your results section following academic writing conventions."</example>'
+model: opus
