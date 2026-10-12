@@ -32,8 +32,26 @@ class NativePlugins:
                 raise ValueError('catalog differs from immutable lock')
             self.spec[target]={'id':'superpowers@ssot-pinned','catalog':catalog,'version':d['refs'][target].lstrip('v'),'commit':d['commits'][target],'repository':d['repository']}
     def run(self,target,args,cwd=None):
+        from setup_marketplaces import REL, read, recover_overlay, projection
+        market_record=None
+        if target=='claude':
+            market_record=self.e.record(REL)
+            if market_record and market_record.get('marketplaces'):
+                recover_overlay(self.e,market_record)
+                mutation=args[:2] in (['plugin','install'],['plugin','uninstall']) or args[:3] in (['plugin','marketplace','add'],['plugin','marketplace','remove'])
+                if mutation:
+                    market_record['native_overlay']=read(self.e.path(REL)); self.e.save()
         env=dict(os.environ,HOME=str(self.e.home),CLAUDE_CONFIG_DIR=str(self.e.home/'.claude'),CODEX_HOME=str(self.e.home/'.codex'))
         result=subprocess.run([target]+args,cwd=cwd or self.root,env=env,text=True,capture_output=True,timeout=180)
+        if target=='claude':
+            record=self.e.record(REL)
+            if record and record.get('marketplaces') and not self.e.matches(self.e.path(REL),record):
+                raise ValueError('native command changed owned marketplace source; journal preserved')
+            if record and record.get('marketplaces'): recover_overlay(self.e,record)
+            flags=self.e.state['native'].get(target,{})
+            if not record and flags.get('removed') and 'marketplace_original' in flags:
+                if projection(read(self.e.path(REL)),flags['marketplace_original'])!=flags['marketplace_original']:
+                    raise ValueError('native restoration changed owned marketplace source')
         if result.returncode: raise ValueError('native command failed (exit '+str(result.returncode)+'): '+target+' '+' '.join(args)+'; '+result.stderr[:400])
         try: return json.loads(result.stdout)
         except json.JSONDecodeError: raise ValueError('native command did not return JSON: '+target)
@@ -130,6 +148,7 @@ class NativePlugins:
     def capture_registries(self,target):
         from setup_symlinks import exists
         for rel in REGISTRY[target]:
+            if target=='claude' and rel=='.claude/plugins/known_marketplaces.json': continue
             path=self.e.path(rel)
             if self.e.record(rel): continue
             data=path.read_bytes() if path.exists() else None
@@ -139,6 +158,7 @@ class NativePlugins:
     def update_registry_hashes(self,target):
         for rel in REGISTRY[target]:
             path=self.e.path(rel); r=self.e.record(rel)
+            if r and r.get('marketplaces'): continue  # never adopt arbitrary native changes
             if r:
                 if path.is_symlink(): raise ValueError('native CLI created registry symlink')
                 r['installed']=hashlib.sha256(path.read_bytes()).hexdigest() if path.exists() else None
@@ -244,10 +264,15 @@ class NativePlugins:
             if 'original_registry' not in flags:
                 flags['original_registry']={}
                 for rel in REGISTRY[target]:
+                    if target=='claude' and rel=='.claude/plugins/known_marketplaces.json': continue
                     record=self.e.record(rel)
                     original=self.e.state_dir/record['backup'] if record.get('backup') else None
                     flags['original_registry'][rel]=self.registry_identity(original) if original else None
             flags.setdefault('retired_marketplaces',[])
+            if target=='claude':
+                from setup_marketplaces import capture, projection
+                market_record=capture(self.e,obsolete,spec['catalog'],not any(x.get('name')=='ssot-pinned' for x in markets))
+                flags['marketplace_original']=projection(market_record['original'],market_record['original'])
             self.e.save()
             try:
                 # Install/read back the pin before retiring other registrations.
@@ -286,6 +311,9 @@ class NativePlugins:
                 records=self.plugins(target)
                 self.verify_local_inventory(target,records)
                 if not self.exact(target,records): raise ValueError('superpowers uniqueness readback failed')
+                if target=='claude':
+                    from setup_marketplaces import finalize
+                    finalize(self.e)
             finally:
                 self.update_registry_hashes(target)
     def uninstall(self,skip):
@@ -303,7 +331,8 @@ class NativePlugins:
             try:
                 selector=self.spec[target]['id']
                 if flags['created_plugin'] and any(r['_id']==selector for r in self.plugins(target)): self.remove(target,selector)
-                if flags['created_marketplace'] and any(r.get('name')=='ssot-pinned' for r in self.marketplaces(target)):
+                semantic_market=target=='claude' and 'marketplace_original' in flags
+                if flags['created_marketplace'] and not semantic_market and any(r.get('name')=='ssot-pinned' for r in self.marketplaces(target)):
                     self.run(target,['plugin','marketplace','remove','ssot-pinned','--json']+(['--scope','user'] if target=='claude' else []))
                     if any(r.get('name')=='ssot-pinned' for r in self.marketplaces(target)): raise ValueError('marketplace removal readback failed')
             finally: self.update_registry_hashes(target)
@@ -322,6 +351,7 @@ class NativePlugins:
         from setup_symlinks import exists, no_symlink_parents
         saved=flags.setdefault('restore_registry',{})
         for i,rel in enumerate(REGISTRY[target]):
+            if target=='claude' and 'marketplace_original' in flags and rel=='.claude/plugins/known_marketplaces.json': continue
             path=self.e.path(rel)
             if path.is_symlink() or (exists(path) and not path.is_file()): raise ValueError('unsafe restoration registry: '+rel)
             if rel in flags.get('original_registry',{}):
@@ -391,7 +421,13 @@ class NativePlugins:
                 originals=flags.get('original_marketplaces',[])
                 actual={r['name']:r for r in self.marketplaces(target)}
                 names={r if isinstance(r,str) else r['name'] for r in originals}
-                if set(actual)!=names: raise ValueError('original marketplace restoration readback failed: '+target)
+                if target=='claude' and 'marketplace_original' in flags:
+                    from setup_marketplaces import read, projection, REL
+                    expected=flags['marketplace_original']
+                    if projection(read(self.e.path(REL)),expected)!=expected: raise ValueError('original marketplace semantic restoration failed')
+                    # Setup-owned entries are verified; unrelated new entries survive.
+                    originals=[r for r in originals if (r if isinstance(r,str) else r['name']) in expected and expected[r if isinstance(r,str) else r['name']] is not None]
+                elif set(actual)!=names: raise ValueError('original marketplace restoration readback failed: '+target)
                 for r in originals:
                     if isinstance(r,str) or not r.get('location'): continue
                     item=actual[r['name']]

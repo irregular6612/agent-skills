@@ -354,10 +354,13 @@ class Installer:
         if self.state_path.is_symlink(): raise ValueError('symlink state')
         self.state=json.loads(self.state_path.read_text()) if self.state_path.exists() else {'version':1,'repo':str(ROOT),'records':[],'directories':[],'native':{}}
         if self.state.get('repo')!=str(ROOT) or self.state.get('version')!=1: raise ValueError('state belongs to another repo/version')
+        self.marketplace_migrated=False
         for r in self.state['records']:
             path = self.path(r['path'])
             if r.get('backup') and not re.fullmatch(r'backups/[0-9]+',r['backup']): raise ValueError('unsafe state backup')
             if r.get('backup'): no_symlink_parents(self.state_dir/r['backup'])
+            from setup_marketplaces import migrate
+            migrate(self,r)
             if not self.matches(path,r): raise ValueError('managed item changed by user: '+r['path'])
         for rel in self.state['directories']:
             p = PurePosixPath(rel)
@@ -394,6 +397,12 @@ class Installer:
 
     def record(self,rel): return next((r for r in self.state['records'] if r['path']==rel),None)
 
+    def next_backup(self):
+        # Shared-registry audit backups survive rollback; never reuse their slot.
+        index=len(self.state['records'])
+        while exists(self.state_dir/('backups/'+str(index))): index+=1
+        return 'backups/'+str(index)
+
     def backup(self,rel,kind,installed,cache_selector=None):
         path=self.path(rel)
         old=self.record(rel)
@@ -405,7 +414,7 @@ class Installer:
         if exists(path):
             if path.is_symlink() and kind=='file': raise ValueError('config symlink refused: '+rel)
             if kind=='file' and not path.is_file(): raise ValueError('config is not a regular file: '+rel)
-            r['backup']='backups/'+str(len(self.state['records']))
+            r['backup']=self.next_backup()
         self.state['records'].append(r); self.save()
         if r['backup']:
             b=self.state_dir/r['backup']; no_symlink_parents(b)
@@ -415,6 +424,9 @@ class Installer:
         return r
 
     def matches(self,path,record):
+        if record.get('marketplaces'):
+            from setup_marketplaces import matches
+            return matches(self,path,record)
         if record.get('restoring'):
             backup=self.state_dir/record['backup']
             if not exists(backup): return exists(path) and self.restore_identity(path)==record['restoring']
@@ -557,6 +569,9 @@ class Installer:
         for r in reversed(self.state['records'][:]):
             path=self.path(r['path']); print('RESTORE '+str(path)); self.changed=True
             if self.dry: continue
+            if r.get('marketplaces'):
+                from setup_marketplaces import restore
+                restore(self,r); continue
             backup=self.state_dir/r['backup'] if r['backup'] else None
             if backup and not exists(backup) and r.get('restoring'):
                 # Rename completed before the journal checkpoint. The inode
@@ -597,7 +612,7 @@ def main():
     guard=(ROOT/'setup').open('rb')
     fcntl.flock(guard,fcntl.LOCK_EX|fcntl.LOCK_NB)
     engine=Installer(home,args.dry_run)
-    if not args.uninstall and any(f.get('removed') for f in engine.state['native'].values()):
+    if not args.uninstall and (any(f.get('removed') for f in engine.state['native'].values()) or any(r.get('pending') or r.get('rollback') or r.get('native_overlay') for r in engine.state['records'] if r.get('marketplaces'))):
         raise ValueError('rollback is pending; resume with --uninstall before setup')
     # Validate every HOME destination and template/config before any changes.
     for entry in manifest['links']: engine.path('.'+entry['harness']+'/'+entry['destination'])
@@ -615,6 +630,7 @@ def main():
     from setup_plugins import NativePlugins
     native=NativePlugins(engine,ROOT,lock)
     if args.uninstall:
+        if engine.marketplace_migrated: engine.save()
         native.uninstall(args.assets_only)
         engine.uninstall()
         native.verify_restored()
@@ -637,6 +653,7 @@ def main():
                 data=merge_toml(text,template).encode()
             pending.append((rel,data))
         native.preflight(args.assets_only)
+        if engine.marketplace_migrated: engine.save()
         engine.quarantine_caches()
         for rel in retirees: engine.move(rel)
         for entry in manifest['links']:

@@ -145,6 +145,7 @@ class SetupTests(unittest.TestCase):
         engine=setup.Installer(self.home); native=NativePlugins(engine,ROOT,self.lock)
         selectors=['superpowers@old-official','superpowers@generated-local-cache']
         registry=self.home/'.claude/plugins/installed_plugins.json'; registry.parent.mkdir(parents=True); registry.write_text(json.dumps(selectors))
+        market_registry=registry.with_name('known_marketplaces.json'); market_registry.write_bytes(setup.encode({}))
         for selector in selectors:
             name,market=selector.split('@'); p=self.home/'.claude/plugins/cache'/market/name/'1/payload'; p.parent.mkdir(parents=True); p.write_text(selector)
         before=snapshot(self.home)
@@ -153,7 +154,9 @@ class SetupTests(unittest.TestCase):
             if args[:3]==['plugin','list','--json']:
                 return [{'id':x,'version':'6.4.1','enabled':True} for x in current]
             if args[:3]==['plugin','marketplace','list']: return [{'name':x} for x in markets]
-            if args[:3]==['plugin','marketplace','add']: markets.append('ssot-pinned'); return {}
+            if args[:3]==['plugin','marketplace','add']:
+                markets.append('ssot-pinned')
+                market_registry.write_bytes(setup.encode({'ssot-pinned':{'source':{'source':'directory','path':args[3]},'installLocation':args[3]}})); return {}
             if args[:2]==['plugin','install']: current.append(args[2]); registry.write_text(json.dumps(current)); return {}
             if args[:2]==['plugin','uninstall']: current.remove(args[2]); registry.write_text(json.dumps(current)); return {}
             if args[:3]==['plugin','marketplace','remove']: markets.remove('ssot-pinned'); return {}

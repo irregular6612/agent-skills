@@ -134,13 +134,14 @@ class RegressionTests(unittest.TestCase):
         cache=self.home/'.claude/plugins/marketplaces/old-duplicate'; (cache/'.claude-plugin').mkdir(parents=True)
         (cache/'.claude-plugin/marketplace.json').write_text(json.dumps({'plugins':[{'name':'superpowers'}]}))
         plugin=self.home/'.claude/plugins/cache/old-duplicate/superpowers/1'; plugin.mkdir(parents=True); (plugin/'payload').write_text('original')
-        registry.write_text(json.dumps({'old-duplicate':str(cache),'unrelated':'preserve'}))
+        registry.write_bytes(setup.encode({'old-duplicate':{'source':{'source':'directory','path':str(cache)},'installLocation':str(cache)},'unrelated':{'source':{'source':'directory','path':'/preserve'},'installLocation':'/preserve'}}))
         before=snapshot(self.home); current=['superpowers@old-duplicate','unrelated@unrelated']
         def run(target,args,cwd=None):
             if args[:2]==['plugin','list']: return [{'id':x,'version':'6.4.1','enabled':True} for x in current]
             markets=json.loads(registry.read_text())
-            if args[:3]==['plugin','marketplace','list']: return [{'name':k,'installLocation':v} for k,v in markets.items()]
-            if args[:3]==['plugin','marketplace','add']: markets['ssot-pinned']=str(native.spec['claude']['catalog']); registry.write_text(json.dumps(markets)); return {}
+            if args[:3]==['plugin','marketplace','list']: return [dict(v,name=k) for k,v in markets.items()]
+            if args[:3]==['plugin','marketplace','add']:
+                location=str(native.spec['claude']['catalog']); markets['ssot-pinned']={'source':{'source':'directory','path':location},'installLocation':location}; registry.write_bytes(setup.encode(markets)); return {}
             if args[:3]==['plugin','marketplace','remove']: del markets[args[3]]; registry.write_text(json.dumps(markets)); return {}
             if args[:2]==['plugin','install']: current.append(args[2]); return {}
             if args[:2]==['plugin','uninstall']: current.remove(args[2]); return {}
