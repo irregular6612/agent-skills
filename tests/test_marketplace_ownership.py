@@ -121,14 +121,19 @@ class MarketplaceOwnershipTests(unittest.TestCase):
             return real(p)
         with patch.object(__import__('pathlib').Path,'read_bytes',read),self.assertRaisesRegex(ValueError,'concurrently'): e.uninstall()
         self.assertIn('concurrent',self.get())
-    def legacy(self, installed=None):
+    def legacy(self, installed=None, authenticate=True):
         # Public legacy API creates hash-only state. No fixture state rewriting.
         e=setup.Installer(self.home)
         final=copy.deepcopy(self.original) if installed is None else installed
         final.pop('retired',None)
         final['ssot-pinned']={'source':{'source':'directory','path':str(ROOT/'dependencies/marketplaces/claude')},'installLocation':str(ROOT/'dependencies/marketplaces/claude'),'lastUpdated':'installed'}
         e.write(markets.REL,setup.encode(final))
-        e.state['native']['claude']={'created_marketplace':True,'created_plugin':False,'retired_marketplaces':['retired'],'original_marketplaces':[]}; e.save()
+        flags={'created_marketplace':True,'created_plugin':False,'retired_marketplaces':['retired'] if 'retired' in self.original else [],'original_marketplaces':[]}
+        if authenticate:
+            backup=e.record(markets.REL)['backup']
+            native=NativePlugins(e,ROOT,json.loads((ROOT/'dependencies/lock.yaml').read_text()))
+            flags['original_registry']={markets.REL:native.registry_identity(e.state_dir/backup) if backup else None}
+        e.state['native']['claude']=flags; e.save()
         return e,final
     def test_legacy_exact_hash_migrates_in_memory_dry_run_without_writes(self):
         self.legacy(); before=snapshot(self.home); e=setup.Installer(self.home,True)
@@ -161,6 +166,74 @@ class MarketplaceOwnershipTests(unittest.TestCase):
         # New legacy fixture with a wrong pin identity; use write() rather than state edit.
         data['ssot-pinned']['source']['path']='/bad'; old.write(markets.REL,setup.encode(data))
         with self.assertRaisesRegex(ValueError,'ownership cannot be proven'): setup.Installer(self.home)
+    def legacy_backup_tamper(self, timestamp_witness=False):
+        old,data=self.legacy(); r=old.record(markets.REL); backup=old.state_dir/r['backup']
+        original_bytes=backup.read_bytes()
+        self.assertEqual(markets.digest(original_bytes),old.state['native']['claude']['original_registry'][markets.REL]['digest'])
+        if timestamp_witness:
+            data['user']['lastUpdated']='runtime'; self.put(data)
+        else:
+            self.assertEqual(markets.digest(self.path.read_bytes()),r['installed'])
+        for change in ['retired source','unknown field','timestamp','whitespace']:
+            with self.subTest(change=change, timestamp_witness=timestamp_witness):
+                original=json.loads(original_bytes)
+                if change=='retired source': original['retired']['source']['path']='/tampered'
+                if change=='unknown field': original['retired']['injectedBackupMetadata']={'mustNotRestore':True}
+                if change=='timestamp': original['retired']['lastUpdated']='tampered'
+                backup.write_bytes(json.dumps(original).encode() if change=='whitespace' else setup.encode(original))
+                before=snapshot(self.home)
+                for args in [(),('--dry-run',),('--uninstall',),('--uninstall','--dry-run')]:
+                    result=self.command(*args,code=2)
+                    self.assertIn('original marketplace backup changed',result.stdout+result.stderr)
+                    self.assertEqual(before,snapshot(self.home))
+                with patch.object(setup.Installer,'save') as save,patch('setup_plugins.subprocess.run') as native:
+                    with self.assertRaisesRegex(ValueError,'backup changed'): setup.Installer(self.home)
+                    save.assert_not_called(); native.assert_not_called()
+        backup.write_bytes(original_bytes)
+    def test_legacy_backup_tamper_refuses_all_modes_with_exact_installed_hash(self):
+        self.legacy_backup_tamper()
+    def test_legacy_backup_tamper_refuses_before_timestamp_witness(self):
+        self.legacy_backup_tamper(True)
+    def test_legacy_missing_original_evidence_refuses_all_modes_without_writes(self):
+        self.legacy(authenticate=False); before=snapshot(self.home)
+        for args in [(),('--dry-run',),('--uninstall',),('--uninstall','--dry-run')]:
+            result=self.command(*args,code=2)
+            self.assertIn('lacks saved digest evidence',result.stdout+result.stderr)
+            self.assertEqual(before,snapshot(self.home))
+    def test_legacy_authenticated_original_absence_migrates(self):
+        self.path.unlink(); self.original={}; old,_=self.legacy()
+        before=snapshot(self.home); e=setup.Installer(self.home,True)
+        self.assertIsNone(e.record(markets.REL)['original_digest'])
+        self.assertEqual(before,snapshot(self.home))
+        e=setup.Installer(self.home); e.uninstall()
+        self.assertEqual(self.get(),{})
+    def test_original_digest_rejects_missing_malformed_conflicting_or_absence_evidence(self):
+        from types import SimpleNamespace
+        good=markets.digest(b'original'); other=markets.digest(b'other')
+        cases=[({},{}), ({'original_digest':''},{}), ({'original_digest':False},{}),
+               ({},{markets.REL:{}}), ({},{markets.REL:{'digest':'invalid'}}),
+               ({'original_digest':good},{markets.REL:{'digest':other}}),
+               ({'original_digest':good},{markets.REL:None}),
+               ({'original_digest':None},{}), ({},{markets.REL:{'digest':None}})]
+        for record,registry in cases:
+            with self.subTest(record=record,registry=registry):
+                engine=SimpleNamespace(state={'native':{'claude':{'original_registry':registry}}})
+                with self.assertRaises(ValueError): markets.original_digest(engine,dict(record,backup='backups/1'))
+        engine=SimpleNamespace(state={'native':{'claude':{'original_registry':{markets.REL:{'digest':good}}}}})
+        self.assertEqual(markets.original_digest(engine,{'backup':'backups/1','original_digest':good}),good)
+        with self.assertRaises(ValueError): markets.original_digest(engine,{'backup':None})
+    def test_legacy_original_digest_and_witness_survive_archive_unchanged(self):
+        old,data=self.legacy(); legacy=copy.deepcopy(old.record(markets.REL))
+        flags=copy.deepcopy(old.state['native']['claude']); expected=flags['original_registry'][markets.REL]['digest']
+        backup=old.state_dir/legacy['backup']; before=backup.read_bytes()
+        data['user']['lastUpdated']='runtime'; self.put(data)
+        e=setup.Installer(self.home); e.uninstall(); archived=e.state['marketplace_journal_archive'][0]
+        self.assertEqual(archived['original_digest'],expected)
+        self.assertEqual(archived['legacy'],legacy)
+        self.assertEqual(archived['witness'],{'sha256':legacy['installed'],'changed_paths':['user.lastUpdated']})
+        self.assertEqual(backup.read_bytes(),before)
+        self.assertEqual(self.get()['retired'],self.old)
+
     def test_readback_does_not_adopt_unexpected_native_source(self):
         e=setup.Installer(self.home); r=markets.capture(e,[],ROOT/'dependencies/marketplaces/claude',True)
         data=self.get(); data['ssot-pinned']=dict(r['installed']['ssot-pinned']); data['ssot-pinned']['installLocation']='/bad'; self.put(data)

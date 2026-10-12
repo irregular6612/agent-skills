@@ -110,13 +110,38 @@ def historical_witness(data, original, expected):
     return parse(candidate), [name+'.lastUpdated' for _, _, _, name in changes]
 
 
+def original_digest(engine, record):
+    """Resolve saved evidence, never authenticate a backup with its current hash."""
+    evidence = []
+    if 'original_digest' in record: evidence.append(record['original_digest'])
+    flags = engine.state['native'].get('claude', {})
+    if not isinstance(flags, dict): raise ValueError('ambiguous original marketplace backup evidence')
+    registries = flags.get('original_registry', {})
+    if not isinstance(registries, dict): raise ValueError('ambiguous original marketplace backup evidence')
+    if REL in registries:
+        original = registries[REL]
+        if original is None: evidence.append(None)  # authenticated original absence
+        elif isinstance(original, dict) and original.get('digest') is not None: evidence.append(original['digest'])
+        else: raise ValueError('ambiguous original marketplace backup evidence')
+    if not evidence: raise ValueError('original marketplace backup lacks saved digest evidence')
+    for expected in evidence:
+        if expected is not None and (not isinstance(expected, str) or not re.fullmatch(r'[0-9a-f]{64}', expected)):
+            raise ValueError('ambiguous original marketplace backup evidence')
+    if any(expected != evidence[0] for expected in evidence):
+        raise ValueError('conflicting original marketplace backup evidence')
+    if bool(record.get('backup')) != (evidence[0] is not None):
+        raise ValueError('original marketplace backup presence differs from saved evidence')
+    return evidence[0]
+
+
 def backup_data(engine, record):
     from setup_symlinks import no_symlink_parents
-    if not record.get('backup'): return {}
+    expected = original_digest(engine, record)
+    if expected is None: return {}
     backup = engine.state_dir / record['backup']; no_symlink_parents(backup)
     if backup.is_symlink() or not backup.is_file(): raise ValueError('missing/unsafe original marketplace backup')
     data = backup.read_bytes()
-    if record.get('original_digest') and digest(data) != record['original_digest']:
+    if digest(data) != expected:
         raise ValueError('original marketplace backup changed')
     return parse(data)
 
@@ -145,7 +170,7 @@ def migrate(engine, record):
         if name not in original or name in installed: raise ValueError('legacy retired marketplace ownership cannot be proven')
     legacy = copy.deepcopy(record)
     record.update(kind='marketplaces', marketplaces=1, installed=projection(installed,names), original={n:copy.deepcopy(original.get(n)) for n in names}, legacy=legacy, witness={'sha256':legacy['installed'],'changed_paths':changed})
-    record['original_digest'] = digest((engine.state_dir/record['backup']).read_bytes()) if record.get('backup') else None
+    record['original_digest'] = original_digest(engine, legacy)
     flags['marketplace_original'] = projection(original,names)
     engine.marketplace_migrated = True
 
