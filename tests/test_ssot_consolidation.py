@@ -91,6 +91,14 @@ class ConsolidationTests(unittest.TestCase):
                     self.assertTrue(any(e['source']=='sources/agents/'+name+'-'+harness+'.'+ext for e in self.manifest['links']))
     def test_critic_both_native_consumers_static_contract(self):
         self.run_command(['bash',str(ROOT/'sources/skills/iterative-academic-writer/evals/check_sync.sh')])
+    def test_driller_active_paths_do_not_infer_claude_home(self):
+        skill=ROOT/'sources/skills/paper-driller'
+        for rel in ('SKILL.md','references/workflow.md','references/templates/general-v1.md'):
+            text=(skill/rel).read_text()
+            self.assertNotIn('~/.claude/',text)
+            self.assertNotIn('$HOME/.claude/',text)
+        self.assertIn('PAPER_FRONTMATTER_PYTHON',(skill/'SKILL.md').read_text())
+
     def test_driller_static_is_portable_without_vault_or_claude_install(self):
         p=self.run_command(['bash',str(ROOT/'sources/skills/paper-driller/scripts/validate-driller.sh')])
         self.assertIn('PASS canonical',p.stdout); self.assertIn('SKIPPED local vault',p.stdout)

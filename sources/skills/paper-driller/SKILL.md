@@ -70,7 +70,7 @@ Role names in this document describe workflows. Claude uses its registered Markd
 
 `vault_root`: 사용자 지정 → `PAPER_DRILLER_VAULT` → CWD에 `Public/`이 있으면 CWD → 없으면 사용자에게 확인. `destination`은 vault_root 상대 경로다. AI 논문 `Public/AI/Papers/`, 비-AI 논문 `Public/{domain}/`. Category 하위 폴더를 만들지 않는다. **PDF 위치에서 저장 경로를 추측하지 않는다.**
 
-frontmatter는 **정확히 13개 키, 이 순서**다: `type: paper`, `Reading-Status`, `Read-Depth`, `Author`, `Journal/Conference`, `Published Year`, `Topic`, `Review-Date`, `Comment`, `URL`, `Category`, `linked-bases`, `Lab`. 빈 값은 `Key:`. 그 외 키(`arXiv-ID`, `DOI`, `Evidence-Quality`, `Reproducibility`, `isTargetPaper` 등)는 쓰지 않는다. 계약의 단일 기준은 vault `Public/_tools/paper_frontmatter.py`이고 Claude Code hook이 위반 Write/Edit를 차단한다. `Read-Depth`는 사람의 읽기 깊이이므로 새 노트는 비우고, `Reading-Status`는 비우거나 `☑️ Not Started`다. 새 노트 식별 키 `template-version: paper-note-v3`, `template-id`, `summary-mode`, `profile`, `source-coverage`, `quality-status`, `visual-check`, `visual-scope`는 YAML이 아니라 frontmatter 바로 뒤 `<!-- BEGIN DRILLER:meta` … `END DRILLER:meta -->` 블록에 `key: value` 한 줄씩 둔다. `reading-decision`은 실제로 판단했을 때만 적는다. 본문은 `<!-- BEGIN AUTO:body template-id={id} -->` … `<!-- END AUTO:body -->` 한 쌍 안에 두고, 그 뒤에 `<!-- BEGIN USER:notes -->` … `<!-- END USER:notes -->`를 둔다. 전체 예시는 `references/workflow.md` 7절.
+frontmatter는 **정확히 13개 키, 이 순서**다: `type: paper`, `Reading-Status`, `Read-Depth`, `Author`, `Journal/Conference`, `Published Year`, `Topic`, `Review-Date`, `Comment`, `URL`, `Category`, `linked-bases`, `Lab`. 빈 값은 `Key:`. 그 외 키(`arXiv-ID`, `DOI`, `Evidence-Quality`, `Reproducibility`, `isTargetPaper` 등)는 쓰지 않는다. 계약의 단일 기준은 vault `Public/_tools/paper_frontmatter.py`이고 local hook 차단은 별도 설치·검증된 환경에 한하며 양 harness에서 자동 보장하지 않는다. `Read-Depth`는 사람의 읽기 깊이이므로 새 노트는 비우고, `Reading-Status`는 비우거나 `☑️ Not Started`다. 새 노트 식별 키 `template-version: paper-note-v3`, `template-id`, `summary-mode`, `profile`, `source-coverage`, `quality-status`, `visual-check`, `visual-scope`는 YAML이 아니라 frontmatter 바로 뒤 `<!-- BEGIN DRILLER:meta` … `END DRILLER:meta -->` 블록에 `key: value` 한 줄씩 둔다. `reading-decision`은 실제로 판단했을 때만 적는다. 본문은 `<!-- BEGIN AUTO:body template-id={id} -->` … `<!-- END AUTO:body -->` 한 쌍 안에 두고, 그 뒤에 `<!-- BEGIN USER:notes -->` … `<!-- END USER:notes -->`를 둔다. 전체 예시는 `references/workflow.md` 7절.
 
 ## 검증 명령
 
@@ -79,15 +79,15 @@ frontmatter는 **정확히 13개 키, 이 순서**다: `type: paper`, `Reading-S
 두 검사는 역할이 다르다. **(a) frontmatter 검사**(`paper_frontmatter.py check`, hook과 같은 판정)는 모든 `type: paper` 노트의 공통 계약이며 본문에 아무것도 요구하지 않는다. **(b) 생성물 완료 검사**(`paper-format-validator.py`)는 driller가 만든 노트의 절 구성·도표 manifest·갱신 보존을 보는 선택 검사이고, 수동 노트나 vault 전체의 준수 여부를 판정하는 도구가 아니다. 기본 `python3`에는 PyYAML이 없을 수 있으므로 아래처럼 전용 venv를 쓴다.
 
 ```bash
-PY="$HOME/.claude/hooks/paper-frontmatter-venv/bin/python"   # PyYAML 포함 (없으면: python3 ~/.claude/hooks/install-paper-frontmatter-hooks.py --setup-venv)
+PY="${PAPER_FRONTMATTER_PYTHON:?PyYAML이 있는 승인된 local interpreter 절대경로 필요}"
 # (a) frontmatter 13키 — 래퍼가 인터프리터를 고른다
 bash "$VAULT/Public/_tools/paper_frontmatter.sh" check "$NOTE"
 # (b) 생성물 완료 검사 — driller 노트 전용
-"$PY" ~/.claude/hooks/paper-format-validator.py --path "$NOTE" --manifest "$MANIFEST"            # 신규 완료 조건
-"$PY" ~/.claude/hooks/paper-format-validator.py --path "$NOTE" --manifest "$MANIFEST" --previous "$OLD"   # 갱신
-"$PY" ~/.claude/hooks/paper-format-validator.py --path "$NOTE" --manifest "$MANIFEST" --previous "$OLD" --approved-switch   # 사용자가 승인한 템플릿 전환만
-"$PY" ~/.claude/hooks/paper-format-validator.py --path "$NOTE" --meta "$META_JSON"              # DRILLER:meta 블록이 없는 옛 노트에 v2/v3 규칙 적용
-"$PY" ~/.claude/hooks/paper-format-validator.py --check-template ${SKILL_ROOT}/references/templates/{id}.md   # 새 템플릿 등록 직후
+"$PY" "${SKILL_ROOT}/../../hooks/claude/paper-format-validator.py" --path "$NOTE" --manifest "$MANIFEST"            # 신규 완료 조건
+"$PY" "${SKILL_ROOT}/../../hooks/claude/paper-format-validator.py" --path "$NOTE" --manifest "$MANIFEST" --previous "$OLD"   # 갱신
+"$PY" "${SKILL_ROOT}/../../hooks/claude/paper-format-validator.py" --path "$NOTE" --manifest "$MANIFEST" --previous "$OLD" --approved-switch   # 사용자가 승인한 템플릿 전환만
+"$PY" "${SKILL_ROOT}/../../hooks/claude/paper-format-validator.py" --path "$NOTE" --meta "$META_JSON"              # DRILLER:meta 블록이 없는 옛 노트에 v2/v3 규칙 적용
+"$PY" "${SKILL_ROOT}/../../hooks/claude/paper-format-validator.py" --check-template ${SKILL_ROOT}/references/templates/{id}.md   # 새 템플릿 등록 직후
 bash ${SKILL_ROOT}/scripts/validate-driller.sh                                    # 정적 계약
 ```
 

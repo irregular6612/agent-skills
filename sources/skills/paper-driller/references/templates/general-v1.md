@@ -33,7 +33,7 @@
 
 ### 1. `## 개요`
 
-`paper-digest` 스킬(`~/.claude/skills/paper-digest/SKILL.md`)을 **그 파일의 규칙대로 실제로 실행해** 얻은 결과를 그대로 넣는다. 그 규칙은 한 문단 구조(Context → Insight → Solution → Evidence), 굵게 표시한 핵심 개념 2–4개, 마지막의 Implication 줄과 📎 링크다.
+`paper-digest` 스킬(`${SKILL_ROOT}/../paper-digest/SKILL.md` (discovered canonical source))을 **그 파일의 규칙대로 실제로 실행해** 얻은 결과를 그대로 넣는다. 그 규칙은 한 문단 구조(Context → Insight → Solution → Evidence), 굵게 표시한 핵심 개념 2–4개, 마지막의 Implication 줄과 📎 링크다.
 
 - 짧은 요약으로 대체하지 않는다. legacy `paper-digest-composer`의 DIGEST 블록으로 대체하지 않는다.
 - 저장 직전 다듬기 단계에서도 이 절은 고쳐 쓰지 않는다.

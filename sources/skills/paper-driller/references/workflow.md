@@ -125,8 +125,8 @@
 4. 저장 직후 검사한다. 실패하면 파일을 고치거나 지우고 다시 검사한다.
 
 ```bash
-PY="$HOME/.claude/hooks/paper-frontmatter-venv/bin/python"   # PyYAML 포함 인터프리터
-"$PY" ~/.claude/hooks/paper-format-validator.py --check-template ${SKILL_ROOT}/references/templates/{id}.md
+PY="${PAPER_FRONTMATTER_PYTHON:?PyYAML이 있는 승인된 local interpreter 절대경로 필요}"
+"$PY" "${SKILL_ROOT}/../../hooks/claude/paper-format-validator.py" --check-template ${SKILL_ROOT}/references/templates/{id}.md
 ```
 
 검사 항목: id 형식, 파일명 = id, 템플릿 디렉터리 바로 안(경로 이동·심볼릭 링크 거부), 메타데이터 자료형, 빈·중복 제목, `visual_section`이 `required_h2`에 있음, 안내 본문 존재. 템플릿 파일의 내용은 절대 실행하지 않는다.
@@ -189,25 +189,25 @@ END DRILLER:meta -->
 
 검사는 두 층이다.
 
-- **(a) frontmatter 13키 검사** — `Public/_tools/paper_frontmatter.py check` (래퍼 `paper_frontmatter.sh`). 모든 `type: paper` 노트의 공통 계약이며 Claude Code hook(`~/.claude/hooks/paper-frontmatter-hook.sh`, PreToolUse에서 잘못된 Write/Edit를 차단)과 같은 판정이다. 본문(H1, 길이, 절)은 보지 않는다. 수동 노트·옛 노트는 이것만 통과하면 된다.
-- **(b) 생성물 완료 검사** — `~/.claude/hooks/paper-format-validator.py`. driller가 만든 노트의 절 구성·도표 manifest·갱신 보존을 보는 **선택** 검사다. hook이 아니므로 Write 직후 직접 실행한다. 새 노트의 **완료 조건은 manifest까지 넣은 이 검사 통과**다. `DRILLER:meta`도 `--meta`도 없는 노트는 legacy 경로(H1·최소 본문)로 보는데, 이는 driller 산출물 점검용이지 vault 전체의 준수 판정이 아니다. 옛 v2 노트에 v2 규칙을 적용하려면 `--meta META.json`을 붙인다.
+- **(a) frontmatter 13키 검사** — `Public/_tools/paper_frontmatter.py check` (래퍼 `paper_frontmatter.sh`). 모든 `type: paper` 노트의 공통 계약이며 명시적으로 설치한 local hook과 같은 엔진 계약을 사용한다. hook 차단 동작은 별도 검증하며 양 harness에서 자동 보장하지 않는다. 본문(H1, 길이, 절)은 보지 않는다. 수동 노트·옛 노트는 이것만 통과하면 된다.
+- **(b) 생성물 완료 검사** — `"${SKILL_ROOT}/../../hooks/claude/paper-format-validator.py"`. driller가 만든 노트의 절 구성·도표 manifest·갱신 보존을 보는 **선택** 검사다. hook이 아니므로 Write 직후 직접 실행한다. 새 노트의 **완료 조건은 manifest까지 넣은 이 검사 통과**다. `DRILLER:meta`도 `--meta`도 없는 노트는 legacy 경로(H1·최소 본문)로 보는데, 이는 driller 산출물 점검용이지 vault 전체의 준수 판정이 아니다. 옛 v2 노트에 v2 규칙을 적용하려면 `--meta META.json`을 붙인다.
 
 기본 `python3`에는 PyYAML이 없을 수 있다. 전용 venv 인터프리터를 한 번 정의해 쓴다.
 
 ```bash
-PY="$HOME/.claude/hooks/paper-frontmatter-venv/bin/python"   # 없으면: python3 ~/.claude/hooks/install-paper-frontmatter-hooks.py --setup-venv
+PY="${PAPER_FRONTMATTER_PYTHON:?PyYAML이 있는 승인된 local interpreter 절대경로 필요}"
 # (a) frontmatter만 (엔진, hook과 같은 판정) — 래퍼가 PyYAML 있는 인터프리터를 고른다
 bash "$VAULT/Public/_tools/paper_frontmatter.sh" check "$NOTE"
 # (b) 완료 검사 (신규)
-"$PY" ~/.claude/hooks/paper-format-validator.py --path "$NOTE" --manifest "$MANIFEST"
+"$PY" "${SKILL_ROOT}/../../hooks/claude/paper-format-validator.py" --path "$NOTE" --manifest "$MANIFEST"
 # (b) 갱신 검사
-"$PY" ~/.claude/hooks/paper-format-validator.py --path "$NOTE" --manifest "$MANIFEST" --previous "$OLD_COPY"
+"$PY" "${SKILL_ROOT}/../../hooks/claude/paper-format-validator.py" --path "$NOTE" --manifest "$MANIFEST" --previous "$OLD_COPY"
 # (b) 사용자가 승인한 템플릿 전환 (플래그는 동의의 기록이지 증거가 아니다)
-"$PY" ~/.claude/hooks/paper-format-validator.py --path "$NOTE" --manifest "$MANIFEST" --previous "$OLD_COPY" --approved-switch
+"$PY" "${SKILL_ROOT}/../../hooks/claude/paper-format-validator.py" --path "$NOTE" --manifest "$MANIFEST" --previous "$OLD_COPY" --approved-switch
 # (b) 형식만 (manifest 없음) — 도표 완전성은 검사하지 않는다
-"$PY" ~/.claude/hooks/paper-format-validator.py --path "$NOTE"
+"$PY" "${SKILL_ROOT}/../../hooks/claude/paper-format-validator.py" --path "$NOTE"
 # legacy stdin 방식도 그대로 동작한다
-printf '{"tool_name":"Write","tool_input":{"file_path":"%s"}}' "$NOTE" | "$PY" ~/.claude/hooks/paper-format-validator.py
+printf '{"tool_name":"Write","tool_input":{"file_path":"%s"}}' "$NOTE" | "$PY" "${SKILL_ROOT}/../../hooks/claude/paper-format-validator.py"
 ```
 
 출력 읽는 법:
