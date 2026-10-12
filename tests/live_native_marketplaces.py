@@ -33,20 +33,23 @@ before={}
 for target in ('claude','codex'):
     filename='.claude-plugin/marketplace.json' if target=='claude' else '.agents/plugins/marketplace.json'
     locked=json.loads((R/'dependencies/marketplaces'/target/filename).read_text())
-    for name in ('old-dedicated','mixed-market','unrelated-market'):
+    for name in ('old-dedicated','mixed-market','unrelated-market','generated-local-cache'):
         catalog=W/'catalogs'/target/name
         owned=locked['plugins'][0]
-        entries=[] if name=='unrelated-market' else [owned]
+        managed=name=='generated-local-cache'
+        plugin_name='bagjuhyeon-agent-ssot' if managed else 'local-unrelated'
+        entries=[] if name=='unrelated-market' or managed else [owned]
         if name!='old-dedicated':
             payload=catalog/'payload'; manifest=payload/('.claude-plugin' if target=='claude' else '.codex-plugin')/'plugin.json'
-            manifest.parent.mkdir(parents=True); manifest.write_text(json.dumps({'name':'local-unrelated','version':'1.0.0','description':'isolated fixture'}))
-            entries.append({'name':'local-unrelated','version':'1.0.0','source':'./payload'})
+
+            manifest.parent.mkdir(parents=True); manifest.write_text(json.dumps({'name':plugin_name,'version':'1.0.0','description':'isolated fixture'}))
+            entries.append({'name':plugin_name,'version':'1.0.0','source':'./payload'})
         data=dict(locked,name=name,plugins=entries)
         path=catalog/filename; path.parent.mkdir(parents=True,exist_ok=True); path.write_text(json.dumps(data))
         run([target,'plugin','marketplace','add',str(catalog),'--json']+(['--scope','user'] if target=='claude' else []))
         selectors=[]
-        if name!='unrelated-market': selectors.append('superpowers@'+name)
-        if name!='old-dedicated': selectors.append('local-unrelated@'+name)
+        if name!='unrelated-market' and not managed: selectors.append('superpowers@'+name)
+        if name!='old-dedicated': selectors.append(plugin_name+'@'+name)
         for selector in selectors:
             run([target,'plugin','install' if target=='claude' else 'add',selector,'--json']+(['--scope','user'] if target=='claude' else []))
     before[target]={'markets':markets(target),'plugins':plugins(target)}
