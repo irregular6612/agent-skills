@@ -73,7 +73,7 @@ run([str(R/'setup')],'install')
 if f11_f12:
     import compileall
     import sys
-    engine=R/'sources/skills/paper-banana-claude/engine'
+    engine=R/'sources/skills/paper-banana/engine'
     assert not list(engine.rglob('__pycache__'))
     prefix=sys.pycache_prefix; sys.pycache_prefix=None
     try: assert compileall.compile_dir(str(engine),quiet=1)
@@ -105,8 +105,8 @@ for e in manifest['links']:
     row=claude_entry(R,e,claude)
     assert row['recognized'],row
     (definitions if category=='agents' else slash_definitions).append(row)
-assert Counter(r['category'] for r in slash_definitions)=={'skills':30,'commands':2}
-assert len({r['name'] for r in slash_definitions})==32
+assert Counter(r['category'] for r in slash_definitions)=={'skills':37,'commands':2}
+assert len({r['name'] for r in slash_definitions})==39
 assert len(definitions)==len({d['name'] for d in definitions})
 wire=Wire('codex',['codex','app-server','--stdio','--strict-config'])
 try:

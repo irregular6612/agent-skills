@@ -1,0 +1,10 @@
+--- sources/skills/hwpx-claude/SKILL.md
++++ sources/skills/hwpx-codex/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: hwpx
+-description: "Comprehensive HWPX (Korean Hancom Office) document creation, editing, and analysis. When Claude needs to work with Korean word processor documents (.hwpx files) for: (1) Reading and extracting content, (2) Creating new documents, (3) Modifying or editing content, (4) Extracting tables to CSV, (5) Modifying tables or table cells, or any other HWPX document tasks. MANDATORY TRIGGERS: hwpx, hwp, 한글, 한컴, Hancom, Korean document"
++description: "Create, read, edit, extract tables from, and analyze HWPX/HWP Korean Hancom document files."
+ ---
+ 
+ # HWPX creation, editing, and analysis

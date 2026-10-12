@@ -57,7 +57,7 @@ def observe(native):
 
 # F8 has its own HOME. Empty synthetic runtime; source originals never changed.
 h=home('f8-home'); run(h,[str(R/'setup'),'--assets-only'])
-v=R/'sources/skills/paper-banana-claude/engine/.venv'; assert not v.exists() and not v.is_symlink()
+v=R/'sources/skills/paper-banana/engine/.venv'; assert not v.exists() and not v.is_symlink()
 v.mkdir()
 try:
     for flags in (['--validate'],['--assets-only','--dry-run'],['--assets-only']):

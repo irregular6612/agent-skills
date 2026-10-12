@@ -18,9 +18,11 @@ No global Python package installation, paid API, launchd changes, or publishing.
 
 - `manifest.yaml` (JSON-compatible YAML) enumerates item symlinks. The complete
   `skills`, `agents`, `commands`, or `prompts` roots are never linked wholesale.
-- `sources/` contains approved canonical originals and explicit harness variants.
-  Claude/Codex exact-match scientific skills share one original. Actual differing
-  snapshots retain overlays; copied mtimes are not evidence of which is newer.
+- `sources/skills/<native-skill-name>/` contains one canonical original per
+  reviewed common skill, including supporting assets. Both harnesses link to it.
+  Explicit supersession records and functional diffs determine consolidation;
+  copied mtimes do not determine recency. Native role metadata stays in thin
+  adapters that read canonical domain bodies, not full copied workflows.
   See `docs/SYMLINK-INVENTORY.json` and `docs/HARNESS-VARIANTS.json`.
   Current correction decisions and active counts are in `docs/SETUP-CORRECTIONS.md`;
   historical inventories are provenance, not the current installation manifest.
@@ -55,8 +57,13 @@ No global Python package installation, paid API, launchd changes, or publishing.
   share canonical definitions; the different DSLab reviewer is named
   `dslab-academic-reviewer`. `retired_links` backs up/removes approved old aliases
   and restores them on uninstall; modified aliases fail before any writes.
-- `.system`, unrelated plugin caches, external taste-skill links, agentcat-usage,
-  lost-me and other unclassified assets are preserved. Exclusion is NOT deletion
+- `.system`, unrelated plugin caches, the external `.agents` taste-skill payload,
+  agentcat-usage, lost-me and unmanaged hooks are preserved. Seven verified taste
+  skills are vendored at immutable commit `84ff339312d29955ce2040c02fd6e5bedb934608`
+  with their MIT license. Managed `.claude/skills` and `.codex/skills` items link
+  reversibly to exact upstream bytes. Existing conflicts are backed up/restored.
+  See `docs/TASTE-PROVENANCE.json` and `docs/SSOT-CONSOLIDATION.md`.
+  Exclusion is NOT deletion
   of a user's preexisting denylisted skills/plugins.
 - `dependencies/lock.yaml` pins superpowers at immutable upstream commits:
   Claude v6.4.1 and Codex v6.4.2. Metadata-only native catalogs select those commits
@@ -122,7 +129,7 @@ tools/setup_plugins.py           native pin, duplicate cleanup/readback/restore
 manifest.yaml                   item destinations + provenance
 sources/{skills,agents,commands,instructions,hooks}/
 templates/                      whitelisted shared config only
-dependencies/lock.yaml           immutable plugin coordinates + unresolved packs
+dependencies/lock.yaml           immutable plugin and verified taste-skill coordinates
 dependencies/marketplaces/       native catalog metadata, no plugin payload
 policy/denylist.yaml             matt-pocock/mattpocock/auto-code exclusions
 docs/inventory/t_8f75d661/        upstream read-only migration/inventory evidence

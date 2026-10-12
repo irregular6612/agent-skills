@@ -47,13 +47,13 @@ def no_symlink_parents(path, include_leaf=False):
 
 # Execution state is opaque, never a selectable manifest asset. Bytecode is
 # allowed only in the enumerated engine packages, not arbitrary PRIVATE paths.
-LOCAL_RUNTIME = 'sources/skills/paper-banana-claude/engine/.venv'
+LOCAL_RUNTIME = 'sources/skills/paper-banana/engine/.venv'
 BYTECODE_PACKAGES = ('mcp_server', 'paperbanana', 'paperbanana/agents',
     'paperbanana/data', 'paperbanana/evaluation', 'paperbanana/guidelines',
     'paperbanana/providers', 'paperbanana/providers/image_gen',
     'paperbanana/providers/vlm', 'paperbanana/reference', 'paperbanana/core')
 LOCAL_RUNTIMES = {LOCAL_RUNTIME} | {
-    'sources/skills/paper-banana-claude/engine/'+p+'/__pycache__'
+    'sources/skills/paper-banana/engine/'+p+'/__pycache__'
     for p in BYTECODE_PACKAGES}
 
 def local_runtime(path):

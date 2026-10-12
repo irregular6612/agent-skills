@@ -1,0 +1,10 @@
+--- sources/skills/paper-section-rewrite-claude/SKILL.md
++++ sources/skills/paper-section-rewrite-codex/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: paper-section-rewrite
+-description: 학술 논문 한 섹션을 4-Level critic loop(내용→문단 간 구성→문단 내 구성→문장)로 분석·개선하는 윤문 스킬. 두괄식·한 문장 한 역할·단문 비율 ≥ 60%·ML 비전공자 가독성 게이트·본문+부록 notation 감사 적용. KO/EN 지원. MANDATORY TRIGGERS - 섹션 다시 쓰기, 섹션 윤문, 풀어쓰기, 두괄식, paper section rewrite, ML-beginner, notation audit, em-dash 0, 단문, 단문 비율, 한 문장 한 역할, insight-first, 자기 완결, 논리적 비약, 서술형 풀어쓰기, 명사형 종결 금지
++description: 학술 논문 섹션을 내용·구조·문장 순서로 비평하고, 두괄식·단문·notation 점검까지 포함해 KO/EN로 윤문한다.
+ ---
+ 
+ # Paper Section Rewrite v4

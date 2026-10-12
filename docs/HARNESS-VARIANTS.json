@@ -1,40 +1,54 @@
 {
-  "limitations": [
-    "Historical reference trees remain non-active copies; only manifest-listed sources are installed.",
-    "Semantic unification of genuinely different harness snapshots is not asserted.",
-    "External taste-skill immutable provenance remains unresolved and existing links are preserved."
-  ],
+  "base": "00030ea9861d6a126afd286abbe94ef1c3b77341",
+  "recency_limit": "Import commits are not source authoring chronology; explicit supersession and functional diffs used, copied mtime excluded.",
   "variants": [
     {
-      "changed_files": [
-        "SKILL.md"
-      ],
-      "decision": "retain explicit harness overlay: approved snapshot content differs; use corrective archive provenance rather than copied mtime to select latest approved variant",
-      "harness_path_and_label_only": false,
       "name": "autoskill",
-      "shared_original": false,
-      "skill_md_equal": false,
+      "shared_original": true,
       "sources": {
-        "claude": "sources/skills/autoskill-claude",
-        "codex": "sources/skills/autoskill-codex"
-      }
-    },
-    {
-      "changed_files": [
+        "claude": "sources/skills/autoskill",
+        "codex": "sources/skills/autoskill"
+      },
+      "decision": "shared equivalent body",
+      "evidence": [
+        "Only frontmatter description differs; domain body and all supporting bytes are equal. Preserve full trigger description, no recency winner asserted."
+      ],
+      "base_changed_files": [
         "SKILL.md"
       ],
-      "decision": "retain explicit harness overlay: approved snapshot content differs; use corrective archive provenance rather than copied mtime to select latest approved variant",
-      "harness_path_and_label_only": false,
-      "name": "citation-management",
-      "shared_original": false,
-      "skill_md_equal": false,
-      "sources": {
-        "claude": "sources/skills/citation-management-claude",
-        "codex": "sources/skills/citation-management-codex"
-      }
+      "adapters": [],
+      "base_diff": "docs/autoskill-BASE-DIFF.patch"
     },
     {
-      "changed_files": [
+      "name": "citation-management",
+      "shared_original": true,
+      "sources": {
+        "claude": "sources/skills/citation-management",
+        "codex": "sources/skills/citation-management"
+      },
+      "decision": "shared equivalent body",
+      "evidence": [
+        "Only frontmatter description differs; domain body and all supporting bytes are equal. Preserve full trigger description, no recency winner asserted."
+      ],
+      "base_changed_files": [
+        "SKILL.md"
+      ],
+      "adapters": [],
+      "base_diff": "docs/citation-management-BASE-DIFF.patch"
+    },
+    {
+      "name": "humanize",
+      "shared_original": true,
+      "sources": {
+        "claude": "sources/skills/humanize",
+        "codex": "sources/skills/humanize"
+      },
+      "decision": "shared reviewed functional revision",
+      "evidence": [
+        "Domain body and rules equal after installation path/native model metadata conversion; no chronological winner asserted.",
+        "summary.md main-orchestrator ownership retained as common protocol; copied Codex guard claim removed as unproven."
+      ],
+      "base_changed_files": [
         "SKILL.md",
         "agents/humanize-fidelity-auditor.md",
         "agents/humanize-ko-detector.md",
@@ -45,32 +59,40 @@
         "agents/humanize-web-architect.md",
         "references/workspace.md"
       ],
-      "decision": "retain explicit harness overlay: approved snapshot content differs; use corrective archive provenance rather than copied mtime to select latest approved variant",
-      "harness_path_and_label_only": false,
-      "name": "humanize",
-      "shared_original": false,
-      "skill_md_equal": false,
-      "sources": {
-        "claude": "sources/skills/humanize-claude",
-        "codex": "sources/skills/humanize-codex"
-      }
+      "adapters": [
+        "native registered agent formats and active surface role dispatch"
+      ],
+      "base_diff": "docs/humanize-BASE-DIFF.patch"
     },
     {
-      "changed_files": [
+      "name": "hwpx",
+      "shared_original": true,
+      "sources": {
+        "claude": "sources/skills/hwpx",
+        "codex": "sources/skills/hwpx"
+      },
+      "decision": "shared equivalent body",
+      "evidence": [
+        "Only frontmatter description differs; domain body and all supporting bytes are equal. Preserve full trigger description, no recency winner asserted."
+      ],
+      "base_changed_files": [
         "SKILL.md"
       ],
-      "decision": "retain explicit harness overlay: approved snapshot content differs; use corrective archive provenance rather than copied mtime to select latest approved variant",
-      "harness_path_and_label_only": false,
-      "name": "hwpx",
-      "shared_original": false,
-      "skill_md_equal": false,
-      "sources": {
-        "claude": "sources/skills/hwpx-claude",
-        "codex": "sources/skills/hwpx-codex"
-      }
+      "adapters": [],
+      "base_diff": "docs/hwpx-BASE-DIFF.patch"
     },
     {
-      "changed_files": [
+      "name": "iterative-academic-writer",
+      "shared_original": true,
+      "sources": {
+        "claude": "sources/skills/iterative-academic-writer",
+        "codex": "sources/skills/iterative-academic-writer"
+      },
+      "decision": "shared reviewed functional revision",
+      "evidence": [
+        "references/changelog.md: v5.x 2026-07-22 supersedes v3/v4 copied evaluation and adds User-Attested/Unverifiable; Codex changelog ends v4.x 2026-06-01."
+      ],
+      "base_changed_files": [
         "SKILL.md",
         "evals/check_sync.sh",
         "evals/evals.json",
@@ -79,32 +101,41 @@
         "references/fact-checking-guide.md",
         "references/section-writing-guide.md"
       ],
-      "decision": "retain explicit harness overlay: approved snapshot content differs; use corrective archive provenance rather than copied mtime to select latest approved variant",
-      "harness_path_and_label_only": false,
-      "name": "iterative-academic-writer",
-      "shared_original": false,
-      "skill_md_equal": false,
-      "sources": {
-        "claude": "sources/skills/iterative-academic-writer-claude",
-        "codex": "sources/skills/iterative-academic-writer-codex"
-      }
+      "adapters": [
+        "native registered agent formats and active surface role dispatch"
+      ],
+      "base_diff": "docs/iterative-academic-writer-BASE-DIFF.patch"
     },
     {
-      "changed_files": [
+      "name": "latex-posters",
+      "shared_original": true,
+      "sources": {
+        "claude": "sources/skills/latex-posters",
+        "codex": "sources/skills/latex-posters"
+      },
+      "decision": "shared equivalent body",
+      "evidence": [
+        "Only frontmatter description differs; domain body and all supporting bytes are equal. Preserve full trigger description, no recency winner asserted."
+      ],
+      "base_changed_files": [
         "SKILL.md"
       ],
-      "decision": "retain explicit harness overlay: approved snapshot content differs; use corrective archive provenance rather than copied mtime to select latest approved variant",
-      "harness_path_and_label_only": false,
-      "name": "latex-posters",
-      "shared_original": false,
-      "skill_md_equal": false,
-      "sources": {
-        "claude": "sources/skills/latex-posters-claude",
-        "codex": "sources/skills/latex-posters-codex"
-      }
+      "adapters": [],
+      "base_diff": "docs/latex-posters-BASE-DIFF.patch"
     },
     {
-      "changed_files": [
+      "name": "latex-publication",
+      "shared_original": true,
+      "sources": {
+        "claude": "sources/skills/latex-publication",
+        "codex": "sources/skills/latex-publication"
+      },
+      "decision": "shared reviewed functional revision",
+      "evidence": [
+        "references/engine-selection.md records replacing hardcoded XeLaTeX with project engine settings; templates/latexmkrc explicitly removes old engine override.",
+        "Codex compile.sh and latexmkrc equal the initial 756141c import; Claude resolver implements documented follow-up."
+      ],
+      "base_changed_files": [
         "SKILL.md",
         "agents/md-fragment-converter-coordinator.md",
         "agents/md-tex-injection-planner.md",
@@ -134,46 +165,58 @@
         "templates/latexmkrc",
         "templates/settings.json"
       ],
-      "decision": "retain explicit harness overlay: approved snapshot content differs; use corrective archive provenance rather than copied mtime to select latest approved variant",
-      "harness_path_and_label_only": false,
-      "name": "latex-publication",
-      "shared_original": false,
-      "skill_md_equal": false,
-      "sources": {
-        "claude": "sources/skills/latex-publication-claude",
-        "codex": "sources/skills/latex-publication-codex"
-      }
+      "adapters": [
+        "native registered agent formats and active surface role dispatch"
+      ],
+      "base_diff": "docs/latex-publication-BASE-DIFF.patch"
     },
     {
-      "changed_files": [
-        "SKILL.md"
-      ],
-      "decision": "retain explicit harness overlay: approved snapshot content differs; use corrective archive provenance rather than copied mtime to select latest approved variant",
-      "harness_path_and_label_only": false,
       "name": "literature-review",
-      "shared_original": false,
-      "skill_md_equal": false,
+      "shared_original": true,
       "sources": {
-        "claude": "sources/skills/literature-review-claude",
-        "codex": "sources/skills/literature-review-codex"
-      }
-    },
-    {
-      "changed_files": [
+        "claude": "sources/skills/literature-review",
+        "codex": "sources/skills/literature-review"
+      },
+      "decision": "shared equivalent body",
+      "evidence": [
+        "Only frontmatter description differs; domain body and all supporting bytes are equal. Preserve full trigger description, no recency winner asserted."
+      ],
+      "base_changed_files": [
         "SKILL.md"
       ],
-      "decision": "retain explicit harness overlay: approved snapshot content differs; use corrective archive provenance rather than copied mtime to select latest approved variant",
-      "harness_path_and_label_only": false,
-      "name": "markdown-mermaid-writing",
-      "shared_original": false,
-      "skill_md_equal": false,
-      "sources": {
-        "claude": "sources/skills/markdown-mermaid-writing-claude",
-        "codex": "sources/skills/markdown-mermaid-writing-codex"
-      }
+      "adapters": [],
+      "base_diff": "docs/literature-review-BASE-DIFF.patch"
     },
     {
-      "changed_files": [
+      "name": "markdown-mermaid-writing",
+      "shared_original": true,
+      "sources": {
+        "claude": "sources/skills/markdown-mermaid-writing",
+        "codex": "sources/skills/markdown-mermaid-writing"
+      },
+      "decision": "shared equivalent body",
+      "evidence": [
+        "Only frontmatter description differs; domain body and all supporting bytes are equal. Preserve full trigger description, no recency winner asserted."
+      ],
+      "base_changed_files": [
+        "SKILL.md"
+      ],
+      "adapters": [],
+      "base_diff": "docs/markdown-mermaid-writing-BASE-DIFF.patch"
+    },
+    {
+      "name": "paper-banana",
+      "shared_original": true,
+      "sources": {
+        "claude": "sources/skills/paper-banana",
+        "codex": "sources/skills/paper-banana"
+      },
+      "decision": "shared reviewed functional revision",
+      "evidence": [
+        "SKILL.md explicitly dates model/config revision 2026-07-30, versus Codex 2026-05 with June amendments; engine config.py matches the July slot map.",
+        "Preserves documented later defaults, NOT a claim of current model availability, cost or performance; no model call."
+      ],
+      "base_changed_files": [
         "SKILL.md",
         "engine/.env.example",
         "engine/README.md",
@@ -183,33 +226,42 @@
         "engine/configs/provider/image/google_imagen.yaml",
         "engine/paperbanana/core/config.py"
       ],
-      "decision": "retain explicit harness overlay: approved snapshot content differs; use corrective archive provenance rather than copied mtime to select latest approved variant",
-      "harness_path_and_label_only": false,
-      "name": "paper-banana",
-      "shared_original": false,
-      "skill_md_equal": false,
-      "sources": {
-        "claude": "sources/skills/paper-banana-claude",
-        "codex": "sources/skills/paper-banana-codex"
-      }
+      "adapters": [
+        "MCP registration syntax only; model policy is shared"
+      ],
+      "base_diff": "docs/paper-banana-BASE-DIFF.patch"
     },
     {
-      "changed_files": [
+      "name": "paper-digest",
+      "shared_original": true,
+      "sources": {
+        "claude": "sources/skills/paper-digest",
+        "codex": "sources/skills/paper-digest"
+      },
+      "decision": "shared reviewed functional revision",
+      "evidence": [
+        "SKILL.md body identical; description condensed in Codex. Claude-only Korean draft is a supporting translation, retained without asserting newer behavior."
+      ],
+      "base_changed_files": [
         "SKILL.ko.md",
         "SKILL.md"
       ],
-      "decision": "retain explicit harness overlay: approved snapshot content differs; use corrective archive provenance rather than copied mtime to select latest approved variant",
-      "harness_path_and_label_only": false,
-      "name": "paper-digest",
-      "shared_original": false,
-      "skill_md_equal": false,
-      "sources": {
-        "claude": "sources/skills/paper-digest-claude",
-        "codex": "sources/skills/paper-digest-codex"
-      }
+      "adapters": [],
+      "base_diff": "docs/paper-digest-BASE-DIFF.patch"
     },
     {
-      "changed_files": [
+      "name": "paper-driller",
+      "shared_original": true,
+      "sources": {
+        "claude": "sources/skills/paper-driller",
+        "codex": "sources/skills/paper-driller"
+      },
+      "decision": "shared reviewed functional revision",
+      "evidence": [
+        "references/legacy-workflow.md: pre-2026-09-22 workflow retained only for legacy v2; SKILL.md and schema introduce v3 template-based notes and 13-key frontmatter.",
+        "Codex SKILL.md equals initial 756141c import."
+      ],
+      "base_changed_files": [
         "SKILL.md",
         "readme.html",
         "references/insight-digest-spec.md",
@@ -222,94 +274,176 @@
         "references/zettelkasten-guide.md",
         "scripts/validate-driller.sh"
       ],
-      "decision": "retain explicit harness overlay: approved snapshot content differs; use corrective archive provenance rather than copied mtime to select latest approved variant",
-      "harness_path_and_label_only": false,
-      "name": "paper-driller",
-      "shared_original": false,
-      "skill_md_equal": false,
-      "sources": {
-        "claude": "sources/skills/paper-driller-claude",
-        "codex": "sources/skills/paper-driller-codex"
-      }
+      "adapters": [
+        "native registered agent formats and active surface role dispatch"
+      ],
+      "base_diff": "docs/paper-driller-BASE-DIFF.patch"
     },
     {
-      "changed_files": [
+      "name": "paper-readability-review",
+      "shared_original": true,
+      "sources": {
+        "claude": "sources/skills/paper-readability-review",
+        "codex": "sources/skills/paper-readability-review"
+      },
+      "decision": "shared reviewed functional revision",
+      "evidence": [
+        "Functional corrective diff: roadmap textbox checks negative overflow and shrinks font, highlights full search hits rather than first rectangle.",
+        "Common PDF implementation fix, not chronological proof of snapshot authoring dates."
+      ],
+      "base_changed_files": [
         "SKILL.md",
         "build_review_pdf.py"
       ],
-      "decision": "retain explicit harness overlay: approved snapshot content differs; use corrective archive provenance rather than copied mtime to select latest approved variant",
-      "harness_path_and_label_only": false,
-      "name": "paper-readability-review",
-      "shared_original": false,
-      "skill_md_equal": false,
-      "sources": {
-        "claude": "sources/skills/paper-readability-review-claude",
-        "codex": "sources/skills/paper-readability-review-codex"
-      }
+      "adapters": [],
+      "base_diff": "docs/paper-readability-review-BASE-DIFF.patch"
     },
     {
-      "changed_files": [
-        "SKILL.md"
-      ],
-      "decision": "retain explicit harness overlay: approved snapshot content differs; use corrective archive provenance rather than copied mtime to select latest approved variant",
-      "harness_path_and_label_only": false,
       "name": "paper-section-rewrite",
-      "shared_original": false,
-      "skill_md_equal": false,
+      "shared_original": true,
       "sources": {
-        "claude": "sources/skills/paper-section-rewrite-claude",
-        "codex": "sources/skills/paper-section-rewrite-codex"
-      }
-    },
-    {
-      "changed_files": [
+        "claude": "sources/skills/paper-section-rewrite",
+        "codex": "sources/skills/paper-section-rewrite"
+      },
+      "decision": "shared equivalent body",
+      "evidence": [
+        "Only frontmatter description differs; domain body and all supporting bytes are equal. Preserve full trigger description, no recency winner asserted."
+      ],
+      "base_changed_files": [
         "SKILL.md"
       ],
-      "decision": "retain explicit harness overlay: approved snapshot content differs; use corrective archive provenance rather than copied mtime to select latest approved variant",
-      "harness_path_and_label_only": false,
-      "name": "peer-review",
-      "shared_original": false,
-      "skill_md_equal": false,
-      "sources": {
-        "claude": "sources/skills/peer-review-claude",
-        "codex": "sources/skills/peer-review-codex"
-      }
+      "adapters": [],
+      "base_diff": "docs/paper-section-rewrite-BASE-DIFF.patch"
     },
     {
-      "changed_files": [],
-      "decision": "exact full-tree equality: one shared original",
-      "harness_path_and_label_only": true,
+      "name": "peer-review",
+      "shared_original": true,
+      "sources": {
+        "claude": "sources/skills/peer-review",
+        "codex": "sources/skills/peer-review"
+      },
+      "decision": "shared equivalent body",
+      "evidence": [
+        "Only frontmatter description differs; domain body and all supporting bytes are equal. Preserve full trigger description, no recency winner asserted."
+      ],
+      "base_changed_files": [
+        "SKILL.md"
+      ],
+      "adapters": [],
+      "base_diff": "docs/peer-review-BASE-DIFF.patch"
+    },
+    {
       "name": "scientific-schematics",
       "shared_original": true,
-      "skill_md_equal": true,
       "sources": {
         "claude": "sources/skills/scientific-schematics",
         "codex": "sources/skills/scientific-schematics"
-      }
+      },
+      "decision": "shared equivalent body",
+      "evidence": [
+        "Full body and supporting bytes already identical at the approved base; canonical original retained unchanged."
+      ],
+      "base_changed_files": [],
+      "adapters": [],
+      "base_diff": null
     },
     {
-      "changed_files": [],
-      "decision": "exact full-tree equality: one shared original",
-      "harness_path_and_label_only": true,
       "name": "scientific-slides",
       "shared_original": true,
-      "skill_md_equal": true,
       "sources": {
         "claude": "sources/skills/scientific-slides",
         "codex": "sources/skills/scientific-slides"
-      }
+      },
+      "decision": "shared equivalent body",
+      "evidence": [
+        "Full body and supporting bytes already identical at the approved base; canonical original retained unchanged."
+      ],
+      "base_changed_files": [],
+      "adapters": [],
+      "base_diff": null
     },
     {
-      "changed_files": [],
-      "decision": "exact full-tree equality: one shared original",
-      "harness_path_and_label_only": true,
       "name": "scientific-writing",
       "shared_original": true,
-      "skill_md_equal": true,
       "sources": {
         "claude": "sources/skills/scientific-writing",
         "codex": "sources/skills/scientific-writing"
+      },
+      "decision": "shared equivalent body",
+      "evidence": [
+        "Full body and supporting bytes already identical at the approved base; canonical original retained unchanged."
+      ],
+      "base_changed_files": [],
+      "adapters": [],
+      "base_diff": null
+    }
+  ],
+  "limitations": [
+    "Native discovery is not execution/model availability proof.",
+    "Historical claude-code/ and codex/ are inactive provenance."
+  ],
+  "native_domain_adapters": {
+    "humanize": {
+      "humanize-fidelity-auditor": {
+        "claude": "sources/agents/humanize-fidelity-auditor-claude.md",
+        "codex": "sources/agents/humanize-fidelity-auditor-codex.toml",
+        "domain_body": "sources/skills/humanize/agents/humanize-fidelity-auditor.md"
+      },
+      "humanize-ko-detector": {
+        "claude": "sources/agents/humanize-ko-detector-claude.md",
+        "codex": "sources/agents/humanize-ko-detector-codex.toml",
+        "domain_body": "sources/skills/humanize/agents/humanize-ko-detector.md"
+      },
+      "humanize-ko-monolith": {
+        "claude": "sources/agents/humanize-ko-monolith-claude.md",
+        "codex": "sources/agents/humanize-ko-monolith-codex.toml",
+        "domain_body": "sources/skills/humanize/agents/humanize-ko-monolith.md"
+      },
+      "humanize-ko-rewriter": {
+        "claude": "sources/agents/humanize-ko-rewriter-claude.md",
+        "codex": "sources/agents/humanize-ko-rewriter-codex.toml",
+        "domain_body": "sources/skills/humanize/agents/humanize-ko-rewriter.md"
+      },
+      "humanize-naturalness-reviewer": {
+        "claude": "sources/agents/humanize-naturalness-reviewer-claude.md",
+        "codex": "sources/agents/humanize-naturalness-reviewer-codex.toml",
+        "domain_body": "sources/skills/humanize/agents/humanize-naturalness-reviewer.md"
+      },
+      "humanize-taxonomist": {
+        "claude": "sources/agents/humanize-taxonomist-claude.md",
+        "codex": "sources/agents/humanize-taxonomist-codex.toml",
+        "domain_body": "sources/skills/humanize/agents/humanize-taxonomist.md"
+      },
+      "humanize-web-architect": {
+        "claude": "sources/agents/humanize-web-architect-claude.md",
+        "codex": "sources/agents/humanize-web-architect-codex.toml",
+        "domain_body": "sources/skills/humanize/agents/humanize-web-architect.md"
+      }
+    },
+    "latex-publication": {
+      "md-tex-injection-planner": {
+        "claude": "sources/agents/md-tex-injection-planner-claude.md",
+        "codex": "sources/agents/md-tex-injection-planner-codex.toml",
+        "domain_body": "sources/skills/latex-publication/agents/md-tex-injection-planner.md"
+      },
+      "md-fragment-converter-coordinator": {
+        "claude": "sources/agents/md-fragment-converter-coordinator-claude.md",
+        "codex": "sources/agents/md-fragment-converter-coordinator-codex.toml",
+        "domain_body": "sources/skills/latex-publication/agents/md-fragment-converter-coordinator.md"
+      },
+      "tex-fragment-format-auditor": {
+        "claude": "sources/agents/tex-fragment-format-auditor-claude.md",
+        "codex": "sources/agents/tex-fragment-format-auditor-codex.toml",
+        "domain_body": "sources/skills/latex-publication/agents/tex-fragment-format-auditor.md"
       }
     }
-  ]
+  },
+  "followup_consistency_corrections": [
+    "Codex Critic reads common absolute protocol, no inline rubric",
+    "Humanize summary ownership, no unverified native guard guarantee",
+    "LaTeX lower commands and diagnostic use project engine; legacy Xe-only converter limitation explicit",
+    "Driller portable static checks separate from opt-in legacy vault/hook integration; canonical schema resolved by installed hook symlink",
+    "MCP uses same canonical command argv, thin native registration syntax only"
+  ],
+  "current_counts_document": "docs/SYMLINK-INVENTORY.json"
 }

@@ -1,0 +1,15 @@
+--- sources/skills/latex-posters-claude/SKILL.md
++++ sources/skills/latex-posters-codex/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: latex-posters
+-description: "Create professional research posters in LaTeX using beamerposter, tikzposter, or baposter. Support for conference presentations, academic posters, and scientific communication. Includes layout design, color schemes, multi-column formats, figure integration, and poster-specific best practices for visual communication."
++description: "Create professional LaTeX research posters with poster layouts, figures, colors, and conference-ready formatting."
+ allowed-tools: Read Write Edit Bash
+ metadata:
+   version: "1.0"
+@@ -1593,4 +1593,3 @@
+ - Color scheme definitions and institutional templates
+ 
+ Load these templates and customize for your specific research and conference requirements.
+-

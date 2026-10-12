@@ -2,10 +2,33 @@
   "schema_version": 2,
   "contract": "item-symlink",
   "retired_links": [
-    {"harness": "claude", "destination": "agents/claude-for-dslab/academic-planner.md", "source": "sources/agents/claude-for-dslab-academic-planner-claude.md", "canonical": "agents/academic-planner.md"},
-    {"harness": "claude", "destination": "agents/claude-for-dslab/report-planner.md", "source": "sources/agents/claude-for-dslab-report-planner-claude.md", "canonical": "agents/report-planner.md"},
-    {"harness": "claude", "destination": "agents/claude-for-dslab/report-reviewer.md", "source": "sources/agents/claude-for-dslab-report-reviewer-claude.md", "canonical": "agents/report-reviewer.md"},
-    {"harness": "claude", "destination": "commands/humanize.md", "source": "sources/commands/command-humanize/command.md", "approved_link_sources": ["sources/commands/command-humanize/command.md"], "canonical": "commands/humanize-command.md"}
+    {
+      "harness": "claude",
+      "destination": "agents/claude-for-dslab/academic-planner.md",
+      "source": "sources/agents/claude-for-dslab-academic-planner-claude.md",
+      "canonical": "agents/academic-planner.md"
+    },
+    {
+      "harness": "claude",
+      "destination": "agents/claude-for-dslab/report-planner.md",
+      "source": "sources/agents/claude-for-dslab-report-planner-claude.md",
+      "canonical": "agents/report-planner.md"
+    },
+    {
+      "harness": "claude",
+      "destination": "agents/claude-for-dslab/report-reviewer.md",
+      "source": "sources/agents/claude-for-dslab-report-reviewer-claude.md",
+      "canonical": "agents/report-reviewer.md"
+    },
+    {
+      "harness": "claude",
+      "destination": "commands/humanize.md",
+      "source": "sources/commands/command-humanize/command.md",
+      "approved_link_sources": [
+        "sources/commands/command-humanize/command.md"
+      ],
+      "canonical": "commands/humanize-command.md"
+    }
   ],
   "package": {
     "id": "agent-skills",
@@ -32,16 +55,16 @@
       "id": "autoskill-claude",
       "harness": "claude",
       "destination": "skills/autoskill",
-      "source": "sources/skills/autoskill-claude",
-      "origin": "sources/skills/autoskill-claude",
+      "source": "sources/skills/autoskill",
+      "origin": "base:00030ea9861d6a126afd286abbe94ef1c3b77341:sources/skills/autoskill-claude",
       "format": "markdown"
     },
     {
       "id": "autoskill-codex",
       "harness": "codex",
       "destination": "skills/autoskill",
-      "source": "sources/skills/autoskill-codex",
-      "origin": "sources/skills/autoskill-codex",
+      "source": "sources/skills/autoskill",
+      "origin": "base:00030ea9861d6a126afd286abbe94ef1c3b77341:sources/skills/autoskill-codex",
       "format": "markdown"
     },
     {
@@ -56,16 +79,16 @@
       "id": "citation-management-claude",
       "harness": "claude",
       "destination": "skills/citation-management",
-      "source": "sources/skills/citation-management-claude",
-      "origin": "sources/skills/citation-management-claude",
+      "source": "sources/skills/citation-management",
+      "origin": "base:00030ea9861d6a126afd286abbe94ef1c3b77341:sources/skills/citation-management-claude",
       "format": "markdown"
     },
     {
       "id": "citation-management-codex",
       "harness": "codex",
       "destination": "skills/citation-management",
-      "source": "sources/skills/citation-management-codex",
-      "origin": "sources/skills/citation-management-codex",
+      "source": "sources/skills/citation-management",
+      "origin": "base:00030ea9861d6a126afd286abbe94ef1c3b77341:sources/skills/citation-management-codex",
       "format": "markdown"
     },
     {
@@ -152,48 +175,48 @@
       "id": "humanize-claude",
       "harness": "claude",
       "destination": "skills/humanize",
-      "source": "sources/skills/humanize-claude",
-      "origin": "sources/skills/humanize-claude",
+      "source": "sources/skills/humanize",
+      "origin": "base:00030ea9861d6a126afd286abbe94ef1c3b77341:sources/skills/humanize-claude",
       "format": "markdown"
     },
     {
       "id": "humanize-codex",
       "harness": "codex",
       "destination": "skills/humanize",
-      "source": "sources/skills/humanize-codex",
-      "origin": "sources/skills/humanize-codex",
+      "source": "sources/skills/humanize",
+      "origin": "base:00030ea9861d6a126afd286abbe94ef1c3b77341:sources/skills/humanize-codex",
       "format": "markdown"
     },
     {
       "id": "hwpx-claude",
       "harness": "claude",
       "destination": "skills/hwpx",
-      "source": "sources/skills/hwpx-claude",
-      "origin": "sources/skills/hwpx-claude",
+      "source": "sources/skills/hwpx",
+      "origin": "base:00030ea9861d6a126afd286abbe94ef1c3b77341:sources/skills/hwpx-claude",
       "format": "markdown"
     },
     {
       "id": "hwpx-codex",
       "harness": "codex",
       "destination": "skills/hwpx",
-      "source": "sources/skills/hwpx-codex",
-      "origin": "sources/skills/hwpx-codex",
+      "source": "sources/skills/hwpx",
+      "origin": "base:00030ea9861d6a126afd286abbe94ef1c3b77341:sources/skills/hwpx-codex",
       "format": "markdown"
     },
     {
       "id": "iterative-academic-writer-claude",
       "harness": "claude",
       "destination": "skills/iterative-academic-writer",
-      "source": "sources/skills/iterative-academic-writer-claude",
-      "origin": "sources/skills/iterative-academic-writer-claude",
+      "source": "sources/skills/iterative-academic-writer",
+      "origin": "base:00030ea9861d6a126afd286abbe94ef1c3b77341:sources/skills/iterative-academic-writer-claude",
       "format": "markdown"
     },
     {
       "id": "iterative-academic-writer-codex",
       "harness": "codex",
       "destination": "skills/iterative-academic-writer",
-      "source": "sources/skills/iterative-academic-writer-codex",
-      "origin": "sources/skills/iterative-academic-writer-codex",
+      "source": "sources/skills/iterative-academic-writer",
+      "origin": "base:00030ea9861d6a126afd286abbe94ef1c3b77341:sources/skills/iterative-academic-writer-codex",
       "format": "markdown"
     },
     {
@@ -208,64 +231,64 @@
       "id": "latex-posters-claude",
       "harness": "claude",
       "destination": "skills/latex-posters",
-      "source": "sources/skills/latex-posters-claude",
-      "origin": "sources/skills/latex-posters-claude",
+      "source": "sources/skills/latex-posters",
+      "origin": "base:00030ea9861d6a126afd286abbe94ef1c3b77341:sources/skills/latex-posters-claude",
       "format": "markdown"
     },
     {
       "id": "latex-posters-codex",
       "harness": "codex",
       "destination": "skills/latex-posters",
-      "source": "sources/skills/latex-posters-codex",
-      "origin": "sources/skills/latex-posters-codex",
+      "source": "sources/skills/latex-posters",
+      "origin": "base:00030ea9861d6a126afd286abbe94ef1c3b77341:sources/skills/latex-posters-codex",
       "format": "markdown"
     },
     {
       "id": "latex-publication-claude",
       "harness": "claude",
       "destination": "skills/latex-publication",
-      "source": "sources/skills/latex-publication-claude",
-      "origin": "sources/skills/latex-publication-claude",
+      "source": "sources/skills/latex-publication",
+      "origin": "base:00030ea9861d6a126afd286abbe94ef1c3b77341:sources/skills/latex-publication-claude",
       "format": "markdown"
     },
     {
       "id": "latex-publication-codex",
       "harness": "codex",
       "destination": "skills/latex-publication",
-      "source": "sources/skills/latex-publication-codex",
-      "origin": "sources/skills/latex-publication-codex",
+      "source": "sources/skills/latex-publication",
+      "origin": "base:00030ea9861d6a126afd286abbe94ef1c3b77341:sources/skills/latex-publication-codex",
       "format": "markdown"
     },
     {
       "id": "literature-review-claude",
       "harness": "claude",
       "destination": "skills/literature-review",
-      "source": "sources/skills/literature-review-claude",
-      "origin": "sources/skills/literature-review-claude",
+      "source": "sources/skills/literature-review",
+      "origin": "base:00030ea9861d6a126afd286abbe94ef1c3b77341:sources/skills/literature-review-claude",
       "format": "markdown"
     },
     {
       "id": "literature-review-codex",
       "harness": "codex",
       "destination": "skills/literature-review",
-      "source": "sources/skills/literature-review-codex",
-      "origin": "sources/skills/literature-review-codex",
+      "source": "sources/skills/literature-review",
+      "origin": "base:00030ea9861d6a126afd286abbe94ef1c3b77341:sources/skills/literature-review-codex",
       "format": "markdown"
     },
     {
       "id": "markdown-mermaid-writing-claude",
       "harness": "claude",
       "destination": "skills/markdown-mermaid-writing",
-      "source": "sources/skills/markdown-mermaid-writing-claude",
-      "origin": "sources/skills/markdown-mermaid-writing-claude",
+      "source": "sources/skills/markdown-mermaid-writing",
+      "origin": "base:00030ea9861d6a126afd286abbe94ef1c3b77341:sources/skills/markdown-mermaid-writing-claude",
       "format": "markdown"
     },
     {
       "id": "markdown-mermaid-writing-codex",
       "harness": "codex",
       "destination": "skills/markdown-mermaid-writing",
-      "source": "sources/skills/markdown-mermaid-writing-codex",
-      "origin": "sources/skills/markdown-mermaid-writing-codex",
+      "source": "sources/skills/markdown-mermaid-writing",
+      "origin": "base:00030ea9861d6a126afd286abbe94ef1c3b77341:sources/skills/markdown-mermaid-writing-codex",
       "format": "markdown"
     },
     {
@@ -280,48 +303,48 @@
       "id": "paper-banana-claude",
       "harness": "claude",
       "destination": "skills/paper-banana",
-      "source": "sources/skills/paper-banana-claude",
-      "origin": "sources/skills/paper-banana-claude",
+      "source": "sources/skills/paper-banana",
+      "origin": "base:00030ea9861d6a126afd286abbe94ef1c3b77341:sources/skills/paper-banana-claude",
       "format": "markdown"
     },
     {
       "id": "paper-banana-codex",
       "harness": "codex",
       "destination": "skills/paper-banana",
-      "source": "sources/skills/paper-banana-codex",
-      "origin": "sources/skills/paper-banana-codex",
+      "source": "sources/skills/paper-banana",
+      "origin": "base:00030ea9861d6a126afd286abbe94ef1c3b77341:sources/skills/paper-banana-codex",
       "format": "markdown"
     },
     {
       "id": "paper-digest-claude",
       "harness": "claude",
       "destination": "skills/paper-digest",
-      "source": "sources/skills/paper-digest-claude",
-      "origin": "sources/skills/paper-digest-claude",
+      "source": "sources/skills/paper-digest",
+      "origin": "base:00030ea9861d6a126afd286abbe94ef1c3b77341:sources/skills/paper-digest-claude",
       "format": "markdown"
     },
     {
       "id": "paper-digest-codex",
       "harness": "codex",
       "destination": "skills/paper-digest",
-      "source": "sources/skills/paper-digest-codex",
-      "origin": "sources/skills/paper-digest-codex",
+      "source": "sources/skills/paper-digest",
+      "origin": "base:00030ea9861d6a126afd286abbe94ef1c3b77341:sources/skills/paper-digest-codex",
       "format": "markdown"
     },
     {
       "id": "paper-driller-claude",
       "harness": "claude",
       "destination": "skills/paper-driller",
-      "source": "sources/skills/paper-driller-claude",
-      "origin": "sources/skills/paper-driller-claude",
+      "source": "sources/skills/paper-driller",
+      "origin": "base:00030ea9861d6a126afd286abbe94ef1c3b77341:sources/skills/paper-driller-claude",
       "format": "markdown"
     },
     {
       "id": "paper-driller-codex",
       "harness": "codex",
       "destination": "skills/paper-driller",
-      "source": "sources/skills/paper-driller-codex",
-      "origin": "sources/skills/paper-driller-codex",
+      "source": "sources/skills/paper-driller",
+      "origin": "base:00030ea9861d6a126afd286abbe94ef1c3b77341:sources/skills/paper-driller-codex",
       "format": "markdown"
     },
     {
@@ -336,32 +359,32 @@
       "id": "paper-readability-review-claude",
       "harness": "claude",
       "destination": "skills/paper-readability-review",
-      "source": "sources/skills/paper-readability-review-claude",
-      "origin": "sources/skills/paper-readability-review-claude",
+      "source": "sources/skills/paper-readability-review",
+      "origin": "base:00030ea9861d6a126afd286abbe94ef1c3b77341:sources/skills/paper-readability-review-claude",
       "format": "markdown"
     },
     {
       "id": "paper-readability-review-codex",
       "harness": "codex",
       "destination": "skills/paper-readability-review",
-      "source": "sources/skills/paper-readability-review-codex",
-      "origin": "sources/skills/paper-readability-review-codex",
+      "source": "sources/skills/paper-readability-review",
+      "origin": "base:00030ea9861d6a126afd286abbe94ef1c3b77341:sources/skills/paper-readability-review-codex",
       "format": "markdown"
     },
     {
       "id": "paper-section-rewrite-claude",
       "harness": "claude",
       "destination": "skills/paper-section-rewrite",
-      "source": "sources/skills/paper-section-rewrite-claude",
-      "origin": "sources/skills/paper-section-rewrite-claude",
+      "source": "sources/skills/paper-section-rewrite",
+      "origin": "base:00030ea9861d6a126afd286abbe94ef1c3b77341:sources/skills/paper-section-rewrite-claude",
       "format": "markdown"
     },
     {
       "id": "paper-section-rewrite-codex",
       "harness": "codex",
       "destination": "skills/paper-section-rewrite",
-      "source": "sources/skills/paper-section-rewrite-codex",
-      "origin": "sources/skills/paper-section-rewrite-codex",
+      "source": "sources/skills/paper-section-rewrite",
+      "origin": "base:00030ea9861d6a126afd286abbe94ef1c3b77341:sources/skills/paper-section-rewrite-codex",
       "format": "markdown"
     },
     {
@@ -384,16 +407,16 @@
       "id": "peer-review-claude",
       "harness": "claude",
       "destination": "skills/peer-review",
-      "source": "sources/skills/peer-review-claude",
-      "origin": "sources/skills/peer-review-claude",
+      "source": "sources/skills/peer-review",
+      "origin": "base:00030ea9861d6a126afd286abbe94ef1c3b77341:sources/skills/peer-review-claude",
       "format": "markdown"
     },
     {
       "id": "peer-review-codex",
       "harness": "codex",
       "destination": "skills/peer-review",
-      "source": "sources/skills/peer-review-codex",
-      "origin": "sources/skills/peer-review-codex",
+      "source": "sources/skills/peer-review",
+      "origin": "base:00030ea9861d6a126afd286abbe94ef1c3b77341:sources/skills/peer-review-codex",
       "format": "markdown"
     },
     {
@@ -559,7 +582,6 @@
       "format": "markdown-frontmatter",
       "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
-
     {
       "id": "claude-for-dslab-academic-reviewer-claude",
       "native_name": "dslab-academic-reviewer",
@@ -570,7 +592,6 @@
       "format": "markdown-frontmatter",
       "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
-
     {
       "id": "code-cleanup-optimizer-claude",
       "harness": "claude",
@@ -1141,6 +1162,142 @@
       "harness": "codex",
       "destination": "hooks/ssot",
       "source": "sources/hooks/codex"
+    },
+    {
+      "id": "brandkit-claude",
+      "harness": "claude",
+      "destination": "skills/brandkit",
+      "source": "sources/skills/brandkit",
+      "origin": "https://github.com/Leonxlnx/taste-skill.git@84ff339312d29955ce2040c02fd6e5bedb934608:skills/brandkit",
+      "format": "markdown"
+    },
+    {
+      "id": "brandkit-codex",
+      "harness": "codex",
+      "destination": "skills/brandkit",
+      "source": "sources/skills/brandkit",
+      "origin": "https://github.com/Leonxlnx/taste-skill.git@84ff339312d29955ce2040c02fd6e5bedb934608:skills/brandkit",
+      "format": "markdown"
+    },
+    {
+      "id": "design-taste-frontend-claude",
+      "harness": "claude",
+      "destination": "skills/design-taste-frontend",
+      "source": "sources/skills/design-taste-frontend",
+      "origin": "https://github.com/Leonxlnx/taste-skill.git@84ff339312d29955ce2040c02fd6e5bedb934608:skills/taste-skill",
+      "format": "markdown"
+    },
+    {
+      "id": "design-taste-frontend-codex",
+      "harness": "codex",
+      "destination": "skills/design-taste-frontend",
+      "source": "sources/skills/design-taste-frontend",
+      "origin": "https://github.com/Leonxlnx/taste-skill.git@84ff339312d29955ce2040c02fd6e5bedb934608:skills/taste-skill",
+      "format": "markdown"
+    },
+    {
+      "id": "full-output-enforcement-claude",
+      "harness": "claude",
+      "destination": "skills/full-output-enforcement",
+      "source": "sources/skills/full-output-enforcement",
+      "origin": "https://github.com/Leonxlnx/taste-skill.git@84ff339312d29955ce2040c02fd6e5bedb934608:skills/output-skill",
+      "format": "markdown"
+    },
+    {
+      "id": "full-output-enforcement-codex",
+      "harness": "codex",
+      "destination": "skills/full-output-enforcement",
+      "source": "sources/skills/full-output-enforcement",
+      "origin": "https://github.com/Leonxlnx/taste-skill.git@84ff339312d29955ce2040c02fd6e5bedb934608:skills/output-skill",
+      "format": "markdown"
+    },
+    {
+      "id": "image-to-code-claude",
+      "harness": "claude",
+      "destination": "skills/image-to-code",
+      "source": "sources/skills/image-to-code",
+      "origin": "https://github.com/Leonxlnx/taste-skill.git@84ff339312d29955ce2040c02fd6e5bedb934608:skills/image-to-code-skill",
+      "format": "markdown"
+    },
+    {
+      "id": "image-to-code-codex",
+      "harness": "codex",
+      "destination": "skills/image-to-code",
+      "source": "sources/skills/image-to-code",
+      "origin": "https://github.com/Leonxlnx/taste-skill.git@84ff339312d29955ce2040c02fd6e5bedb934608:skills/image-to-code-skill",
+      "format": "markdown"
+    },
+    {
+      "id": "industrial-brutalist-ui-claude",
+      "harness": "claude",
+      "destination": "skills/industrial-brutalist-ui",
+      "source": "sources/skills/industrial-brutalist-ui",
+      "origin": "https://github.com/Leonxlnx/taste-skill.git@84ff339312d29955ce2040c02fd6e5bedb934608:skills/brutalist-skill",
+      "format": "markdown"
+    },
+    {
+      "id": "industrial-brutalist-ui-codex",
+      "harness": "codex",
+      "destination": "skills/industrial-brutalist-ui",
+      "source": "sources/skills/industrial-brutalist-ui",
+      "origin": "https://github.com/Leonxlnx/taste-skill.git@84ff339312d29955ce2040c02fd6e5bedb934608:skills/brutalist-skill",
+      "format": "markdown"
+    },
+    {
+      "id": "minimalist-ui-claude",
+      "harness": "claude",
+      "destination": "skills/minimalist-ui",
+      "source": "sources/skills/minimalist-ui",
+      "origin": "https://github.com/Leonxlnx/taste-skill.git@84ff339312d29955ce2040c02fd6e5bedb934608:skills/minimalist-skill",
+      "format": "markdown"
+    },
+    {
+      "id": "minimalist-ui-codex",
+      "harness": "codex",
+      "destination": "skills/minimalist-ui",
+      "source": "sources/skills/minimalist-ui",
+      "origin": "https://github.com/Leonxlnx/taste-skill.git@84ff339312d29955ce2040c02fd6e5bedb934608:skills/minimalist-skill",
+      "format": "markdown"
+    },
+    {
+      "id": "redesign-existing-projects-claude",
+      "harness": "claude",
+      "destination": "skills/redesign-existing-projects",
+      "source": "sources/skills/redesign-existing-projects",
+      "origin": "https://github.com/Leonxlnx/taste-skill.git@84ff339312d29955ce2040c02fd6e5bedb934608:skills/redesign-skill",
+      "format": "markdown"
+    },
+    {
+      "id": "redesign-existing-projects-codex",
+      "harness": "codex",
+      "destination": "skills/redesign-existing-projects",
+      "source": "sources/skills/redesign-existing-projects",
+      "origin": "https://github.com/Leonxlnx/taste-skill.git@84ff339312d29955ce2040c02fd6e5bedb934608:skills/redesign-skill",
+      "format": "markdown"
+    },
+    {
+      "id": "md-tex-injection-planner-claude",
+      "harness": "claude",
+      "destination": "agents/md-tex-injection-planner.md",
+      "source": "sources/agents/md-tex-injection-planner-claude.md",
+      "origin": "shared latex-publication supporting body; native metadata adapter",
+      "policy": "owned"
+    },
+    {
+      "id": "md-fragment-converter-coordinator-claude",
+      "harness": "claude",
+      "destination": "agents/md-fragment-converter-coordinator.md",
+      "source": "sources/agents/md-fragment-converter-coordinator-claude.md",
+      "origin": "shared latex-publication supporting body; native metadata adapter",
+      "policy": "owned"
+    },
+    {
+      "id": "tex-fragment-format-auditor-claude",
+      "harness": "claude",
+      "destination": "agents/tex-fragment-format-auditor.md",
+      "source": "sources/agents/tex-fragment-format-auditor-claude.md",
+      "origin": "shared latex-publication supporting body; native metadata adapter",
+      "policy": "owned"
     }
   ],
   "templates": {

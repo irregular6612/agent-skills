@@ -81,7 +81,7 @@ class RegressionTests(unittest.TestCase):
     def test_claude_native_names_unique_and_canonical_comparison(self):
         agents=[e for e in self.manifest['links'] if e['harness']=='claude' and e['destination'].startswith('agents/')]
         names=[json.loads((ROOT/e['source']).read_text().split('---',2)[1].split('name: ',1)[1].splitlines()[0]) for e in agents]
-        self.assertEqual(len(agents),31); self.assertEqual(len(names),len(set(names)))
+        self.assertEqual(len(agents),34); self.assertEqual(len(names),len(set(names)))
         self.assertIn('academic-reviewer',names); self.assertIn('dslab-academic-reviewer',names)
         for name in ('academic-planner','report-planner','report-reviewer'):
             a=(ROOT/'sources/agents'/f'{name}-claude.md').read_text().split('---',2)[2]

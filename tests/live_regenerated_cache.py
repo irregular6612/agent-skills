@@ -81,7 +81,7 @@ assert {str(p.relative_to(cache)):identity(p) for p in cache.rglob('*') if p.is_
 # Real Python bytecode generation, without importing/executing the engine.
 H2=W/'runtime-home'; H2.mkdir(); env.update(HOME=str(H2),CLAUDE_CONFIG_DIR=str(H2/'.claude'),CODEX_HOME=str(H2/'.codex'))
 run([str(R/'setup'),'--assets-only'])
-source=R/'sources/skills/paper-banana-claude/engine/mcp_server/__init__.py'
+source=R/'sources/skills/paper-banana/engine/mcp_server/__init__.py'
 runtime=source.parent/'__pycache__'; assert not runtime.exists()
 runtime.mkdir()
 py_compile.compile(str(source),cfile=str(runtime/('__init__.'+sys.implementation.cache_tag+'.pyc')),doraise=True)

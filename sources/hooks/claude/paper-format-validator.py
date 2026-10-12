@@ -56,7 +56,8 @@ from urllib.parse import urlsplit
 # Schema / engine loading
 # ---------------------------------------------------------------------------
 
-SKILL_REFS = Path.home() / ".claude" / "skills" / "paper-driller" / "references"
+# Resolve our installed item symlink to the checkout, not another harness HOME.
+SKILL_REFS = Path(__file__).resolve().parents[3] / "sources" / "skills" / "paper-driller" / "references"
 SCHEMA_PATH = SKILL_REFS / "paper-schema.json"
 # Tests monkeypatch this module constant. There is no environment override.
 TEMPLATES_DIR = SKILL_REFS / "templates"

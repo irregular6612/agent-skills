@@ -19,7 +19,7 @@ class RegeneratedCacheTests(unittest.TestCase):
         root=self.base/'repo'; root.mkdir()
         subprocess.run(['git','init','-q',str(root)],check=True)
         (root/'.gitignore').write_text('.venv/\n')
-        skill=root/'sources/skills/paper-banana-claude'; (skill/'engine').mkdir(parents=True)
+        skill=root/'sources/skills/paper-banana'; (skill/'engine').mkdir(parents=True)
         (skill/'SKILL.md').write_text('synthetic original')
         return root,skill
 

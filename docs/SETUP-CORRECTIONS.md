@@ -1,5 +1,7 @@
 # setup 수정 결정 — t_ce71121d
 
+현재 통합 후보는 `docs/SSOT-CONSOLIDATION.md`와 `docs/SYMLINK-INVENTORY.json`이 기준이다. 155 item links이며 Claude skill37/agent34/command2, Codex skill42/role34/reference prompt2다. 아래 138/30/31/35와 discovery 결과는 당시 F1–F13 승인 base의 역사 기록이다.
+
 이 문서는 t_70718ee6의 REVISE(F1–F4)에 대한 구현 결정이다. 구현 자체 검증은 실제 HOME 적용 승인이나 독립 검증 PASS를 대신하지 않는다.
 
 ## F1: TOML 편집 범위

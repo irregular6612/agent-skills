@@ -1,21 +1,53 @@
 {
-  "upstream": "t_064fc190 corrective approved snapshot; t_8f75d661 inventory",
+  "upstream": "t_b8b0fced consolidation over approved 00030ea9861d6a126afd286abbe94ef1c3b77341",
   "excluded": [
     "agentcat-usage",
+    "lost-me"
+  ],
+  "variant_policy": "One canonical source per reviewed common skill; native format adapters only, full duplicate sources removed.",
+  "links": 155,
+  "shared_skill_names": [
+    "autoskill",
+    "citation-management",
+    "humanize",
+    "hwpx",
+    "iterative-academic-writer",
+    "latex-posters",
+    "latex-publication",
+    "literature-review",
+    "markdown-mermaid-writing",
+    "paper-banana",
+    "paper-digest",
+    "paper-driller",
+    "paper-readability-review",
+    "paper-section-rewrite",
+    "peer-review",
+    "scientific-schematics",
+    "scientific-slides",
+    "scientific-writing",
     "brandkit",
     "design-taste-frontend",
     "full-output-enforcement",
     "image-to-code",
     "industrial-brutalist-ui",
-    "lost-me",
     "minimalist-ui",
     "redesign-existing-projects"
   ],
-  "variant_policy": "Content differences retain harness overlays, not guessed newest from copied mtimes. Codex TOML native agents are explicit adapters. Exact full-tree equality shares one source.",
-  "links": 141,
-  "shared_skill_names": [
-    "scientific-schematics",
-    "scientific-slides",
-    "scientific-writing"
-  ]
+  "preservation": "Unknown agentcat-usage/lost-me, unmanaged hooks, unrelated preexisting denied plugins and .agents installer payloads remain outside import/install ownership.",
+  "category_counts": {
+    "claude": {
+      "skills": 37,
+      "agents": 34,
+      "commands": 2,
+      "prompts": 0,
+      "hooks": 1
+    },
+    "codex": {
+      "skills": 42,
+      "agents": 34,
+      "commands": 0,
+      "prompts": 2,
+      "hooks": 1
+    }
+  }
 }

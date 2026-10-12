@@ -1,0 +1,2781 @@
+--- sources/skills/paper-driller-claude/SKILL.md
++++ sources/skills/paper-driller-codex/SKILL.md
+@@ -1,7 +1,6 @@
+ ---
+ name: paper-driller
+-description: >-
+-  논문 1편을 원문 옆에 띄워 놓고 읽기 위한 근거 추적 노트를 만든다. 사용자가 고른 템플릿(기본 general-v1: paper-digest 개요 + 배경 + 지표 + 방법 + 결과 + take-home + 본문 도표 전부)로 쓴다. TRIGGERS: 논문 요약, paper drill, arxiv 정리, 논문 노트, 논문 읽기 전 요약, deep paper analysis
++description: 논문이나 긴 글을 spine 분석 후 심층 노트 또는 공유용 한 문단 요약으로 정리한다.
+ allowed-tools:
+   - mcp__arxiv__download_paper
+   - mcp__arxiv__read_paper
+@@ -19,79 +18,465 @@
+   - Agent
+ ---
+ 
+-# Paper Driller v3
+-
+-## 무엇을 만드나
+-
+-논문 원문(PDF)을 옆에 띄워 놓고 함께 읽는 **동반 노트**를 만든다. 논문을 대신하는 글이 아니라, 원문의 어디에 무엇이 있는지 짚어 주는 글이다. 독자는 이 분야를 처음 보는 고등학생이라고 생각하고 쉽게 쓰되, 숫자·조건·가정은 원문 그대로 정확하게 남긴다.
+-
+-노트의 절 구성은 **템플릿**이 정한다. 템플릿은 `references/templates/{id}.md` 파일 하나다. 첫 템플릿은 `general-v1`(일반 7부)이다. 자세한 절차는 `references/workflow.md`, 기계 스키마는 `references/paper-schema.json`이 단일 원천이다.
+-
+-## 호출
+-
+-```text
+-/paper-driller <arXiv-ID | DOI | URL | 제목> [--template <id>|auto] [--mode preread|deep] [--profile ...] [--humanize]
+-```
+-
+-- `--template <id>`: 그 템플릿을 쓴다. 다시 묻지 않는다.
+-- `--template auto` (또는 `--auto`, "auto로 해줘"): **반드시 `general-v1`**. 전문 템플릿을 대신 골라 주는 옵션이 아니다.
+-- `--mode preread|deep` (기본값: preread): `deep`은 고른 템플릿을 다 채운 뒤 `## 상세 독해 노트`를 더 붙인다(비어 있으면 검증 실패). 템플릿 질문이나 도표 설명을 건너뛰는 뜻이 아니다. `--mode preread`만 있는 호출(radar `드릴` 포함)도 템플릿은 묻는다.
+-- `--humanize`: 저장 직전 서술 문단만 `humanize` 스킬로 다듬는다. 개요·표·수치·frontmatter는 넘기지 않는다.
+-
+-## 순서
+-
+-1. **중복 확인.** 원문 식별자는 frontmatter의 `URL` 하나다. `URL`에서 유도한 arXiv id(버전 제거)·DOI·정규화 URL이 같은 노트가 있으면 새로 만들지 않고 `update-existing`으로 간다. URL은 스킴·호스트 대소문자·`www.`·`#` 조각·끝 슬래시만 무시하고, 경로 대소문자와 query는 그대로 비교한다(`forum?id=A`와 `forum?id=B`는 다른 논문). 기존 템플릿을 유지하고 `AUTO:body` 안만 다시 쓴다. 사용자 필드·`USER:` 블록·H1 제목·마커 밖 내용은 글자 하나 바꾸지 않는다(YAML 들여쓰기·따옴표 포함). 사용자가 템플릿 전환을 명시적으로 승인한 경우에만 검증에 `--approved-switch`를 붙인다. 이 플래그는 이미 받은 동의의 기록이지 동의의 증거가 아니다.
+-2. **템플릿 선택.** 새 논문이면 `references/templates/`의 목록을 이름·용도와 함께 보여 주고 **사용자가 고를 때까지 기다린다.** 하나뿐이어도 묻는다. 논문 성격상 새 전문 구조가 낫다고 보면 절 제목 목록과 저장할 id를 제안하고 **"만들어서 저장해도 됩니까?"** 동의를 받은 뒤에만 파일을 만든다. 동의하지 않으면 파일을 만들지 않는다. 이미 고른 템플릿이 있으면 그것으로 진행하고, 아직 고른 것이 없으면 목록을 다시 보여 주고 선택을 기다린다. 명시적 `auto`는 전문 템플릿 제안으로 멈추지 않고 `general-v1`로 바로 간다. 비대화형이면 "템플릿 선택 필요"를 출력하고 파일을 만들지 않는다.
+-3. **원문 수집.** arXiv MCP → Semantic Scholar → paper-search MCP → `WebFetch` → `WebSearch` 순서. 캐시된 PDF 경로가 나오면 `Read(pages=…)`로 끝까지 읽는다. 확보 범위를 `source-coverage`(`fulltext|section-extract|abstract-only|unknown`)에 정직하게 적는다.
+-4. **도표 manifest.** 노트를 쓰기 전에 원문에서 Figure/Table 목록을 임시 JSON으로 만든다. 항목마다 원문 라벨 그대로의 `id`, 본문 여부(`true|false|"unsure"`), 확인 상태(`viewed|caption-only|not-seen`)를 적는다. 부록·보충자료는 `false`. 노트에서 거꾸로 만들지 않는다.
+-5. **작성.** 선택한 템플릿의 절을 순서대로 채운다. `general-v1`의 `## 개요`는 `paper-digest` 스킬 규칙으로 실제 작성한 결과를 그대로 넣는다. 본문 Figure/Table은 하나도 빠짐없이 `### Figure N` / `### Table N` 아래 각각 설명한다. 길이 상한은 없다.
+-6. **검증.** Write 직후 아래 명령을 직접 실행한다. `SKIPPED:` 줄이 남아 있으면 완료가 아니다.
+-7. **Wiki Integration.** 중복 재확인, `linked-bases` 확인, 관련 노트 연결, `build_catalog.py`, `lint.py`, `_wiki/log.md` 기록.
+-
+-## 공통 규칙 (템플릿이 끌 수 없음)
+-
+-- 사실마다 원문 위치(Section/Table/Figure) 또는 `[위치 미확인]`.
+-- 출처 라벨 `author-stated | analyst-inference | unknown`을 섞지 않는다.
+-- 원문에 없는 수치·조건·주장·도표·arXiv 링크를 만들지 않는다. 기억 속 논문 내용으로 빈칸을 채우지 않는다. 원문 전체를 읽고도 없으면 "보고되지 않았다", 읽지 못한 범위에 있을 수 있으면 "확보한 범위에서 확인하지 못했다". 둘을 섞지 않는다.
+-- `abstract-only`·`section-extract` 노트는 짧게 쓴다. 범위 한계는 첫 절에 한 번만 밝히고, 채울 수 없는 절에는 "확보한 범위에 없음" 한 줄이면 된다. 초록 문장들을 이어 붙여 인과관계나 선행 연구 비교를 만들지 않는다.
+-- 지표가 없는 논문이면 템플릿의 지표 절(`general-v1`은 `## 지표`)에 "해당 없음"과 이유를 쓴다. 절 제목은 템플릿이 정한다.
+-- 도표를 직접 못 봤으면 캡션에서 확인되는 것만 쓰고 `caption-only`, 캡션도 못 봤으면 `not-seen`으로 표시한다. 항목별 `확인 상태`는 manifest의 `evidence`와 같아야 하며 빈 제목만 두면 설명한 것이 아니다. 그런 노트는 `quality-status: review`다.
+-- 도표 범위를 줄이는 것은 사용자가 명시적으로 요청했을 때만이며 `visual-scope: user-narrowed` + `visual-scope-note`에 그 요청을 적는다.
+-- 용어는 지우지 않는다. 첫 등장에 `용어(쉬운 설명)`. 15어절·비유 개수·수치 반복 금지 같은 v2 규칙은 새 노트에 적용하지 않는다.
+-
+-## 저장
+-
+-`vault_root`: 사용자 지정 → `PAPER_DRILLER_VAULT` → CWD에 `Public/`이 있으면 CWD → 없으면 사용자에게 확인. `destination`은 vault_root 상대 경로다. AI 논문 `Public/AI/Papers/`, 비-AI 논문 `Public/{domain}/`. Category 하위 폴더를 만들지 않는다. **PDF 위치에서 저장 경로를 추측하지 않는다.**
+-
+-frontmatter는 **정확히 13개 키, 이 순서**다: `type: paper`, `Reading-Status`, `Read-Depth`, `Author`, `Journal/Conference`, `Published Year`, `Topic`, `Review-Date`, `Comment`, `URL`, `Category`, `linked-bases`, `Lab`. 빈 값은 `Key:`. 그 외 키(`arXiv-ID`, `DOI`, `Evidence-Quality`, `Reproducibility`, `isTargetPaper` 등)는 쓰지 않는다. 계약의 단일 기준은 vault `Public/_tools/paper_frontmatter.py`이고 Claude Code hook이 위반 Write/Edit를 차단한다. `Read-Depth`는 사람의 읽기 깊이이므로 새 노트는 비우고, `Reading-Status`는 비우거나 `☑️ Not Started`다. 새 노트 식별 키 `template-version: paper-note-v3`, `template-id`, `summary-mode`, `profile`, `source-coverage`, `quality-status`, `visual-check`, `visual-scope`는 YAML이 아니라 frontmatter 바로 뒤 `<!-- BEGIN DRILLER:meta` … `END DRILLER:meta -->` 블록에 `key: value` 한 줄씩 둔다. `reading-decision`은 실제로 판단했을 때만 적는다. 본문은 `<!-- BEGIN AUTO:body template-id={id} -->` … `<!-- END AUTO:body -->` 한 쌍 안에 두고, 그 뒤에 `<!-- BEGIN USER:notes -->` … `<!-- END USER:notes -->`를 둔다. 전체 예시는 `references/workflow.md` 7절.
+-
+-## 검증 명령
+-
+-두 검사는 역할이 다르다. **(a) frontmatter 검사**(`paper_frontmatter.py check`, hook과 같은 판정)는 모든 `type: paper` 노트의 공통 계약이며 본문에 아무것도 요구하지 않는다. **(b) 생성물 완료 검사**(`paper-format-validator.py`)는 driller가 만든 노트의 절 구성·도표 manifest·갱신 보존을 보는 선택 검사이고, 수동 노트나 vault 전체의 준수 여부를 판정하는 도구가 아니다. 기본 `python3`에는 PyYAML이 없을 수 있으므로 아래처럼 전용 venv를 쓴다.
+-
+-```bash
+-PY="$HOME/.claude/hooks/paper-frontmatter-venv/bin/python"   # PyYAML 포함 (없으면: python3 ~/.claude/hooks/install-paper-frontmatter-hooks.py --setup-venv)
+-# (a) frontmatter 13키 — 래퍼가 인터프리터를 고른다
+-bash "$VAULT/Public/_tools/paper_frontmatter.sh" check "$NOTE"
+-# (b) 생성물 완료 검사 — driller 노트 전용
+-"$PY" ~/.claude/hooks/paper-format-validator.py --path "$NOTE" --manifest "$MANIFEST"            # 신규 완료 조건
+-"$PY" ~/.claude/hooks/paper-format-validator.py --path "$NOTE" --manifest "$MANIFEST" --previous "$OLD"   # 갱신
+-"$PY" ~/.claude/hooks/paper-format-validator.py --path "$NOTE" --manifest "$MANIFEST" --previous "$OLD" --approved-switch   # 사용자가 승인한 템플릿 전환만
+-"$PY" ~/.claude/hooks/paper-format-validator.py --path "$NOTE" --meta "$META_JSON"              # DRILLER:meta 블록이 없는 옛 노트에 v2/v3 규칙 적용
+-"$PY" ~/.claude/hooks/paper-format-validator.py --check-template ~/.claude/skills/paper-driller/references/templates/{id}.md   # 새 템플릿 등록 직후
+-bash ~/.claude/skills/paper-driller/scripts/validate-driller.sh                                    # 정적 계약
+-```
+-
+-`CHECKED:`는 실제 검사한 것, `SKIPPED:`는 안 한 것이다. exit 2면 stderr의 `FORMAT_VIOLATION`을 고치고 다시 실행한다(최대 3회). 잘못된 manifest는 건너뛰기가 아니라 실패다. 검증기는 노트와 manifest의 일치만 확인하고, manifest가 빠뜨린 도표나 실제로 봤는지 여부는 증명하지 못한다.
+-
+-## Legacy
+-
+-`template-version: paper-preread-v2`·`paper-deep-v2` 노트와 옛 agent 기반 deep 경로는 `references/legacy-workflow.md`, `references/preread-v2-spec.md`, `references/readability-spec.md`, `references/insight-digest-spec.md`를 따른다. 기존 노트의 본문은 일괄 변환하지 않는다(frontmatter만 13키로 마이그레이션되며 옛 YAML 키는 백업 manifest에 남는다). 옛 v2 검증(5,500자 상한, 6개 H2)은 `DRILLER:meta` 블록 또는 `--meta`로 v2임을 알 때 그대로 동작한다. `paper-digest`, `paper-radar`, `paper-understand`, 기존 agent 파일은 바꾸지 않았다.
++# Paper Driller
++
++## Codex Subagent Compatibility
++
++Legacy Claude invocation snippets in this skill should be interpreted as Codex subagent workflow guidance, not literal Claude Code API calls.
++
++- Spawn subagents only when the user explicitly asks for subagents or parallel agent work, or when the active Codex surface exposes an equivalent explicit subagent workflow.
++- Prefer a matching custom agent in `~/.codex/agents/*.toml`; otherwise use Codex built-ins (`explorer` for read-heavy scans, `worker` for implementation, `default` for general roles) with the role prompt as task guidance.
++- Do not pass Claude model aliases such as `haiku`, `sonnet`, or `opus` to Codex. Custom agents inherit the parent model unless their TOML file intentionally sets a Codex-supported field such as `model_reasoning_effort`.
++- Keep parallel write scopes disjoint; if that is not possible, do the work in the main context and use subagents only for review or read-heavy analysis.
++
++
++> **Use this for**: 1개 문서(arxiv 논문·일반 URL·파일·붙여넣은 텍스트)를 spine 선행 분석 + 섹션별 병렬 분석으로 깊이 정리.
++
++어떤 글이든 **spine(전체 흐름 맵) → 섹션별 subagent 분석 → readable 합성**으로 정리한다. 학술 문서면 메타/BibTeX를 포함한 노트를, 일반 글이면 비전문가용 readable 요약을 생성한다.
++
++## 외부 접근 (skill-local)
++
++**MCP/외부 fetch 권한은 오직 paper-driller skill에만 있다.** 모든 subagent는 MCP·WebFetch·WebSearch를 사용하지 않으며, paper-driller가 추출해 전달하는 텍스트(또는 이미 로컬에 받아둔 파일 경로)만 입력으로 받는다.
++
++우선순위 (fallback chain):
++1. `mcp__arxiv__download_paper` + `mcp__arxiv__read_paper` — arXiv 논문 전문
++2. `mcp__mcpsemanticscholar__get-paper-abstract` — SemanticScholar 메타·abstract
++3. `mcp__paper-search-mcp-openai-v2__search_*` — 대체 검색
++4. `WebFetch(https://arxiv.org/abs/{id})` — 최후 fallback
++5. `WebSearch` — 제목 기반 마지막 시도
++
++## Available Agents (6) + 모델/effort
++
++| Agent | Phase | Role | Codex agent config |
++|---|---|---|---|
++| `paper-spine` | B (선행 1회) | 전체 읽기 → spine(논지·흐름맵·경계·thesis초안). 짧으면 섹션까지 1패스 | custom agent, high reasoning |
++| `paper-section-driller` | C 병렬 | 섹션(또는 chunk)별 요약, spine 주입, structure(imrad/free) 분기 | custom agent, high reasoning |
++| `paper-meta` | C 병렬(논문만) | 메타데이터 + BibTeX + Category | custom agent, inherited reasoning |
++| `paper-evidence` | C 병렬(논문만) | 실험 표 + Mermaid(mmdc) + 재현성 | custom agent, high reasoning |
++| `paper-comparison` | C 병렬(논문만) | 관련 연구 비교 매트릭스 | custom agent, high reasoning |
++| `paper-digest-composer` | D | readable 서문(insight-digest-spec) + Zettelkasten + 용어 + 태그 | custom agent, high reasoning |
++
++**Codex 운영 주의:** Claude 모델/effort 별칭은 사용하지 않는다. `paper-*` custom agent TOML은 필요한 경우 `model_reasoning_effort = "high"`만 보존하고 모델은 부모 세션에서 상속한다.
++
++**설계 선택지 — Agent Teams vs subagent**: Agent Teams (experimental, v2.1.32+)는 peer-to-peer·공유 task list가 필요할 때 유리하나, 본 설계의 section agent는 서로 독립이고 합성은 composer가 전담하므로 일반 subagent 병렬 호출이 더 경제적이다.
++
++**구조 이력**: (2026-04-17) 5개 `paper-section-*`를 `paper-section-driller`로 통합.
++(2026-06-03) Global Spine 도입 — holistic-analyzer를 `paper-spine`으로 흡수해
++"선행 1회 전체읽기"로 승격하고, 그 spine을 모든 섹션 호출에 주입해 전체 흐름을 보존한다.
++입력 범위를 논문→임의 텍스트로 확장(structure×scholarly 분기). 섹션 fan-out 수는 글의 실제 섹션 수에
++따른다(정형 논문이면 5).
++
++---
++
++## Mode detection
++
++- `--bite` 플래그가 명시적으로 전달되면 Bite 모드.
++- 사용자 요청 문장에 bite 트리거("논문 요약", "한입 요약", "paper bite", "디스코드에 공유", "share this paper", "summarize for sharing")가 있으면 자동 Bite 모드.
++- 그 외 모두 Deep 모드(기본).
++
++Bite 모드는 Phase A/B/C 까지만 수행 후 인사이트 단락을 출력하고 종료한다. Phase D/E/F 및 QC 매트릭스의 엄격한 루프, 파일 Write, hook 검증은 수행되지 않는다.
++
++## Profile detection — 2축 (structure × scholarly)
++
++paper-spine의 SPINE 출력 `structure`와 `scholarly` 두 축을 **독립적으로** 따른다.
++
++- `structure`: **imrad** = abstract/method/results 헤딩·실험 구조가 뚜렷 → section_type(abstract/intro/method/results/discussion) 블록 + **evidence agent**(실험표·재현성) 사용.
++  **free** = 그 외(철학·이론·수학 에세이, 블로그, 문서) → 실제 섹션 id로 자유 `<<<SECTION:{id}>>>` 요약, evidence 생략.
++- `scholarly`: **yes** = 인용가능 학술원(저자·venue·연도) → **meta agent**(메타+BibTeX), scholarly frontmatter, comparison(관련문서 있을 때), `{vault_root}/Public/AI/Papers/[Category]/` 저장, Phase F hook 검증.
++  **no** = 블로그·뉴스·일반 글 → 경량 frontmatter, `{vault_root}/survey-notes/`(또는 사용자 지정) 저장, hook 생략.
++
++조합 예: Turing 1950 = `structure=free, scholarly=yes` → 자유 섹션요약 + BibTeX/메타 + scholarly frontmatter (BibTeX를 잃지 않는다). 블로그 글 = `free, no`. 표준 ML 논문 = `imrad, yes`.
++
++사용자가 `--structure imrad|free` / `--scholarly yes|no`로 수동 override 가능. 감지 근거는 노트에 `<!-- structure: {값} / scholarly: {값} (근거) -->` 주석으로 남긴다.
++
++---
++
++## Workflow
++
++```
++[입력: arxiv ID/URL · 일반 URL · 파일 · 붙여넣은 텍스트 + 선택적 --bite/--structure/--scholarly]
++      ↓
++[Phase A] 수집·정규화 → full_text (+ 논문이면 관련 문서 pre-fetch)
++[Phase B] paper-spine 선행 1회 → SPINE(논지·흐름맵·경계·structure·scholarly) + 길이 tier 판정
++[Phase C] 섹션 병렬 호출 (spine 주입; Tier S는 spine이 섹션까지, Tier L은 chunk 단위)
++          └ scholarly==yes면 meta/comparison, structure==imrad면 evidence 추가
++[Phase C.5] QC 매트릭스 루프 (해당 agent만 targeted retry, 최대 3회)
++      ↓
++  mode == bite?
++   ├─ yes → [Phase D'] insight-digest-spec 기반 서문 → chat 출력 → DONE
++   └─ no  → [Phase D] readable-composer → [Phase E] 조립 → [Phase F] (논문) hook 검증 → [Phase G] 모델/effort 검증 → DONE
++      ↓
++[품질 체크리스트 최종 확인]
++```
++
++다중 문서 처리: 여러 문서 입력 시 각각에 대해 위 workflow 반복. 사용자에게 처리 목록 확인 후 진행.
++
++---
++
++## Phase A: 수집·정규화
++
++입력 형태별로 텍스트를 확보한다:
++- **arxiv ID/URL**: `mcp__arxiv__read_paper` → 실패 시 MCP/WebFetch fallback chain.
++- **일반 URL(HTML)**: `WebFetch`로 본문 추출.
++- **PDF URL / 저작권 학술 논문**: `WebFetch`는 소형 모델이 **전문을 요약하거나 저작권을 이유로 전문 재현을 거부**할 수 있다. 이때 WebFetch는 PDF 바이너리를 **로컬 tool-results 경로에 캐시**하므로, 그 **캐시된 PDF 경로를 orchestrator가 `Read`(pages=…)로 직접 읽어** `full_text`를 확보한다(네트워크 재fetch 아님). WebFetch 응답에 `redirect`가 감지되면 안내된 URL로 **재호출**한다(cross-host redirect는 자동 추적되지 않음).
++- **로컬 파일 경로**: `Read`.
++- **붙여넣은 텍스트**: 그대로 사용.
++확보한 텍스트를 `full_text`로 정규화한다. 10쪽 초과 PDF는 `Read`의 `pages`로 분할해 전부 읽는다. 이후:
++
++1. **(학술 문서 후보일 때만) 관련 문서 pre-fetch**: comparison agent용 3-5편. (Phase A는 spine 이전이므로 arxiv ID·저자/venue 단서로 추정하고, 확정은 Phase B의 `scholarly` 판정을 따른다.)
++2. **관련 논문 pre-fetch (comparison agent용)**: SemanticScholar `paper-search-advanced` 또는 related-papers API로 3-5편 후보 메타 수집.
++   - 각 원소: `{ title, year, venue, abstract, code_url?, relation_type }` (`direct` / `base` / `sota` / `alternative`).
++   - 선정: 본 논문 제목·키워드로 유사도 상위, 같은 문제 다른 접근 우선.
++3. **코드 링크 감지**: 본문에서 `https://github.com/...` 패턴 추출 → evidence agent 입력.
++
++---
++
++## Phase B: Spine 패스 (선행 1회)
++
++`paper-spine`을 **1회 호출**해 `full_text`로부터 SPINE을 만든다. SPINE은 장르·structure·scholarly·
++thesis·audience_frame·throughline·flow_map·section_boundaries·terms_to_explain을 담는다. 이 SPINE이
++이후 모든 섹션 호출에 **공유 맥락으로 주입**되어 전체 흐름을 보존한다.
++
++길이 판정으로 tier 결정(다음 Phase C):
++- **Tier S (짧음)**: `paper-spine`을 `mode=spine_plus_sections`로 호출해 섹션 출력까지
++  한 번에 받는다. fan-out 없음. (이전 holistic fallback의 정상화)
++- **Tier M (구조적·중간)**: spine 후 section_boundaries대로 section-driller 병렬.
++- **Tier L (섹션이 임계 초과)**: 해당 섹션을 chunk로 나눠 `is_chunk=true`로 각 chunk를
++  section-driller에 보내고(모든 chunk 1회 이상 방문), chunk 요약을 섹션 단위로 병합.
++  Tier L 진입 시 chunk 수를 사용자에게 사전 고지한다(조용한 누락 금지).
++
++빠른 경로(옵션): 명확한 IMRaD 정규식 헤딩이 이미 보이면 spine의 section_boundaries를
++그 정규식 결과로 채워 spine 호출을 가볍게 할 수 있다(품질 저하 없으면).
++
++**출력 언어(`output_lang`)**: 사용자 입력 언어를 따른다(기본: 입력이 한국어면 `ko`, 영어면 `en`). orchestrator는 `output_lang`을 paper-spine·paper-section-driller·paper-digest-composer **모든 호출 payload에 포함**한다. 원문 인용·고유명·수치는 언어와 무관하게 원형 보존한다.
++
++---
++
++## Phase C: 병렬 호출 프로토콜
++
++**단일 assistant 메시지에 Agent 툴을 동시 호출.** 모든 섹션 호출에 `spine`을 주입한다.
++
++각 section-driller 호출 payload:
++```
++doc_id, title, authors?(있으면), output_lang, structure, scholarly, spine(SPINE 블록 전체),
++section_id, section_text, section_type?(structure==imrad), is_chunk?, chunk_index?, chunk_total?,
++retry_feedback?(선택)
++```
++
++호출 구성:
++- **Tier S**: 섹션 출력은 이미 spine이 생성 → section-driller fan-out 없음.
++- **Tier M/L**: spine.flow_map의 각 section_id마다 section-driller 1회(Tier L은 chunk당 1회).
++- **scholarly == yes**일 때 추가:
++  - `paper-meta` — `raw_metadata` (메타+BibTeX)
++  - `paper-comparison` — `target_paper, candidates(pre-fetch)` (관련문서 있을 때)
++- **structure == imrad**일 때 추가:
++  - `paper-evidence` — `results_text, method_text, abstract_text, discussion_text, code_links`
++- 두 축이 모두 아래값이면(free, no) section-driller만 호출한다.
++
++structure==imrad에서 section-driller의 `section_type`은 spine.flow_map의 IMRaD 매핑을 따르며,
++누락되면 에이전트가 오류로 종료한다.
++
++---
++
++## Phase C.5: Section QC Matrix Loop
++
++각 subagent 산출물을 매트릭스로 검증. 실패 항목이 있으면 **해당 agent(및 section agent의 경우 해당 `section_type`)만** `retry_feedback`과 함께 재호출.
++
++| Agent / section_type | 필수 요구사항 |
++|---|---|
++| paper-section-driller (abstract) | (a) 3-5문장, (b) 선언적 contribution 2-3 bullet, (c) 원문과 일치 |
++| paper-section-driller (introduction) | (a) 연구 동기, (b) 기존 한계 2+, (c) RQ/핵심 통찰, (d) `왜 이 연구를 하는가?` 블록 |
++| paper-section-driller (method) | (a) 핵심 구성요소, (b) 입출력, (c) 차별점 |
++| paper-section-driller (results) | (a) 숫자+출처, (b) 베이스라인 비교, (c) `발견` 블록 |
++| paper-section-driller (discussion) | (a) 한계 2+, (b) 향후 방향 1+, (c) 논쟁점/검증 가정/후속, (d) `이론적 의의` |
++| paper-meta | (a) 10 메타 필드 전부, (b) BibTeX compile-safe, (c) Category enum 중 하나 |
++| paper-evidence | (a) 실험 표 or "불충분" 명시, (b) mmdc 통과 Mermaid, (c) 재현성 종합등급 |
++| paper-comparison | (a) 3편+, (b) 7 축 전부, (c) 코드공개 표기 |
++| paper-section-driller (free `<<<SECTION:{id}>>>`) | (a) 3-8문장, (b) 첫 문장이 전체 흐름 속 역할 명시, (c) 용어 괄호설명, (d) 원문과 일치 |
++
++> **축 조건**: section_type 행과 `paper-evidence`는 `structure==imrad`일 때만, `paper-meta`·`paper-comparison`은 `scholarly==yes`일 때만 적용한다. `structure==free`면 위 free 행으로 검증하고, 호출되지 않은 agent 행은 건너뛴다(생성되지 않은 산출물에 retry 금지).
++
++**루프 프로토콜**:
++1. 각 산출물에 대해 위 매트릭스 자동 체크 (paper-driller 내부 로직).
++2. 실패 시 해당 agent를 `retry_feedback=[누락 항목 리스트]`로 **단독 재호출**.
++3. 섹션별 **최대 3회** retry. 초과 시 실패 항목을 `qc_warnings`로 composer에 전달 + 최종 파일에 `<!-- QC: {failed_items} -->` 코멘트 삽입.
++4. 모든 섹션 통과 → Phase D.
++
++Legacy Claude SubagentStop hook(`paper-driller-subagent-log.sh`)은 Codex에서 자동 실행되지 않는다. 필요하면 Codex 실행 중 직접 `~/.codex/logs/paper-driller-qc.jsonl`에 같은 형식으로 기록해 재시도 패턴을 관찰한다.
++
++---
++
++## Phase D' (Bite mode 전용): Insight-First Single Paragraph
++
++Bite 모드일 때 Phase C.5 통과 후 다음 블록을 조합해 한 문단 요약 생성:
++
++**structure == imrad** (paper 마커 사용):
++- `<<<SECTION:abstract>>>` + `<<<CONTRIB:abstract>>>`
++- `<<<RATIONALE:why>>>` (Introduction의 motivation)
++- `<<<RATIONALE:findings>>>` (Results의 발견)
++- `<<<RATIONALE:significance>>>` (Discussion의 이론적 의의)
++- `<<<META>>>` 에서 title, arxiv_id, url 필드 추출 (출처 링크용)
++
++**structure == free** (paper 마커·META 없음 — spine.flow_map의 각 `<<<SECTION:{id}>>>` 블록 사용):
++- spine.thesis / throughline / audience_frame + 가용한 `<<<SECTION:{id}>>>` 블록들로 서문 구성
++- 출처 링크: `scholarly==yes`로 `<<<META>>>` 블록이 있으면 거기서 title/url/DOI를 사용; 없으면 입력 URL, 그것도 없으면 생략
++
++### 출력 구조·작성 규칙
++
++Bite 모드 서문은 **`references/insight-digest-spec.md`를 그대로 따른다** (Context→Insight
++→Solution→Evidence + Implication + 출처 링크, 작성 규칙·피해야 할 것·다중 문서 처리 포함).
++이 명세는 readable-composer와 공유된다 — 한 곳에서만 진화시킨다.
++
++**Bite 모드는 파일 Write를 하지 않고 chat에 직접 출력한다.** 사용자가 명시적으로 "파일로 저장" 또는 `--bite --write`를 지정하면 `{title}_bite.md`로 저장.
++
++---
++
++## Phase D: Digest Composer
++
++`paper-digest-composer` 에 `doc_id` + `title` + `title_kr` + `output_lang` + `structure` + `scholarly` + `spine` + QC 통과 섹션
++블록(structure==imrad이면 evidence, scholarly==yes이면 comparison/meta 포함) + `qc_warnings` 전달. composer는 spine.thesis를 seed로 받아
++`references/insight-digest-spec.md`에 따라 readable 서문을 확정하고, 다음을 생성:
++- `<<<DIGEST>>>` CISELQ 한 문단
++- `<<<ZETTEL>>>` 원자적 인사이트 2-4개
++- `<<<GLOSSARY>>>` 핵심 용어 5+
++- `<<<TAGS>>>` 태그 3+
++- `<<<RELATED_LINKS>>>` Obsidian 링크
++
++**composer는 섹션 요약을 재작성하지 않는다. 파일 Write도 하지 않는다.**
++
++참조: `references/zettelkasten-guide.md`.
++
++---
++
++## Phase E: 템플릿 조립 + Write
++
++paper-driller가 기계적으로 블록을 템플릿 슬롯에 주입하여 `.md` 파일 생성.
++
++**파일명**: 논문 제목 기반 (금지 문자 대체: `:` → ` -`, `/` → `-`, `?*"<>|` 제거). 예: `Alignment Faking in Large Language Models.md`.
++
++**저장 위치(`vault_root` 해석)**: 다음 순서로 `vault_root`를 정한다 — (1) 사용자가 경로를 지정했으면 그것, (2) 환경변수 `PAPER_DRILLER_VAULT`가 있으면 그것, (3) 현재 작업 디렉터리에 `Public/AI/Papers/` 또는 `survey-notes/`가 이미 있으면 CWD, (4) 모두 없으면 **사용자에게 1회 질문**(찾지 못하면 `./paper-notes/`로 임시 저장하고 노트 상단에 경고 주석). 최종 경로: scholarly==yes → `{vault_root}/Public/AI/Papers/[Category]/`, scholarly==no → `{vault_root}/survey-notes/`. 카테고리 폴더 없으면 생성.
++
++**⚠️ 모든 출력 파일은 YAML frontmatter(`---`)로 시작해야 한다.**
++
++### 통합 출력 템플릿
++
++```markdown
++---
++Reading-Status: "✅ Done"
++Author: "[First Author et al.]"
++Journal/Conference: "[Venue]"
++Published Year: YYYY
++Topic: "[Keywords]"
++Review-Date: "YYYY-MM-DD"
++Comment: "[한줄 요약]"
++URL: "[Paper URL]"
++arXiv-ID: "[arXiv ID or N/A]"
++Category: "[enum]"
++Evidence-Quality: "[A/B/C/D]"
++Reproducibility: "[A/B/C/D]"
++linked-bases: "[[Papers.base]]"
++---
++
++# {title_kr}
++
++> **Digest**: {<<<DIGEST>>> 삽입}
++
++---
++
++## 섹션별 요약
++
++### Abstract
++{<<<SECTION:abstract>>>}
++
++**저자 contribution**
++{<<<CONTRIB:abstract>>>}
++
++### 왜 이 연구를 하는가?
++{<<<RATIONALE:why>>>}
++
++### Introduction
++{<<<SECTION:introduction>>>}
++
++### Methods
++{<<<SECTION:method>>>}
++
++### 발견 (Findings)
++{<<<RATIONALE:findings>>>}
++
++### Results
++{<<<SECTION:results>>>}
++
++### Discussion
++{<<<SECTION:discussion>>>}
++
++{<<<RATIONALE:significance>>>}  <!-- #### 이론적 의의 -->
++
++**Discussion Points**
++{<<<DISCUSSION_POINTS>>>}
++
++---
++
++## 실험 결과 상세
++{<<<EVIDENCE:table>>>}
++
++## 프레임워크 다이어그램
++{<<<EVIDENCE:diagram>>>}
++
++## 재현성 및 신뢰도 평가
++{<<<EVIDENCE:reproducibility>>>}
++
++## 관련 연구 비교 매트릭스
++{<<<COMPARISON>>>}
++
++---
++
++## 원자적 인사이트 (Zettelkasten)
++{<<<ZETTEL>>>}
++
++## 핵심 용어 정리
++{<<<GLOSSARY>>>}
++
++## 관련 연구
++{<<<RELATED_LINKS>>>}
++
++## 태그
++{<<<TAGS>>>}
++
++---
++
++## BibTeX
++```bibtex
++{<<<BIBTEX>>>}
++```
++```
++
++### free 프로파일 출력 템플릿 (structure == free)
++
++free 구조에서는 **본문**이 IMRaD 슬롯 대신 spine.flow_map의 실제 섹션을 쓴다. 단, **frontmatter는 저장 경로의 `paper-format-validator` 계약을 따라야 한다**: SCOPE_GLOBS(`Public/AI/Papers/**`·`arxiv-notes/**`·`survey-notes/**`)에 저장되는 모든 노트는 **canonical 15키 frontmatter**를 요구하고 `title`/`author`/`year`/`tags`는 **금지 alias**다(validator는 본문 구조에는 관대 → free 본문은 그대로 허용). 따라서 free 노트도 frontmatter는 통합 템플릿과 동일한 canonical 키를 쓰고 **본문만 free 구조**로 채운다.
++
++- **scholarly==yes** (→ `{vault_root}/Public/AI/Papers/[Category]/`): 아래 canonical frontmatter(통합 출력 템플릿과 동일한 Reading-Status … linked-bases 15키)를 그대로 사용. `Evidence-Quality`·`Reproducibility`는 A/B/C/D 강제이므로 실험 없는 개념/이론·철학 글이면 보수적으로 C/D 부여. `Category`는 enum(Architecture/Training/Benchmark·Evaluation/Application/Reasoning/Survey/Dataset/Optimization/Theory/AGI) 중 하나. `structure: free`·`scholarly: yes`는 추가 키로 보존 가능(금지 alias 아님). `## BibTeX`(`<<<BIBTEX>>>`)를 본문 끝에 덧붙인다.
++- **scholarly==no**: SCOPE_GLOBS **밖**(예: 사용자 지정 일반 노트 경로)에 저장하면 경량 frontmatter(아래 주석 처리된 lightweight 예시)를 써도 된다. 단 `survey-notes/`도 SCOPE_GLOBS에 포함되므로 거기에 저장하면 canonical frontmatter가 강제됨에 유의.
++
++frontmatter는 `### 통합 출력 템플릿`의 canonical 블록을 그대로 쓰고(매핑은 아래 **frontmatter 값은 …** 규칙 공유), **본문만** 아래 free 구조로 교체한다:
++
++```markdown
++# {title_kr}
++
++> 📌 **한입 요약**
++> {<<<DIGEST>>>}
++
++---
++
++## 흐름 따라 읽기
++
++> 논지 흐름(throughline): {spine.throughline}
++
++### {section_id 1 제목}
++{<<<SECTION:{id1}>>>}
++
++### {section_id 2 제목}
++{<<<SECTION:{id2}>>>}
++... (spine.flow_map의 모든 섹션)
++
++---
++
++## 원자적 인사이트 (Zettelkasten)
++{<<<ZETTEL>>>}
++
++## 핵심 용어 정리
++{<<<GLOSSARY>>>}
++
++## 태그
++{<<<TAGS>>>}
++```
++scholarly==yes면 위 본문 마지막에 `## BibTeX` 코드블록(`<<<BIBTEX>>>`)도 덧붙인다(통합 템플릿과 동일). (lightweight frontmatter — `title`/`title_kr`/`source`/`year`/`tags` — 는 **SCOPE_GLOBS 밖**의 scholarly==no 노트에만 허용; SCOPE_GLOBS 안에서는 절대 금지 — validator가 `title`/`author`/`year`/`tags`를 차단한다.)
++
++**frontmatter 값은 `<<<META>>>` 블록에서 매핑**:
++- `Author` ← meta.authors의 first + "et al."
++- `Journal/Conference` ← meta.venue
++- `Published Year` ← meta.year
++- `URL` ← meta.url
++- `arXiv-ID` ← meta.arxiv_id
++- `DOI` ← meta.doi
++- `Category` ← meta.category
++- `Evidence-Quality` ← meta.evidence_quality
++- `Reproducibility` ← evidence 종합등급
++- `Review-Date` ← 오늘 날짜
++- `linked-bases` ← 카테고리별 base 파일
++
++---
++
++## Phase F: Hook 검증 + Retry
++
++Write 직후 PostToolUse hook `paper-format-validator.sh`가 자동 실행. stderr에 `FORMAT_VIOLATION in paper summary file:` 포함 시 위반 상태.
++
++**Retry 프로토콜 (최대 3회)**:
++1. stderr의 `FRONTMATTER: ...` / `SECTIONS: ...` / `CONTENT: ...` 항목을 파싱.
++2. 각 항목 타깃형 Edit:
++   - `FRONTMATTER: required key missing: X` → canonical 순서로 추가.
++   - `FRONTMATTER: deprecated/alias key` → canonical 매핑 또는 삭제.
++   - `FRONTMATTER: Category=... — must be one of ...` → enum 중 가장 가까운 값.
++   - `SECTIONS: ... skeleton` → 해당 섹션 블록 복구 (composer 또는 해당 section agent 재호출).
++   - `CONTENT: no \`\`\`mermaid block` → evidence agent 재호출.
++   - `CONTENT: placeholder pattern` → 실제 내용으로 대체 (composer 재호출).
++3. Edit 후 hook 자동 재실행. exit 0이면 성공.
++4. 3회 초과 → 사용자에게 stderr + 수동 수정 요청.
++
++**⚠️ hook은 `Public/AI/Papers/**`, `arxiv-notes/**`, `survey-notes/**` 경로에서만 동작**.
++비학술(scholarly==no) 노트를 hook 경로 밖에 저장하면 검증을 건너뛴다(의도된 동작 — 논문 전용 검증).
++
++Legacy Claude SubagentStop hook `paper-driller-subagent-log.sh`은 Codex에서 자동 실행되지 않는다. 필요하면 각 agent-style 작업 종료를 `~/.codex/logs/paper-driller-qc.jsonl`에 직접 기록한다.
++
++---
++
++## Phase G: Codex agent 설정 검증 (최초 1회 / 변경 후)
++
++정적 검증: `~/.codex/agents/paper-*.toml` 파일이 존재하고 Claude 모델 alias 없이 필요한 `model_reasoning_effort`만 포함하는지 확인한다.
++
++런타임 검증(샘플 1편): 병렬 실행을 명시적으로 요청한 경우 각 역할이 기대한 출력 블록을 반환하는지 확인한다. Codex subagent 활동 로그나 `/agent` 화면은 역할 종료와 요약 확인용으로만 사용한다.
++
++---
++
++
++## 품질 체크리스트 (최종)
++
++> 아래는 **imrad + scholarly 완전형** 기준이다. `structure==free`면 IMRaD 하위(Abstract/Introduction/Methods/Results/Discussion)·rationale·실험표·Mermaid·재현성·비교매트릭스 항목을 건너뛰고 `흐름 따라 읽기`의 모든 섹션·Digest·인사이트·용어·태그만 확인한다. `scholarly==no`면 BibTeX·비교매트릭스·`Public/AI/Papers/` 경로 항목을 생략하고 `survey-notes/` 저장으로 확인한다.
++
++- [ ] frontmatter가 canonical 순서로 완전
++- [ ] Digest가 CISELQ 6요소 전부, 전문용어 괄호 설명, 숫자+출처
++- [ ] `섹션별 요약` 블록에 Abstract/Introduction/Methods/Results/Discussion 5개 하위 모두
++- [ ] rationale 블록 3개(`왜 이 연구를 하는가?` / `발견` / `이론적 의의`)가 대응 섹션에 인접
++- [ ] Discussion Points 3개 카테고리 전부
++- [ ] 실험 표 또는 "데이터 불충분" 명시
++- [ ] Mermaid 블록 mmdc 통과
++- [ ] 재현성 종합등급 A/B/C/D 부여
++- [ ] 주장별 신뢰도 2+
++- [ ] 비교 매트릭스 3편+
++- [ ] 원자적 인사이트 2+, 자기설명적
++- [ ] 핵심 용어 5+ (논문 기본 용어 포함)
++- [ ] 태그 3+
++- [ ] 파일 `Public/AI/Papers/{Category}/` 에 저장
++
++**미충족 시**: 해당 agent/composer를 targeted 재호출 또는 Edit으로 수정 후 재검증.
++
++---
++
++## 카테고리 분류 기준
++
++| 카테고리 | 키워드 |
++|---|---|
++| Memory | memory, test-time learning, context, retrieval, RAG |
++| Skill_LM | reward, RL, RLHF, self-improvement, exploration, skill |
++| Meta-cognition | consciousness, self-awareness, metacognition, introspection |
++| (새) | 위에 해당 안 되면 주제로 새 폴더 생성 |
++
++---
+ 
+ ## References
+ 
+-- `references/workflow.md` — 선택·갱신·수집·manifest·검증·Wiki 절차 전체
+-- `references/templates/general-v1.md` — 일반 7부 템플릿과 절별 작성 안내
+-- `references/paper-schema.json` — frontmatter·enum·manifest 스키마
+-- `references/legacy-workflow.md` — 옛 v2/deep 절차 보존본
+-- `scripts/validate-driller.sh` — 정적 계약 검증
++- `references/section-summary-best-practices/{abstract,introduction,method,results,discussion,meta,evidence,comparison}.md` — 섹션별 요약 best practices (agent 프롬프트 내부 참조)
++- `references/reproducibility-rubric.md` — 재현성 평가 기준
++- `references/comparison-matrix-guide.md` — 비교 매트릭스 가이드
++- `references/zettelkasten-guide.md` — 원자적 인사이트 가이드
++- `references/insight-digest-spec.md` — readable 서문 단일 명세(Bite 모드 + composer 공유)
++- `scripts/validate-driller.sh` — frontmatter·참조 정적 검증 하버스
+--- sources/skills/paper-driller-claude/readme.html
++++ sources/skills/paper-driller-codex/readme.html
+@@ -1,473 +0,0 @@
+-<!doctype html>
+-<html lang="ko">
+-<head>
+-<meta charset="utf-8">
+-<meta name="viewport" content="width=device-width, initial-scale=1">
+-<title>paper-driller 안내서</title>
+-<style>
+-  :root{
+-    --bg:#faf8f4; --paper:#ffffff; --ink:#1f2328; --muted:#5f6b7a; --line:#e6e1d8;
+-    --accent:#0f766e; --accent-soft:#e6f4f1; --warn:#b45309; --warn-soft:#fdf3e3;
+-    --bad:#b42318; --bad-soft:#fdecec; --code:#f3f1ec;
+-  }
+-  *{box-sizing:border-box}
+-  html{scroll-behavior:smooth}
+-  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Apple SD Gothic Neo","Pretendard","Noto Sans KR",system-ui,-apple-system,sans-serif;font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased}
+-  main{max-width:880px;margin:0 auto;padding:40px 24px 96px}
+-  h1{font-size:2rem;line-height:1.25;margin:0 0 8px;letter-spacing:-.01em}
+-  h2{font-size:1.45rem;margin:64px 0 12px;padding-top:12px;border-top:2px solid var(--ink);letter-spacing:-.01em}
+-  h3{font-size:1.1rem;margin:32px 0 8px}
+-  p{margin:0 0 14px}
+-  ul,ol{margin:0 0 14px;padding-left:22px}
+-  li{margin:4px 0}
+-  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;background:var(--code);padding:1px 5px;border-radius:4px}
+-  pre{background:var(--code);padding:14px 16px;border-radius:8px;overflow-x:auto;font-size:.85rem;line-height:1.6;margin:0 0 16px}
+-  pre code{background:none;padding:0}
+-  table{border-collapse:collapse;width:100%;margin:0 0 18px;font-size:.93rem}
+-  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+-  th{background:#f2efe8;font-weight:600}
+-  .wrap{overflow-x:auto}
+-  .lede{font-size:1.1rem;color:var(--muted);margin-bottom:24px}
+-  .meta{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 24px}
+-  .pill{font-size:.78rem;padding:3px 10px;border-radius:999px;border:1px solid var(--line);background:var(--paper);color:var(--muted)}
+-  .pill.warn{border-color:#f0c48a;background:var(--warn-soft);color:var(--warn)}
+-  .toc{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:16px 20px;margin:0 0 8px}
+-  .toc ol{margin:0;padding-left:20px;columns:2;column-gap:28px}
+-  .toc a{color:var(--ink);text-decoration:none}
+-  .toc a:hover{text-decoration:underline}
+-  .note{border-left:4px solid var(--accent);background:var(--accent-soft);padding:12px 16px;border-radius:0 8px 8px 0;margin:0 0 16px}
+-  .note.warn{border-color:#e0a04a;background:var(--warn-soft)}
+-  .note.bad{border-color:#e06666;background:var(--bad-soft)}
+-  .note p:last-child{margin-bottom:0}
+-  /* 흐름 다이어그램 */
+-  .flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:6px;margin:8px 0 18px}
+-  .step{flex:1 1 130px;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-width:130px;position:relative}
+-  .step b{display:block;font-size:.8rem;color:var(--accent);letter-spacing:.04em;margin-bottom:2px}
+-  .step span{font-size:.9rem}
+-  .step.agent{border-color:var(--accent);background:var(--accent-soft)}
+-  .step.off{opacity:.55;border-style:dashed}
+-  .arrow{align-self:center;color:var(--muted);font-size:1.1rem;padding:0 2px}
+-  /* 카드 */
+-  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin:8px 0 18px}
+-  .card{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+-  .card h4{margin:0 0 4px;font-size:1rem}
+-  .card .tag{font-size:.75rem;color:var(--muted);margin-bottom:8px}
+-  .card .tag.on{color:var(--accent);font-weight:600}
+-  .card p{font-size:.92rem;margin-bottom:6px}
+-  .card .spec{font-size:.78rem;color:var(--muted);border-top:1px dashed var(--line);padding-top:6px;margin-top:8px}
+-  /* 난이도 데모 */
+-  .demo{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:8px 0 18px}
+-  .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:12px}
+-  .seg button{border:0;background:var(--paper);padding:7px 14px;font:inherit;font-size:.9rem;cursor:pointer;color:var(--muted)}
+-  .seg button.on{background:var(--ink);color:#fff}
+-  .demo [data-level]{display:none}
+-  .demo [data-level].on{display:block}
+-  .demo .why{font-size:.85rem;color:var(--muted);border-top:1px dashed var(--line);padding-top:8px;margin-top:10px}
+-  .kv{display:grid;grid-template-columns:150px 1fr;gap:4px 14px;font-size:.93rem;margin:0 0 16px}
+-  .kv dt{color:var(--muted)}
+-  .kv dd{margin:0}
+-  .prio{list-style:none;padding:0;counter-reset:p}
+-  .prio li{counter-increment:p;position:relative;padding:12px 14px 12px 52px;background:var(--paper);border:1px solid var(--line);border-radius:8px;margin:8px 0}
+-  .prio li::before{content:counter(p);position:absolute;left:14px;top:12px;width:26px;height:26px;border-radius:50%;background:var(--ink);color:#fff;font-size:.85rem;display:flex;align-items:center;justify-content:center}
+-  .prio b{display:block;margin-bottom:2px}
+-  .small{font-size:.85rem;color:var(--muted)}
+-  @media (max-width:640px){ .toc ol{columns:1} .kv{grid-template-columns:1fr} h1{font-size:1.6rem} }
+-</style>
+-</head>
+-<body>
+-<main>
+-
+-<h1>paper-driller, 어떻게 돌아가고 어디를 고칠까</h1>
+-<p class="lede">논문을 읽기 전에 "읽을까 말까, 읽으면 어디부터"를 알려주는 스킬. 지금 구조를 고등학생도 따라올 수 있게 풀어 쓰고, 요약이 왜 읽기 어려운지, 어디가 반복되는지, 난이도 조절을 어떻게 넣을지 정리했다.</p>
+-<div class="meta">
+-  <span class="pill">2026-09-05 기준</span>
+-  <span class="pill">preread v2</span>
+-  <span class="pill">독자 intro 고정 · --humanize 옵션 반영됨</span>
+-  <span class="pill">v2 + intro 수정 커밋됨</span>
+-  <span class="pill">validator 수동 실행 계약</span>
+-</div>
+-
+-<nav class="toc">
+-<ol>
+-  <li><a href="#what">한 문장으로</a></li>
+-  <li><a href="#flow">전체 흐름</a></li>
+-  <li><a href="#agents">등장인물: 서브에이전트 7명</a></li>
+-  <li><a href="#refs">규칙 문서(reference)</a></li>
+-  <li><a href="#output">결과물은 어떻게 생겼나</a></li>
+-  <li><a href="#deps">무엇에 기대고 있나</a></li>
+-  <li><a href="#problem">지금 뭐가 문제인가</a></li>
+-  <li><a href="#repeat">반복과 압축</a></li>
+-  <li><a href="#eli5">ELI5 규칙을 심을 수 있나</a></li>
+-  <li><a href="#level">난이도: intro로 고정 (결정·반영)</a></li>
+-  <li><a href="#plan">개선 방안 우선순위</a></li>
+-  <li><a href="#decide">결정과 반영 내역</a></li>
+-  <li><a href="#dryrun">dry-run 결과</a></li>
+-</ol>
+-</nav>
+-
+-<!-- ===================================================== -->
+-<h2 id="what">1. 한 문장으로</h2>
+-<p>영화 보기 전에 스포 없는 리뷰를 읽는 것과 비슷하다. 다만 이 리뷰는 "재밌다/없다"가 아니라 <b>읽어라 / 훑어라 / 건너뛰어라</b> 셋 중 하나를 고르고, 읽는다면 <b>어느 장면(Section, Table, Figure)부터 보라</b>고 지도까지 그려 준다.</p>
+-<p>그래서 이 스킬은 논문을 대신 읽어 주는 게 아니다. 원문으로 돌아가게 만드는 게 목적이고, 모든 주장 옆에 "어디에 써 있다"를 붙인다. 이게 다른 논문 요약기와 가장 다른 점이다.</p>
+-<dl class="kv">
+-  <dt>모드 두 개</dt><dd><code>preread</code>(기본, 5~8분 분량) / <code>deep</code>(명시 요청 시만, 섹션별 상세 노트)</dd>
+-  <dt>부르는 법</dt><dd><code>/paper-driller {arXiv ID 또는 URL} --mode preread</code></dd>
+-  <dt>결과 저장</dt><dd>Obsidian vault의 <code>Public/AI/Papers/{제목}.md</code> (AI 논문 기준)</dd>
+-  <dt>현재 규모</dt><dd>Papers 폴더 노트 709개, 그중 v2 템플릿 58개</dd>
+-</dl>
+-
+-<!-- ===================================================== -->
+-<h2 id="flow">2. 전체 흐름</h2>
+-<p>기본 모드(<code>preread</code>)는 다섯 단계다. 사람이 하는 일에 빗대면 <b>재료 모으기 → 분석가 한 명이 읽고 메모 → 양식에 붙여넣기 → 검사 → 도서관 등록</b> 순서다.</p>
+-
+-<h3>preread (기본)</h3>
+-<div class="flow">
+-  <div class="step"><b>A 수집</b><span>arXiv/Semantic Scholar/웹에서 초록·기여 문단·핵심 표·한계 부분만 뽑음. 얼마나 확보했는지 <code>source-coverage</code>로 기록</span></div>
+-  <div class="arrow">→</div>
+-  <div class="step agent"><b>B 분석</b><span><code>paper-preread-analyst</code> <b>딱 1번</b> 호출. 9개 블록을 한 번에 씀</span></div>
+-  <div class="arrow">→</div>
+-  <div class="step"><b>C 조립</b><span>메타데이터·BibTeX는 코드가 기계적으로 채움. 분석가가 준 블록을 순서대로 붙임</span></div>
+-  <div class="arrow">→</div>
+-  <div class="step"><b>D 검사</b><span><code>paper-format-validator</code>로 형식 확인. 틀리면 최대 3번 고침</span></div>
+-  <div class="arrow">→</div>
+-  <div class="step"><b>E 등록</b><span>중복 확인, 관련 노트 1~3개 연결, catalog 재생성, lint, 로그</span></div>
+-</div>
+-<div class="note"><p><b>왜 분석가가 한 명뿐인가.</b> 예전 버전은 섹션마다 에이전트를 따로 불러서 느리고 비쌌고, 결과도 같은 얘기를 여러 곳에서 반복했다. v2는 "기본은 1번, 수치 충돌이나 <code>--verify</code> 때만 같은 분석가를 한 번 더" 로 예산을 못 박았다. 최대 2회.</p></div>
+-
+-<h3>deep (요청할 때만)</h3>
+-<div class="flow">
+-  <div class="step"><b>수집</b><span>전문 전체. 10쪽 넘으면 page range로 나눠 읽음</span></div>
+-  <div class="arrow">→</div>
+-  <div class="step agent"><b>spine</b><span>뼈대: 논지·흐름맵·섹션 경계</span></div>
+-  <div class="arrow">→</div>
+-  <div class="step agent"><b>section × N</b><span>섹션마다 하나씩</span></div>
+-  <div class="arrow">→</div>
+-  <div class="step agent"><b>evidence</b><span>근거 장부·재현성</span></div>
+-  <div class="arrow">→</div>
+-  <div class="step agent off"><b>meta / comparison</b><span>필요할 때만</span></div>
+-  <div class="arrow">→</div>
+-  <div class="step agent"><b>composer</b><span>중복 지우고 합침</span></div>
+-  <div class="arrow">→</div>
+-  <div class="step"><b>조립·검사·등록</b><span>preread와 동일</span></div>
+-</div>
+-<p class="small">deep은 preread 블록을 맨 앞에 그대로 두고 그 아래 <code>## 상세 독해 노트</code>를 붙이는 구조다.</p>
+-
+-<!-- ===================================================== -->
+-<h2 id="agents">3. 등장인물: 서브에이전트 7명</h2>
+-<p>에이전트는 <code>~/.claude/agents/paper-*.md</code>에 하나씩 있다. 전부 <code>Read</code>만 쓸 수 있고(evidence만 Mermaid 검증용 <code>Bash</code> 추가), 인터넷 접근과 파일 쓰기는 금지다. 재료를 모으고 파일을 쓰는 건 오케스트레이터(SKILL.md를 읽는 본체) 몫이다.</p>
+-<div class="cards">
+-  <div class="card"><h4>paper-preread-analyst</h4><div class="tag on">preread 필수 · deep 생략</div>
+-    <p>기본 모드의 유일한 일꾼. 읽기 판정, 1분 요약, 핵심 아이디어, 무엇을 했나, 근거 장부, 한계, 읽기 지도, 용어, 위키 링크까지 한 호출로 낸다. 독서 코치 한 명이 논문을 훑고 메모를 남기는 셈.</p>
+-    <div class="spec">sonnet · effort high · Read</div></div>
+-  <div class="card"><h4>paper-spine</h4><div class="tag">deep 필수</div>
+-    <p>글 전체를 한 번 읽고 "뼈대"를 만든다. 핵심 주장 한 문장, 문제→통찰→방법→근거→한계 흐름, 섹션 경계, 설명이 필요한 용어. 이 뼈대가 뒤 에이전트 전부에게 공유 맥락으로 주입된다. 짧은 글(Tier S)이면 섹션 요약까지 혼자 한다.</p>
+-    <div class="spec">opus · effort max · Read</div></div>
+-  <div class="card"><h4>paper-section-driller</h4><div class="tag">deep 필요 시</div>
+-    <p>섹션 하나(또는 긴 섹션의 조각 하나)를 맡아 요약한다. IMRaD면 abstract/intro/method/results/discussion별로 다른 규칙과 출력 틀을 쓴다. 각 장 담당 조교.</p>
+-    <div class="spec">sonnet · effort xhigh · Read</div></div>
+-  <div class="card"><h4>paper-evidence</h4><div class="tag">deep 필수</div>
+-    <p>팩트체커. 주장마다 위치(Table 2, §4.1)·수치·조건을 장부로 만들고, deep에서는 실험표·Mermaid·재현성 등급표까지 낸다. 유리한 결과만 고르지 말고 부정 결과도 넣으라는 규칙이 있다.</p>
+-    <div class="spec">sonnet · effort xhigh · Read, Bash(mmdc)</div></div>
+-  <div class="card"><h4>paper-digest-composer</h4><div class="tag">deep 필수</div>
+-    <p>편집장. 위 에이전트들의 출력을 이어 붙이지 않고 중복을 지운 뒤 우선순위를 다시 잡아 최종 노트를 쓴다. Zettelkasten·쉬운 설명·용어표는 여기서 나온다.</p>
+-    <div class="spec">opus · effort max · Read</div></div>
+-  <div class="card"><h4>paper-meta</h4><div class="tag">deep 선택</div>
+-    <p>사서. 제목·저자·연도·venue·DOI를 정리하고 BibTeX와 Category(10종 enum)를 매긴다. 모르는 값은 <code>N/A</code>, 추측 금지.</p>
+-    <div class="spec">haiku · effort 없음 · Read</div></div>
+-  <div class="card"><h4>paper-comparison</h4><div class="tag">deep 선택</div>
+-    <p>비교 리뷰어. 관련 논문 3~5편을 7개 축(접근·문제·데이터·메트릭·확장성·한계·코드)으로 표를 만든다. 후보 논문은 오케스트레이터가 미리 넘겨준다.</p>
+-    <div class="spec">sonnet · effort xhigh · Read</div></div>
+-</div>
+-<div class="note"><p><b>정리됨(2026-09-05).</b> <code>paper-evidence</code>와 <code>paper-digest-composer</code>에 남아 있던 "Mode: preread" 절은 실제로는 deep 노트 상단 블록을 만드는 자리였다. 이름을 바꾸고 analyst 계약과 맞췄다. composer self-check의 어긋난 수치(지도 3~6행, 용어 7개)는 schema대로 2~4행, 3개로, LIMITS 제목은 "어디까지 믿을까"로, 근거 표에는 claim_origin 열을 넣었다. validate-driller.sh가 이 정합을 grep으로 지킨다.</p></div>
+-<div class="note warn" hidden><p><b>이전 진단.</b> <code>paper-evidence</code>와 <code>paper-digest-composer</code>에는 "Mode: preread" 절이 길게 남아 있지만, SKILL.md는 preread에서 이 둘을 절대 부르지 않는다. 그리고 composer의 preread self-check는 "READING_MAP 3~6행, TERMS 최대 7개"라고 쓰여 있는데 schema는 2~4행, 3개다. 안 쓰이니 안 터졌을 뿐, 계약이 어긋나 있다.</p></div>
+-
+-<!-- ===================================================== -->
+-<h2 id="refs">4. 규칙 문서(reference)</h2>
+-<p>에이전트는 프롬프트 안에 규칙을 다 넣지 않고 <code>references/</code>의 문서를 가리킨다. "단일 진실 원천" 원칙이라 같은 규칙을 두 군데 쓰지 않으려 한다. 누가 무엇을 읽는지 정리하면 이렇다.</p>
+-<div class="wrap"><table>
+-<tr><th>파일</th><th>무엇을 정하나</th><th>누가 읽나</th><th>모드</th></tr>
+-<tr><td><code>paper-schema.json</code></td><td>기계 규칙의 원본. 필수 frontmatter 키, Category·profile·coverage enum, 필수 H2 6개, claim 5개·용어 3개·지도 2~4행, 본문 5,500자 상한</td><td>analyst, validator hook, validate-driller.sh</td><td>둘 다</td></tr>
+-<tr><td><code>preread-v2-spec.md</code></td><td>9블록 출력 계약, 각 블록의 길이, 중복 금지 쌍 표, 길이 초과 시 줄이는 순서, 완료 기준</td><td>analyst, composer</td><td>preread</td></tr>
+-<tr><td><code>readability-spec.md</code></td><td>"정확성 보존형 쉬운 설명": 용어를 바꾸지 말고 <code>용어(쉬운 설명)</code>로, 문장 25어절·문단 4문장 이하, 비유는 보조만</td><td>analyst(참조만), composer, section-driller</td><td>주로 deep</td></tr>
+-<tr><td><code>insight-digest-spec.md</code></td><td>deep 서문 구조 CISELQ(Context/Insight/Solution/Evidence/Limitations/Open)</td><td>composer</td><td>deep</td></tr>
+-<tr><td><code>zettelkasten-guide.md</code></td><td>원자적 인사이트 카드 규칙</td><td>composer</td><td>deep</td></tr>
+-<tr><td><code>reproducibility-rubric.md</code></td><td>코드·데이터·하이퍼파라미터·환경·통계 5항목 등급</td><td>evidence</td><td>deep</td></tr>
+-<tr><td><code>comparison-matrix-guide.md</code></td><td>비교표 7축과 후보 선정 기준</td><td>comparison</td><td>deep</td></tr>
+-<tr><td><code>section-summary-best-practices/*.md</code> (8개)</td><td>abstract/intro/method/results/discussion/evidence/comparison/meta 각각의 원칙과 안티패턴</td><td>section-driller, meta, comparison</td><td>deep</td></tr>
+-<tr><td><code>scripts/validate-driller.sh</code></td><td>정적 계약 검사. 에이전트 파일 존재, model/effort 값, SKILL.md에 특정 문자열이 있는지 grep</td><td>사람(수동 실행)</td><td>둘 다</td></tr>
+-</table></div>
+-<div class="note warn"><p><b>여기가 가독성 문제의 뿌리 하나.</b> <code>readability-spec.md</code>의 "Required Blocks for Composer"는 deep 전용 블록(PLAIN_EXPLANATION 등)이고, preread의 analyst는 이 문서를 "가독성 규칙"으로 링크만 걸어 두었다. analyst 출력 틀과 self-check 8항목 어디에도 문장 길이, 괄호 설명, 비유 같은 항목이 없다. 즉 <b>기본 경로에서 쉬운 설명 규칙은 강제되지 않는다.</b></p></div>
+-
+-<!-- ===================================================== -->
+-<h2 id="output">5. 결과물은 어떻게 생겼나</h2>
+-<p>frontmatter(YAML) 뒤에 9개 블록이 정해진 순서로 온다. 분석가는 각 블록을 <code>&lt;&lt;&lt;마커&gt;&gt;&gt; ... &lt;&lt;&lt;END&gt;&gt;&gt;</code>로 감싸 돌려주고, 오케스트레이터가 마커를 벗겨 순서대로 붙인다.</p>
+-<div class="wrap"><table>
+-<tr><th>블록</th><th>H2 제목</th><th>내용</th><th>한도</th></tr>
+-<tr><td>READING_DECISION</td><td>읽기 판단</td><td>read/skim/skip + confidence + 이유 1~2문장</td><td>필수</td></tr>
+-<tr><td>ONE_MINUTE</td><td>(callout) 1분 요약</td><td>문제·핵심 아이디어·새로움·근거·주의점 bullet</td><td>4~6개</td></tr>
+-<tr><td>CORE_IDEA</td><td>핵심 아이디어</td><td>기존 병목 → 저자의 통찰 → 작동 원리</td><td>2~4문단</td></tr>
+-<tr><td>WHAT_THEY_DID</td><td>무엇을 했나</td><td>profile별 bullet (데이터·조건·metric 등)</td><td>3~6개</td></tr>
+-<tr><td>KEY_EVIDENCE</td><td>핵심 근거</td><td>주장 | 위치 | 수치 | 조건 | 출처(author-stated/analyst-inference/unknown)</td><td>5행</td></tr>
+-<tr><td>LIMITS</td><td>어디까지 믿을까</td><td>저자 명시 / 분석자 판단 / 미확인 셋으로 나눔</td><td>필수</td></tr>
+-<tr><td>READING_MAP</td><td>원문 읽기 지도</td><td>우선순위 | 볼 곳 | 확인할 질문</td><td>2~4행</td></tr>
+-<tr><td>TERMS</td><td>읽기 전 용어</td><td>이 노트 이해에 필요한 용어만</td><td>3개</td></tr>
+-<tr><td>CONTEXT_LINKS</td><td>Wiki 연결</td><td>존재 확인된 관련 노트 + 연결 이유</td><td>5개</td></tr>
+-</table></div>
+-<p>본문 전체는 공백 제외 <b>5,500자</b>를 넘기면 안 된다. 넘치면 중복 → 배경 → 보조 수치 → 용어 → 절차(지도로 이동) 순으로 자른다. 핵심 한계와 수치의 조건, coverage는 절대 안 자른다.</p>
+-<p class="small">CONTEXT_LINKS 규칙은 "실제 존재가 확인된 링크만"인데, analyst는 Read만 있고 vault를 뒤질 수 없다. 오케스트레이터가 후보 노트 목록을 payload로 넘겨야 하는데 입력 계약에 그 필드가 없다. 작은 구멍.</p>
+-
+-<!-- ===================================================== -->
+-<h2 id="deps">6. 무엇에 기대고 있나</h2>
+-<h3>다른 스킬에 의존하나: 없다</h3>
+-<p><code>skills/paper-driller/</code>와 <code>agents/paper-*.md</code>를 grep해 봐도 다른 스킬을 부르거나 가리키는 곳이 없다. 완전히 자립한다. 반대 방향은 있다.</p>
+-<ul>
+-  <li><b>paper-radar</b> → 읽기로 결정한 논문을 <code>/paper-driller ... --mode preread</code>로 넘긴다. handoff 페이로드 계약이 radar 쪽 <code>references/handoff-schema.yaml</code>에 있다.</li>
+-  <li><b>paper-understand</b> → preread 노트가 없으면 먼저 paper-driller를 돌리라고 제안한다. 노트를 학습 자료의 두 번째 출처로 쓴다.</li>
+-  <li><b>latex-publication</b> → 표에서 "컨텐츠 작성용"으로 이름만 언급. 실제 호출 없음.</li>
+-</ul>
+-<p>그러니 paper-driller의 출력 형식(frontmatter 키, H2 이름)을 바꾸면 <b>radar와 understand가 깨질 수 있다.</b> 난이도 필드를 추가하는 건 괜찮지만 기존 키를 지우거나 이름을 바꾸는 건 두 스킬을 같이 봐야 한다.</p>
+-
+-<h3>스킬 밖 의존</h3>
+-<div class="wrap"><table>
+-<tr><th>대상</th><th>용도</th><th>없으면</th></tr>
+-<tr><td>MCP: <code>arxiv</code>, <code>mcpsemanticscholar</code>, <code>paper-search-mcp-openai-v2</code></td><td>Phase A 수집. 순서대로 fallback, 마지막은 WebFetch/WebSearch</td><td>abstract-only로 떨어지고 <code>quality-status: review</code></td></tr>
+-<tr><td><code>hooks/paper-format-validator.py</code> (+ .sh 래퍼)</td><td>Phase D 형식 검사. <code>paper-schema.json</code>을 읽어 필수 키·H2·placeholder 확인</td><td>형식 오류가 그대로 저장됨</td></tr>
+-<tr><td>vault 도구 <code>Public/_tools/build_catalog.py</code>, <code>lint.py</code></td><td>Phase F 등록</td><td>노트는 있지만 catalog에 안 뜸</td></tr>
+-<tr><td>환경변수 <code>PAPER_DRILLER_VAULT</code></td><td>vault 위치. 없으면 CWD에 <code>Public/</code> 있는지, 그것도 없으면 사용자에게 물음</td><td>현재 미설정. iCloud Obsidian 경로를 매번 찾아야 함</td></tr>
+-<tr><td><code>/opt/homebrew/bin/mmdc</code></td><td>deep 모드 Mermaid 검증</td><td>deep에서 다이어그램 생략</td></tr>
+-</table></div>
+-<div class="note warn"><p><b>hook은 일부러 빠져 있다. 수동 실행으로 대체했다(2026-09-05).</b> PostToolUse·SubagentStop hook 두 개는 2026-08 설정 정리 때 <code>settings.json</code>에서 제거됐고(미커밋 변경), 전역 hook을 되살리면 모든 세션의 Write마다 python이 뜨니 되돌리지 않았다. 대신 SKILL.md Phase E에 validator를 stdin JSON으로 직접 부르는 명령을, Phase B에 Agent 호출마다 <code>logs/paper-driller-qc.jsonl</code>에 한 줄 남기는 명령을 적었다. 오케스트레이터가 이 두 명령을 실행하는 게 계약이다.</p></div>
+-
+-<!-- ===================================================== -->
+-<h2 id="problem">7. 지금 뭐가 문제인가: 요약이 읽기 어렵다</h2>
+-<p>v2 노트 하나(The Red Queen Gödel Machine, 2026-09-01 생성)의 "핵심 아이디어" 첫 문단을 그대로 가져왔다.</p>
+-<pre><code>evaluator를 계속 바꾸면 search utility가 non-stationary해져 HGM류 수렴 보장이 무너진다.
+-RQGM은 시간을 잘라 이 충돌을 피한다. 한 epoch 안에서는 evaluator·artifact 생성 절차·binary
+-scoring rule을 모두 동결하므로(Asm. 2) 각 epoch이 그 자체로 fixed-criterion 탐색 문제가 되고
+-기존 HGM search가 그대로 적용된다(Prop. 3). epoch 경계에서만 evaluator-independent한
+-ground-truth anchor(APReS 사람 판정, IMO-GradingBench 사람 채점, CRAVE PR 판정)에 대해
+-incumbent와 challenger를 ε-best-belief로 비교해, challenger가 통계적으로 나을 때만
+-교체한다(Prop. 4).</code></pre>
+-<p>정확하다. 위치도 다 붙어 있다. 그런데 이 분야 사람이 아니면 첫 문장에서 멈춘다. 왜 이렇게 나오는지 원인을 다섯 개로 쪼갰다.</p>
+-<ol>
+-  <li><b>독자가 정해져 있지 않다.</b> analyst 입력에 <code>output_lang</code>과 <code>user_context?</code>는 있지만 "누구를 위해 쓰는가"가 없다. 독자를 안 주면 모델은 원문 문체를 그대로 따라간다. 논문 문체 = 밀도 최대.</li>
+-  <li><b>규칙이 밀도를 밀어붙인다.</b> claim 5개에 각각 위치·수치·조건·출처, 한계 3분류, 지도 2~4행을 요구하면서 상한은 5,500자. 요구 정보량 ÷ 글자 수 = 압축률이고, 압축은 곧 읽기 어려움이다. 첫 문장에 개념이 네 개 들어간 이유.</li>
+-  <li><b>쉬운 설명 규칙이 preread에 안 걸려 있다.</b> 4절에서 본 대로. <code>readability-spec</code>의 "용어(쉬운 설명)" 형식, 25어절, 4문장 규칙은 analyst의 출력 틀에도 self-check에도 없다.</li>
+-  <li><b>용어를 용어로 설명한다.</b> 같은 노트의 TERMS: "clade metaproductivity: 노드 자신의 성공률이 아니라 그 노드를 루트로 하는 서브트리 전체의 pooled 성공률로 노드를 고르는 HGM 유래 search utility". 정의는 맞지만 설명이 아니다.</li>
+-  <li><b>Comment 필드가 한 문장 200자.</b> frontmatter의 Comment는 "문제·아이디어·결과·한계를 포함한 한 문장"이라는 규칙 때문에 한 문장에 넷을 우겨 넣는다. Obsidian 목록에서 이 줄만 보이는데 읽히지 않는다.</li>
+-</ol>
+-<div class="note"><p>다시 말해 <b>모델이 못 써서가 아니라 규칙이 그렇게 쓰게 만든다.</b> 그래서 프롬프트에 "쉽게 써"를 한 줄 넣는 걸로는 안 풀리고, 독자 설정과 블록별 문체 규칙을 계약에 넣어야 한다.</p></div>
+-
+-<!-- ===================================================== -->
+-<h2 id="repeat">8. 어디가 반복되고, 어디를 줄일 수 있나</h2>
+-<p>같은 Red Queen 노트를 숫자로 재 봤다. 본문은 공백 제외 4,368자로 상한(5,500) 안이다. 그런데 안에서 같은 말이 돈다.</p>
+-<div class="wrap"><table>
+-<tr><th>블록</th><th>글자 수</th><th>반복 표현 (파일 전체 등장 횟수)</th></tr>
+-<tr><td>Comment (frontmatter)</td><td>316</td><td rowspan="9" style="vertical-align:middle">
+-  <code>anchor</code> 9회 · <code>epoch 경계</code> 6회 · <code>adversarial</code> 6회 · <code>동결</code> 5회<br>
+-  <code>1회 실행</code> 4회 · <code>selective erasure</code> 3회 · <code>ε-best-belief</code> 3회<br>
+-  <code>APReS</code>·<code>IMO-GradingBench</code> 3회씩 · <code>100–166</code>·<code>±4–9%p</code> 2회씩
+-</td></tr>
+-<tr><td>읽기 판단</td><td>183</td></tr>
+-<tr><td>1분 요약</td><td>520</td></tr>
+-<tr><td>핵심 아이디어</td><td>608</td></tr>
+-<tr><td>무엇을 했나</td><td>625</td></tr>
+-<tr><td>핵심 근거</td><td>1,018</td></tr>
+-<tr><td>어디까지 믿을까</td><td>448</td></tr>
+-<tr><td>원문 읽기 지도</td><td>304</td></tr>
+-<tr><td>읽기 전 용어 + Wiki 연결</td><td>621</td></tr>
+-</table></div>
+-
+-<h3>반복 네 갈래</h3>
+-<ol>
+-  <li><b>핵심 메커니즘이 네 번.</b> Comment(316자 한 문장) → 1분 요약의 "아이디어" bullet(epoch·동결·ε-best-belief·selective erasure 전부 등장) → 핵심 아이디어(같은 내용을 길게) → 읽기 전 용어의 "controlled utility evolution"(핵심 아이디어 1문단의 압축본). 스펙은 "1분 요약에는 결론만"이라고 했지만 bullet 하나가 메커니즘 전체를 담았다.</li>
+-  <li><b>주의점이 네 번.</b> Comment 끝("단 도메인×baseline 조합당 1회 실행이고 코드 공개가 없다") → 읽기 판단 이유("1회 실행이라 방향성 확인용") → 1분 요약 "주의점"(App. C.2, 100–166개, ±4–9%p까지) → 어디까지 믿을까 "분석자 관찰"(같은 수치 그대로). 수치 두 쌍이 두 블록에 똑같이 있다.</li>
+-  <li><b>anchor 이름이 세 번.</b> 핵심 아이디어(APReS, IMO-GradingBench, CRAVE 나열) → 무엇을 했나 "도메인 3개" bullet(같은 셋 + Polyglot) → 핵심 근거 "조건" 칸.</li>
+-  <li><b>용어 블록이 본문을 다시 쓴다.</b> selective erasure는 핵심 아이디어에서 이미 "displaced evaluator에 의존한 기록만 지우는"으로 설명됐는데 읽기 전 용어에서 한 번 더 정의한다. 한 자리에서만 하면 된다.</li>
+-</ol>
+-
+-<h3>왜 생기나</h3>
+-<p>세 가지가 겹친다. 첫째, <code>preread-v2-spec</code>의 중복 규칙 표는 <b>옛 블록 쌍</b>(Digest+Abstract 등)을 v2 블록으로 합치는 표지, v2 블록끼리의 역할 분담은 "완전한 서술은 한 곳에 한 번"이라는 한 줄뿐이다. 둘째, Comment 규칙이 "문제·아이디어·결과·한계를 포함한 한 문장"이라 1분 요약 복제를 <b>요구</b>한다. 셋째, 읽기 판단에 "판정 이유"를 쓰라고 하니 문제와 주의점을 또 쓰게 된다.</p>
+-
+-<h3>압축안: 블록마다 "완전 서술 자리"를 하나로</h3>
+-<div class="wrap"><table>
+-<tr><th>블록</th><th>지금</th><th>제안</th><th>절감(추정)</th></tr>
+-<tr><td>Comment</td><td>316자 한 문장, 1분 요약 복제</td><td>80자 이내. "누구에게 왜"만. 또는 analyst가 쓰지 않고 오케스트레이터가 1분 요약의 문제+결과 bullet에서 자동 생성</td><td>~230</td></tr>
+-<tr><td>읽기 판단 이유</td><td>문제·주의점 재서술</td><td>독자 적합성만("X 계열이면 read, Y 목적이면 skim"). 수치와 한계 금지</td><td>~100</td></tr>
+-<tr><td>1분 요약 · 아이디어</td><td>메커니즘 전부</td><td>원리 한 구절, 40자 이내, locator 금지. 상세는 핵심 아이디어</td><td>~150</td></tr>
+-<tr><td>1분 요약 · 주의점</td><td>수치 포함</td><td>한 구절. 숫자는 어디까지 믿을까에만</td><td>~100</td></tr>
+-<tr><td>핵심 아이디어</td><td>anchor 구체명 나열</td><td>"사람이 매긴 정답지(anchor)"로 일반화. 구체명은 무엇을 했나에 한 번</td><td>~60</td></tr>
+-<tr><td>읽기 전 용어</td><td>본문에서 설명한 용어를 재정의</td><td>본문에 괄호 설명이 있는 용어는 제외. 남는 자리는 핵심 근거·지도에 나오는데 설명할 틈이 없던 용어에 씀</td><td>~200</td></tr>
+-<tr><td>핵심 근거 조건 ↔ 어디까지 믿을까</td><td>패널 구성 등이 양쪽에</td><td>조건은 표에, 해석은 한계에. 한계에서는 "C2의 패널 구성 참고"처럼 행 번호로 참조</td><td>~100</td></tr>
+-</table></div>
+-<p>합치면 <b>약 900자, 본문의 20%</b>다. 이 여유를 intro 난이도에서 늘어나는 괄호 설명과 비유에 쓰면 길이 상한을 올리지 않아도 된다. 12절의 두 번째 결정과 이어진다.</p>
+-
+-<h3>규칙으로 박는 법</h3>
+-<p><code>preread-v2-spec.md</code>의 Duplication Rules 아래에 v2 블록 간 표를 하나 더 둔다.</p>
+-<div class="wrap"><table>
+-<tr><th>정보 종류</th><th>완전 서술 자리</th><th>다른 블록에서는</th></tr>
+-<tr><td>작동 원리</td><td>핵심 아이디어</td><td>방법 이름과 한 구절만</td></tr>
+-<tr><td>수치·실험 조건</td><td>핵심 근거</td><td>결론만, 숫자 금지</td></tr>
+-<tr><td>한계 상세·표본 크기</td><td>어디까지 믿을까</td><td>한 구절</td></tr>
+-<tr><td>데이터셋·anchor·baseline 이름</td><td>무엇을 했나</td><td>일반명사("사람 채점 기준")</td></tr>
+-<tr><td>용어 정의</td><td>본문 괄호 <b>또는</b> 읽기 전 용어, 둘 중 하나</td><td>-</td></tr>
+-</table></div>
+-<p>analyst self-check에는 두 줄이 더 들어간다. "같은 수치가 두 블록에 나오지 않음", "1분 요약에 Table/Figure/App. locator가 없음". validator에는 선택으로 숫자+단위 토큰(예: <code>71.7%</code>, <code>1.35×</code>)이 두 블록 이상에 등장하면 경고하는 lint를 넣을 수 있다. 정규식 하나면 된다.</p>
+-<div class="note warn"><p><b>구조 자체를 줄이는 안은 보류.</b> 읽기 판단과 1분 요약을 callout 하나로 합치면 헤딩이 9개에서 8개로 줄고 자연스럽다. 하지만 <code>paper-schema.json</code>의 required_h2에 "읽기 판단"이 있고 validator와 paper-understand가 그 이름을 본다. 세 곳을 같이 고쳐야 하니 난이도 작업이 끝난 뒤로 미루는 게 낫다.</p></div>
+-
+-<!-- ===================================================== -->
+-<h2 id="eli5">9. ELI5 규칙을 심을 수 있나</h2>
+-<p>eli5 스킬의 뼈대는 넷이다. (1) 독자를 먼저 정한다, (2) 무엇 → 비유 → 세부 → 그래서 뭐 순서, (3) 독자별 언어 조정(쉬운 독자는 전문용어 0·한 문장 한 아이디어·구체 예시, 전문가는 용어 그대로·트레이드오프 중심), (4) 절대 깔보지 않는다. 이걸 paper-driller에 그대로 옮기면 안 되는 부분이 있다.</p>
+-
+-<h3>그대로 가져와도 되는 것</h3>
+-<ul>
+-  <li><b>독자 먼저.</b> eli5의 1단계. payload에 독자 필드를 넣는 것으로 그대로 옮겨진다. 10절의 <code>--level</code>.</li>
+-  <li><b>무엇 → 비유 → 세부 → 그래서.</b> CORE_IDEA 블록의 현재 순서 "병목 → 통찰 → 구현"과 거의 겹친다. 첫 문장에 "이 논문은 X를 Y로 푼다"를 두고, 두 번째에 비유 하나, 그다음 원리, 마지막에 누구에게 왜 쓸모인지. 순서만 못 박으면 된다.</li>
+-  <li><b>한 문장 한 아이디어, 구체가 추상보다 먼저.</b> readability-spec에 이미 있다. 강제만 안 됐을 뿐.</li>
+-  <li><b>깔보지 않기.</b> "고등학생 수준"이 "유치하게"가 아니라는 점. 톤 규칙 한 줄로 충분하다.</li>
+-</ul>
+-
+-<h3>손봐서 가져와야 하는 것</h3>
+-<ul>
+-  <li><b>기본 독자.</b> eli5 기본값은 5살. 논문 노트 기본값은 "그 분야를 처음 보는 똑똑한 독자"(readability-spec의 표현)가 맞다. 5살 모드는 아예 빼는 게 낫다.</li>
+-  <li><b>비유.</b> eli5는 비유를 적극 권하지만 readability-spec 4번은 "비유가 새 주장을 만들면 안 된다"고 막는다. 둘 다 맞다. 타협: <b>CORE_IDEA에만 비유 1개, KEY_EVIDENCE·LIMITS에는 0개</b>. 비유 뒤에는 반드시 정확한 용어를 괄호로 되돌려 놓는다.</li>
+-  <li><b>"80% 정확도면 된다".</b> eli5의 이 원칙은 근거 장부와 한계 블록에 절대 적용하면 안 된다. 수치·조건·위치는 난이도와 무관하게 원문 그대로. <b>ELI5는 서술 블록(ONE_MINUTE, CORE_IDEA, WHAT_THEY_DID, TERMS)에만 적용</b>하고 표 블록은 건드리지 않는다.</li>
+-  <li><b>전문용어 0개.</b> 쉬운 독자여도 용어를 지우면 원문으로 돌아갈 수 없다. readability-spec의 <code>용어(쉬운 설명)</code> 형식이 우선이다. 용어를 없애는 게 아니라 옆에 설명을 붙인다.</li>
+-</ul>
+-
+-<h3>블록별 적용 범위</h3>
+-<div class="wrap"><table>
+-<tr><th>블록</th><th>ELI5 적용</th><th>바뀌는 것</th><th>안 바뀌는 것</th></tr>
+-<tr><td>ONE_MINUTE</td><td>부분</td><td>bullet 문장 길이, 용어 괄호 설명</td><td>5개 항목 구성</td></tr>
+-<tr><td>CORE_IDEA</td><td><b>전면</b></td><td>순서(무엇→비유→원리→쓸모), 비유 1개, 문장 길이, 문단 수</td><td>기술 용어 존재, 원문 위치 표기</td></tr>
+-<tr><td>WHAT_THEY_DID</td><td>부분</td><td>각 bullet 앞에 "왜 이걸 했나" 한 구절</td><td>데이터·조건·metric 이름</td></tr>
+-<tr><td>KEY_EVIDENCE</td><td><b>없음</b></td><td>-</td><td>전부. 표 그대로</td></tr>
+-<tr><td>LIMITS</td><td>없음</td><td>-</td><td>전부. 출처 분류 그대로</td></tr>
+-<tr><td>READING_MAP</td><td>없음</td><td>-</td><td>전부</td></tr>
+-<tr><td>TERMS</td><td><b>전면</b></td><td>3단 정의: 일상어 한 줄 → 정확한 정의 → 이 논문에서 왜 중요</td><td>용어 개수 3</td></tr>
+-<tr><td>Comment(frontmatter)</td><td>부분</td><td>두 문장 허용, 80자 상한</td><td>문제·결과 포함</td></tr>
+-</table></div>
+-
+-<h3>"사람이 쓴 것처럼"은 어디서 처리하나</h3>
+-<p>두 갈래가 있다. (a) analyst 프롬프트에 문체 규칙을 심는다. (b) 노트를 쓴 뒤 <code>humanize</code> 스킬로 후처리한다. 추천은 <b>(a) 기본, (b)는 <code>--humanize</code> 옵션</b>이다. 이유: preread는 호출 1회 예산이 핵심 설계인데 humanize Strict는 에이전트 5명을 더 부른다. 대신 humanize의 "내용 한 글자도 안 바꿈" 보장(fidelity auditor)은 근거 장부가 있는 이 노트와 잘 맞아서, 정말 사람 문체가 필요한 노트에만 옵션으로 켜는 게 맞다. (a)에 넣을 규칙은 humanize의 <code>ko-taxonomy.md</code>에서 상위 몇 개만 빌리면 된다: 명사형 종결 금지, "본 논문은/시사한다" 금지, 한 문장 한 역할, 접속 부사 남발 금지.</p>
+-
+-<!-- ===================================================== -->
+-<h2 id="level">10. 난이도: intro로 고정 (결정·반영)</h2>
+-<div class="note"><p><b>결정(2026-09-05).</b> 난이도 옵션은 두지 않는다. 모든 preread 노트는 <code>intro</code> 독자에게 쓴다. 아래 표의 standard·expert 열은 검토 기록으로만 남긴다. 핵심은 <b>서술 블록만 쉽게 쓰고 표 블록은 그대로</b>라서, 전문가도 KEY_EVIDENCE·READING_MAP에서 원문 밀도를 그대로 얻는다.</p></div>
+-
+-<h3>단계 셋</h3>
+-<div class="wrap"><table>
+-<tr><th></th><th><code>intro</code> (채택, 유일)</th><th><s>standard</s></th><th><s>expert</s></th></tr>
+-<tr><td>독자</td><td>고등학생, 타분야 대학생</td><td>인접 분야 대학원생</td><td>같은 분야 연구자</td></tr>
+-<tr><td>문장 길이</td><td>15어절 이하</td><td>25어절 이하</td><td>제한 없음</td></tr>
+-<tr><td>용어 처리</td><td>첫 등장마다 <code>용어(쉬운 설명)</code>, 두 번째부터 용어만</td><td>첫 등장만 괄호</td><td>괄호 없음</td></tr>
+-<tr><td>CORE_IDEA</td><td>3~4문단, 비유 1개 필수, 첫 문장 "이 논문은 X를 Y로 푼다"</td><td>2~4문단, 비유 선택</td><td>2문단, 비유 없음, 트레이드오프 중심</td></tr>
+-<tr><td>TERMS</td><td>3개, 3단 정의</td><td>3개, 정의 + 왜 중요</td><td>생략 가능</td></tr>
+-<tr><td>WHAT_THEY_DID</td><td>bullet마다 "왜" 구절</td><td>기본</td><td>기본</td></tr>
+-<tr><td>KEY_EVIDENCE / LIMITS / READING_MAP</td><td colspan="3" style="text-align:center">동일. 난이도와 무관</td></tr>
+-<tr><td>길이 상한</td><td>5,500자 유지. 8절 압축으로 확보한 ~900자를 괄호 설명과 비유에 씀</td><td>-</td><td>-</td></tr>
+-</table></div>
+-
+-<h3>같은 문단, 세 난이도</h3>
+-<p>위 Red Queen 문단을 세 단계로 다시 쓰면 이렇게 된다. 수치와 위치(Asm. 2, Prop. 3·4)는 세 버전 모두 같다. 채택된 건 <b>intro</b> 하나이고, standard는 지금 v2가 내는 문체, expert는 참고용이다.</p>
+-<div class="demo" id="demo">
+-  <div class="seg">
+-    <button data-pick="intro" class="on">intro (채택)</button>
+-    <button data-pick="standard">standard (현재 v2)</button>
+-    <button data-pick="expert">expert</button>
+-  </div>
+-  <div data-level="intro" class="on">
+-    <p>AI 에이전트가 스스로 더 나은 버전을 만들어 가는 탐색을 상상해 보자. 그런데 "더 낫다"를 판단하는 채점자(evaluator)까지 같이 바꾸면 문제가 생긴다. 채점 기준이 계속 흔들리면 어느 버전이 진짜 나아진 건지 비교할 수 없기 때문이다.</p>
+-    <p>이 논문의 답은 시간을 학기(epoch)처럼 자르는 것이다. 한 학기 안에서는 채점자를 고정한다(Asm. 2). 그러면 그 학기만 놓고 보면 기존 방식(HGM search)이 그대로 통한다(Prop. 3). 학기가 끝날 때만 사람이 매긴 정답지(anchor: APReS, IMO-GradingBench, CRAVE)에 대고 새 채점자가 정말 더 정확한지 통계로 확인하고, 그럴 때만 교체한다(Prop. 4).</p>
+-    <p>바꿀 때는 옛 채점자가 매긴 점수만 골라서 지운다(selective erasure). 그래서 채점자가 바뀌어도 나머지 기록은 살아남는다.</p>
+-    <div class="why">문장 15어절 이하 · 용어마다 괄호 · 비유(학기, 정답지) 1세트 · 위치 표기 유지</div>
+-  </div>
+-  <div data-level="standard">
+-    <p>evaluator(에이전트 산출물을 채점하는 모델)를 탐색 도중 계속 바꾸면 utility가 non-stationary해져 HGM 계열의 수렴 보장이 깨진다. RQGM은 시간을 epoch으로 잘라 이 충돌을 피한다.</p>
+-    <p>한 epoch 안에서는 evaluator, artifact 생성 절차, 채점 규칙을 전부 동결한다(Asm. 2). 그러면 각 epoch은 기준이 고정된 탐색 문제가 되어 기존 HGM search를 그대로 쓸 수 있다(Prop. 3). epoch 경계에서만 evaluator와 무관한 ground-truth anchor(APReS 사람 판정, IMO-GradingBench 사람 채점, CRAVE PR 판정)에 대해 현 evaluator와 도전자를 ε-best-belief로 비교하고, 도전자가 통계적으로 나을 때만 교체한다(Prop. 4).</p>
+-    <p>교체 시에는 밀려난 evaluator에 의존한 utility 기록만 지우는 selective erasure를 한다.</p>
+-    <div class="why">문장 25어절 이하 · 첫 등장 용어만 괄호 · 비유 없음 · 원문 순서 유지</div>
+-  </div>
+-  <div data-level="expert">
+-    <p>Evaluator를 search 중 교체하면 utility가 non-stationary가 되어 HGM의 수렴 보장이 무너진다. RQGM은 epoch 내부에서 evaluator·artifact 생성 절차·binary scoring rule을 동결해(Asm. 2) 각 epoch을 fixed-criterion 문제로 환원하고(Prop. 3), 경계에서만 evaluator-independent anchor(APReS, IMO-GradingBench, CRAVE)에 대한 ε-best-belief 비교로 incumbent를 교체한다(Prop. 4). 교체 시 selective erasure로 displaced evaluator 의존 기록만 제거한다. 트레이드오프: 보장은 epoch 내부에만 유효하고 transition 누적 regret은 열려 있다(App. F.4).</p>
+-    <div class="why">현재 v2 출력에 가장 가까움 · 트레이드오프 한 줄 추가 · 괄호 설명 없음</div>
+-  </div>
+-</div>
+-
+-<h3>실제로 고친 곳 (2026-09-05)</h3>
+-<ol>
+-  <li><code>references/readability-spec.md</code>: 전면 재작성. 독자 고정, 서술 블록 문장 15어절, 첫 등장만 괄호, CORE_IDEA 순서(무엇→비유 1개→원리→쓸모), TERMS 3단, 문체 규칙(명사형 종결·상투 표현·접속 부사 금지), Comment 80자, 전후 예시. 별도 audience-levels.md는 만들지 않았다. 레벨이 하나라 파일을 나눌 이유가 없다.</li>
+-  <li><code>references/preread-v2-spec.md</code>: "Audience (고정)" 절, 블록별 지시 강화, v2 블록 간 "완전 서술 자리" 표(8절), ONE_MINUTE locator·숫자 금지, 읽기 판단 이유는 독자 적합성만, <code>--humanize</code> 예산 예외, 완료 기준 3줄 추가.</li>
+-  <li><code>references/paper-schema.json</code>: <code>audience_level: "intro"</code>, 서술/표 블록 목록, <code>max_sentence_words_narrative: 15</code>, <code>comment_max_chars: 80</code>, frontmatter 선택 키 <code>audience-level</code>. 기존 58개 v2 노트가 깨지지 않게 필수 키로는 넣지 않았다.</li>
+-  <li><code>agents/paper-preread-analyst.md</code>: 입력에 <code>audience_level: intro</code>, "독자 (고정)" 절, 블록 템플릿 안내문 교체, 금지 6항목·self-check 7항목 추가.</li>
+-  <li><code>SKILL.md</code>: 목적에 독자 고정과 <code>--humanize</code>, 편집 원칙 6·7번, frontmatter 예시에 <code>audience-level: intro</code>와 Comment 규칙, payload에 <code>audience_level</code>, <b>Phase D' Humanize</b> 신설, 품질 게이트 4줄.</li>
+-  <li><code>scripts/validate-driller.sh</code>: 위 문자열 13개 grep 추가. <code>--level</code>이 SKILL.md에 등장하면 실패. 실행 결과 ALL PASS.</li>
+-</ol>
+-<h3>--humanize는 이렇게 돈다</h3>
+-<p>validator를 한 번 통과한 노트에서 서술 블록만 뽑아 humanize KO Fast(<code>장르: 리포트, 강도: 보수</code>, monolith 1회)에 넘기고, 돌아온 글을 같은 자리에 되돌린다. 표·frontmatter·BibTeX·위키 링크는 넘기지 않는다. 되돌린 뒤 숫자, 괄호 안 영문 용어, <code>[위치 미확인]</code>, <code>C1</code>류 행 참조, <code>[[링크]]</code> 중 하나라도 바뀐 블록은 원본으로 롤백하고 validator를 다시 통과시킨다. preread 2회 예산에 세지 않고, 등급이 낮아도 Strict로 자동 승급하지 않는다.</p>
+-<div class="note warn"><p><b>아직 안 한 것.</b> <code>hooks/paper-format-validator.py</code>에 Comment 80자와 문장 길이 lint는 넣지 않았다. hook 자체가 settings.json에서 빠져 있어서(6절) 먼저 그걸 복구해야 lint를 넣는 의미가 있다. 그리고 실제 논문 한 편으로 새 규칙을 돌려 본 dry-run이 없다. 다음 실행 때 Red Queen을 다시 돌려 8절 표와 비교하면 된다.</p></div>
+-
+-<!-- ===================================================== -->
+-<h2 id="plan">11. 개선 방안 우선순위</h2>
+-<ol class="prio">
+-  <li><b>validator 수동 실행 명령을 SKILL.md에 명시</b>반영됨. hook 재등록은 하지 않았다(6절).</li>
+-  <li><b>v2 커밋</b>이번 수정과 함께 커밋함(a164639).</li>
+-  <li><b>intro 독자 고정 + ELI5 블록별 규칙 (10절)</b>반영됨. 분석가 프롬프트·schema·reference 세 곳. hook lint는 미반영.</li>
+-  <li><b>analyst self-check에 가독성 항목</b>반영됨(7항목).</li>
+-  <li><b>블록 간 "완전 서술 자리" 표 + 수치 1회 규칙 (8절)</b>반영됨. preread-v2-spec 표, analyst 금지·self-check.</li>
+-  <li><b>TERMS 3단 정의, Comment 80자·2문장</b>반영됨.</li>
+-  <li><b>evidence·composer 정리</b>반영됨(3절).</li>
+-  <li><b>subagent 호출 로그</b>hook 대신 오케스트레이터가 직접 한 줄 기록하도록 SKILL.md에 명시. 반영됨.</li>
+-  <li><b>CONTEXT_LINKS 후보 목록을 payload에</b>오케스트레이터가 vault에서 후보 노트 제목을 뽑아 <code>existing_notes</code>로 넘긴다. 지금은 analyst가 존재를 확인할 수단이 없다.</li>
+-  <li><b><code>PAPER_DRILLER_VAULT</code> 설정</b>iCloud Obsidian 경로를 환경변수로 박으면 매번 경로 확인 단계가 사라진다.</li>
+-</ol>
+-
+-<!-- ===================================================== -->
+-<h2 id="decide">12. 결정과 반영 내역</h2>
+-<ol>
+-  <li><b>기본 level → intro 하나만.</b> 다른 level은 없다. <code>--level</code> 인자도 만들지 않았고 validator가 그 문자열을 금지한다. 반영됨.</li>
+-  <li><b>길이 상한 → 5,500자 유지.</b> 8절 압축 규칙으로 여유를 만든다. 반영됨.</li>
+-  <li><b>humanize → <code>--humanize</code> 옵션 개방.</b> 기본 꺼짐, 서술 블록만, 예산 밖. 반영됨.</li>
+-</ol>
+-<p>dry-run은 13절. 남은 것: vault의 Red Queen 노트를 새 노트로 교체할지는 사용자 결정(개인 메모 없음, 교체해도 손실 없음).</p>
+-<p class="small">이 문서는 2026-09-05의 파일 상태를 기준으로 썼다. SKILL.md 344줄, reference 969줄, 에이전트 7개, vault 노트 709개(v2 58개).</p>
+-
+-<!-- ===================================================== -->
+-<h2 id="dryrun">13. dry-run 결과 (2026-09-05)</h2>
+-<p>새 규칙으로 Red Queen 논문을 다시 돌렸다. 원문은 arXiv PDF 13쪽을 pdftotext로 뽑아 fulltext로 넘겼고, <code>paper-preread-analyst</code> 1회 호출, validator 수동 실행 통과(exit 0). 결과는 scratchpad에만 두고 vault 노트는 덮지 않았다.</p>
+-<div class="wrap"><table>
+-<tr><th>지표</th><th>기존 노트 (9/1)</th><th>새 노트 (9/5)</th></tr>
+-<tr><td>본문 글자 수 (공백 제외)</td><td>4,368</td><td>3,313</td></tr>
+-<tr><td>Comment 길이</td><td>316자 한 문장</td><td>55자 두 문장</td></tr>
+-<tr><td>같은 수치가 두 블록에</td><td>5개</td><td>0개</td></tr>
+-<tr><td>"1회 실행" 등장</td><td>4회</td><td><b>0회 (문제)</b></td></tr>
+-<tr><td>"anchor" 등장</td><td>9회</td><td>1회</td></tr>
+-<tr><td>"epoch 경계" 등장</td><td>6회</td><td>0회</td></tr>
+-<tr><td>15어절 초과 문장 (서술)</td><td>11 / 45</td><td>9 / 48, 그중 6개는 TERMS 3단·Wiki 제목 줄(측정 방식 문제)</td></tr>
+-<tr><td>핵심 아이디어 첫 문장</td><td>"evaluator를 계속 바꾸면 search utility가 non-stationary해져…"</td><td>"이 논문은 평가 기준이 고정된 자기개선 탐색 문제를 공진화(…)로 푼다."</td></tr>
+-</table></div>
+-<h3>잘 된 것</h3>
+-<ul>
+-  <li>반복이 사라졌다. 메커니즘은 핵심 아이디어에 한 번, 수치는 핵심 근거 표에 한 번, 한계는 C1~C5 행 번호로 참조.</li>
+-  <li>비유 1개(포식자와 먹이), 용어 괄호 설명, 3단 용어 정의가 지시대로 나왔다.</li>
+-  <li>무엇을 했나의 모든 bullet이 "…를 보려고"로 시작해 동기가 보인다.</li>
+-</ul>
+-<h3>문제 하나, 고침</h3>
+-<p>기존 노트가 네 번이나 말하던 "도메인×baseline 조합당 1회 실행, 코드 미공개"가 새 노트에서 <b>0번</b>이 됐다. 원문 App. C.2에 "one per domain per baseline"이 분명히 있다. "한 번만 써라"가 "안 써도 된다"로 미끄러진 것이다. 중복 제거 규칙의 부작용이라 규칙 쪽을 고쳤다: preread-v2-spec LIMITS에 "빠뜨리면 안 되는 두 줄"(실험 반복 횟수, 코드·데이터 공개 여부)을 필수로 넣고, analyst self-check와 validate-driller.sh에 같은 항목을 추가했다.</p>
+-<p class="small">측정 스크립트가 TERMS 3단 정의 한 줄과 Wiki 링크 제목을 한 문장으로 세는 바람에 15어절 초과가 부풀려졌다. readability-spec에 "단마다 따로 센다, 링크는 제목 제외"를 명시했다. 실제 서술 문장에서 초과한 건 1분 요약 2개(16·17어절)와 한계 1개(16어절)뿐이다.</p>
+-
+-</main>
+-<script>
+-  (function(){
+-    var demo=document.getElementById('demo');
+-    demo.querySelectorAll('[data-pick]').forEach(function(b){
+-      b.addEventListener('click',function(){
+-        var k=b.getAttribute('data-pick');
+-        demo.querySelectorAll('[data-pick]').forEach(function(x){x.classList.toggle('on',x===b)});
+-        demo.querySelectorAll('[data-level]').forEach(function(x){x.classList.toggle('on',x.getAttribute('data-level')===k)});
+-      });
+-    });
+-  })();
+-</script>
+-</body>
+-</html>
+--- sources/skills/paper-driller-claude/references/insight-digest-spec.md
++++ sources/skills/paper-driller-codex/references/insight-digest-spec.md
+@@ -1,7 +1,7 @@
+ # Insight-Digest 명세 (단일 진실원천)
+ 
+-> 이 파일은 **paper-digest-composer**가 사용하는 readable 서문 명세다.
+-> 이 명세를 따라 "그 분야를 모르는 독자도 읽히는, insight·함의 중심" 단락을
++> 이 파일은 **paper-driller Bite 모드**와 **paper-digest-composer** 가 공유한다.
++> 둘 다 이 명세를 따라 "그 분야를 모르는 독자도 읽히는, insight·함의 중심" 단락을
+ > 생성한다. (주의: 별도 스킬 `paper-digest`는 이 파일을 참조하지 않는 독립 구현이다.)
+ 
+ ## 구조 (4 + 2)
+@@ -37,9 +37,9 @@
+ - 각 문서가 서로 다르게 깨달은 바를 대조.
+ - 문서 간 함의를 종합.
+ 
+-## composer 확장
++## composer 전용 확장 (deep 모드)
+ 
+-composer는 위 4+2 서문에 더해 다음을 생성한다:
++composer는 위 4+2 서문에 더해 다음을 생성한다(Bite 모드는 서문까지만):
+ - **Limitations** — 저자/원문 인정 한계 + 독자 식별 한계.
+ - **Open Questions** — 열려 있는 미해결 질문.
+ 이로써 composer의 산출은 CISELQ(Context/Insight/Solution/Evidence/Limitations/Open)가 된다.
+--- sources/skills/paper-driller-claude/references/legacy-workflow.md
++++ sources/skills/paper-driller-codex/references/legacy-workflow.md
+@@ -1,377 +0,0 @@
+-# Legacy 절차 — paper-preread-v2 / legacy deep
+-
+-> **이 문서는 옛 절차의 보존본이다.** 2026-09-22 이전 `SKILL.md` 본문을 frontmatter만 빼고 그대로 옮겼다.
+-> 적용 대상: `template-version: paper-preread-v2` 노트의 갱신, 그리고 사용자가 옛 agent 기반 deep 경로를 명시적으로 요청한 경우뿐이다.
+-> 새 노트(`paper-note-v3`)는 `references/workflow.md`와 선택한 템플릿을 따르며, 아래의 15어절·비유 1개·수치 반복 금지·5,500자 상한·subagent 필수 호출 규칙을 적용하지 않는다.
+-> 기존 v2 노트를 v3로 일괄 변환하지 않는다.
+-> 검증 계약: `template-version: paper-preread-v2`는 6개 H2 + `> [!summary] 1분 요약` + 5,500자 상한. `template-version: paper-deep-v2`는 `summary-mode: deep`, 같은 preread 블록 뒤에 `## 상세 독해 노트`가 있어야 하며 길이 상한은 없다. 두 버전 모두 `paper-format-validator.py`가 그대로 검사한다.
+-
+----
+-
+-
+-# Paper Driller v2
+-
+-## 목적
+-
+-기본 산출물은 논문을 대신하는 장문 해설이 아니다. 독자가 원문을 읽기 전에 문제·핵심 아이디어·주요 근거·한계·읽을 위치를 빠르게 파악하는 **프리리드 요약**이다.
+-
+-- `--mode preread|deep`
+-- **기본값: preread**
+-- `deep`은 사용자가 심층 독해 노트나 섹션별 분석을 명시적으로 요청한 경우에만 사용한다.
+-- `--humanize`: 저장 직전 서술 블록을 `humanize` 스킬(KO Fast)로 한 번 더 다듬는다. 기본 꺼짐.
+-- 난이도 옵션은 없다. 모든 preread 노트는 **intro 독자**(이 분야를 처음 보는 고등학생·타분야 대학생)에게 쓴다. 규칙은 `references/readability-spec.md`.
+-
+-기계 판독 스키마의 단일 진실 원천은 `references/paper-schema.json`이다. Category·profile·source coverage·preread 필수 섹션 enum을 다른 문서에 별도로 복제하지 않는다. 출력 의도와 편집 원칙은 `references/preread-v2-spec.md`, 정확성 보존형 쉬운 설명 규칙은 `references/readability-spec.md`, deep 모드의 장문 digest 규칙은 `references/insight-digest-spec.md`를 따른다.
+-
+-## 핵심 편집 원칙
+-
+-1. **원문을 대신하지 않는다.** 정밀한 수식·증명·실험 설정은 reading map으로 원문에 연결한다.
+-2. **원문 순서보다 독자 질문 순서로 재구성한다.** 문제 → 아이디어 → 수행 내용 → 근거 → 한계 → 읽기 지도.
+-3. **중복을 제거한다.** Digest·먼저 이해하기·Abstract를 별도 반복하지 않는다.
+-4. **근거를 추적한다.** 핵심 주장에는 Table/Figure/Section 또는 coverage 한계를 붙인다.
+-5. **기본은 짧게, 상세는 요청 시에만.** Zettelkasten·거대 비교표·섹션별 요약은 deep 전용이다.
+-6. **독자는 초심자, 표는 전문가.** 서술 블록은 15어절 이하 문장과 `용어(쉬운 설명)`로 쓰고, KEY_EVIDENCE·READING_MAP 표에는 수치·조건·위치를 원문 그대로 둔다. 용어를 지우지 않는다.
+-7. **완전 서술 자리는 하나.** 작동 원리는 CORE_IDEA, 수치는 KEY_EVIDENCE, 한계 상세는 LIMITS, 데이터셋·baseline 구체명은 WHAT_THEY_DID. 다른 블록에서는 이름이나 한 구절로만 가리킨다.
+-
+-## 프로파일
+-
+-`structure`와 `scholarly`에 더해 `profile`을 판정한다.
+-
+-| profile | 판정 | 핵심 검증 대상 |
+-|---|---|---|
+-| `empirical` | 실험·관찰 중심 | 데이터, 조건, baseline, metric, 부정 결과 |
+-| `theoretical` | 정리·증명·구성 중심 | 가정, 증명 전략, 정리의 적용 범위 |
+-| `survey` | 문헌 분류·종합 중심 | 조사 범위, taxonomy, 포함·제외 기준 |
+-| `position` | 주장·논증 중심 | 핵심 주장, 근거 종류, 반론 |
+-| `dataset-benchmark` | 데이터셋·평가체계 중심 | 생성, split, metric, baseline, 누출·편향 |
+-| `general-article` | 비학술 일반 글 | 논증 흐름, 출처, 핵심 사례 |
+-
+-기존 2축도 유지한다.
+-
+-- `structure`: `imrad` | `free`
+-- `scholarly`: `yes` | `no`
+-
+-사용자는 `--mode`, `--profile`, `--structure`, `--scholarly`, `--humanize`를 지정할 수 있다.
+-
+-## Agent 구성
+-
+-| Agent | preread | deep | 책임 |
+-|---|---:|---:|---|
+-| `paper-preread-analyst` | **필수·1회** | 생략 | 읽기 판정, 핵심 아이디어, 수행 내용, claim ledger, 한계, reading map을 한 번에 생성 |
+-| `paper-spine` | 생략 | 필수 | 상세 독해용 전체 논지·flow map |
+-| `paper-meta` | 생략 | 선택 | deep에서 metadata 보정이 필요한 경우만 사용 |
+-| `paper-evidence` | 생략 | 필수 | deep claim/evidence·재현성 감사 |
+-| `paper-digest-composer` | 생략 | 필수 | deep 산출물 합성 |
+-| `paper-section-driller` | 생략 | 필요 | deep 섹션별 상세 독해 |
+-| `paper-comparison` | 생략 | 선택 | deep 관련 연구 비교 매트릭스 |
+-
+-**기본 subagent 호출 예산: 1회**다. 핵심 수치 충돌, low-confidence 핵심 claim, 사용자 `--verify|--repro` 요청에만 같은 analyst를 제한된 payload로 한 번 더 호출한다. preread는 최대 2회이며 section fan-out·별도 meta/evidence/composer 호출을 금지한다. `--humanize`의 `humanize-ko-monolith` 1회는 이 예산 밖이다. metadata와 BibTeX는 수집 결과를 orchestrator가 결정론적으로 매핑한다.
+-
+-## Workflow
+-
+-### preread — 기본
+-
+-```text
+-입력
+-  ↓
+-A. metadata + 판단에 필요한 핵심 구간 수집, source coverage 판정
+-  ↓
+-B. paper-preread-analyst 1회
+-  ↓
+-C. 결정론적 frontmatter/BibTeX 매핑 + 템플릿 조립
+-  ↓
+-D. paper-format-validator
+-  ↓
+-D'. (--humanize일 때만) 서술 블록 humanize → validator 재통과
+-  ↓
+-E. Wiki Integration
+-```
+-
+-### deep — 명시 요청 전용
+-
+-```text
+-전체 수집 → paper-spine → section/evidence/meta/comparison → composer
+-→ 템플릿 조립 → validator → Wiki Integration
+-```
+-
+-# Phase A — 수집·정규화
+-
+-## Fetch fallback
+-
+-1. arXiv: `mcp__arxiv__download_paper` + `mcp__arxiv__read_paper`
+-2. Semantic Scholar metadata/abstract
+-3. paper-search MCP
+-4. `WebFetch` arXiv HTML
+-5. 제목 기반 `WebSearch`
+-
+-PDF URL에서 WebFetch가 전문 대신 **캐시된 PDF** 경로를 반환하면 orchestrator가 해당 로컬 경로를 `Read(pages=…)`로 읽는다. cross-host `redirect`가 나오면 안내 URL로 다시 호출한다.
+-
+-preread는 페이지 수와 무관하게 먼저 다음 구간만 수집한다.
+-
+-1. metadata + abstract
+-2. Introduction의 contribution 단락
+-3. method overview 또는 핵심 Figure caption
+-4. 대표 결과 Table/Figure와 주변 문단
+-5. limitations/discussion/conclusion
+-6. 목차·heading·page locator
+-
+-판정·claim·reading map을 만들기에 부족할 때만 추가 구간을 읽는다. deep에서만 10쪽 초과 PDF를 page range로 나눠 전체를 방문한다.
+-
+-## Source coverage
+-
+-확보 범위를 다음 중 하나로 기록한다.
+-
+-- `fulltext`
+-- `section-extract`
+-- `abstract-only`
+-- `unknown`
+-
+-`abstract-only` 또는 `unknown`이면:
+-
+-- 방법·결과 세부를 추측하지 않는다.
+-- `quality-status: review`를 emit한다.
+-- ONE_MINUTE와 KEY_EVIDENCE에서 coverage 한계를 알린다.
+-
+-`output_lang`은 사용자 입력 언어를 따르며 모든 agent payload에 포함한다. 고유명·수식·수치·원문 식별자는 보존한다.
+-
+-# Phase B — Preread analyst
+-
+-`mode=preread`이면 `paper-preread-analyst`를 정확히 1회 호출한다. 다음을 한 호출에서 생성한다.
+-
+-```text
+-READING_DECISION, ONE_MINUTE, CORE_IDEA, WHAT_THEY_DID,
+-KEY_EVIDENCE, LIMITS, READING_MAP, TERMS?, CONTEXT_LINKS?
+-```
+-
+-claim ledger:
+-
+-```text
+-claim | source_location | observation | condition_or_caveat | claim_origin
+-```
+-
+-`claim_origin`은 다음 enum만 사용한다.
+-
+-```text
+-author-stated | analyst-inference | unknown
+-```
+-
+-- 원문 명시 내용과 분석자의 해석을 섞지 않는다.
+-- 최대 5개 claim만 남긴다.
+-- locator가 없으면 `[위치 미확인]`으로 쓴다.
+-- `abstract-only|unknown`에서는 방법·수치·위치를 추측하지 않는다.
+-- 같은 claim의 완전한 서술은 한 곳에 한 번만 둔다.
+-- READING_MAP은 2–4행, TERMS는 최대 3개다.
+-
+-`paper-preread-analyst`가 반환한 marker를 orchestrator가 순서대로 조립한다. 별도 composer가 문장을 다시 생성하지 않는다.
+-
+-subagent 호출 예산을 확인할 수 있도록, Agent 호출이 끝날 때마다 orchestrator가 한 줄을 남긴다(SubagentStop hook은 등록되어 있지 않다).
+-
+-```bash
+-printf '{"ts":"%s","doc_id":"%s","subagent_type":"%s","call_no":%d,"mode":"%s"}\n' \
+-  "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$DOC_ID" paper-preread-analyst 1 preread \
+-  >> ~/.claude/logs/paper-driller-qc.jsonl
+-```
+-
+-모든 payload에 `audience_level: intro`를 넣는다. 값은 하나뿐이지만 analyst가 `user_context`의 "전문가용" 같은 요청에 문체를 바꾸지 않도록 명시한다.
+-
+-# Phase C — Deep 분기
+-
+-`mode=deep`에서만 legacy 상세 agent 경로를 사용한다.
+-
+-1. `paper-spine`: profile·thesis·flow map·argument map
+-2. 긴 원문은 `paper-section-driller`로 실제 chunk를 방문
+-3. `paper-evidence`: 상세 claim/evidence·재현성 감사
+-4. `paper-meta`: metadata 보정이 필요한 경우만
+-5. `paper-comparison`: 비교가 실제로 필요한 경우만
+-6. `paper-digest-composer`: 중복 제거 후 deep note 합성
+-
+-Deep에서도 모든 원문 heading을 기계적으로 재서술하지 않는다. Zettelkasten·Mermaid·비교표는 독해 후 재사용 가치가 있을 때만 생성한다.
+-
+-# Phase D — 출력
+-
+-## canonical frontmatter
+-
+-> **2026-09-22 이후 주의.** 아래 YAML은 보존본이다. 현재 계약(`paper-schema.json` v4, `Public/_tools/paper_frontmatter.py`)에서 frontmatter는 13개 키(`type`, `Reading-Status`, `Read-Depth`, `Author`, `Journal/Conference`, `Published Year`, `Topic`, `Review-Date`, `Comment`, `URL`, `Category`, `linked-bases`, `Lab`)뿐이며, 아래의 `template-version`~`decision-confidence`·`audience-level`은 본문 `DRILLER:meta` 블록으로, `arXiv-ID`·`DOI`·`Evidence-Quality`·`Reproducibility`·`isTargetPaper`는 제거됐다. 기존 v2 노트의 옛 키는 마이그레이션 백업 manifest에 raw로 남아 있다.
+-
+-모든 학술 논문은 `type: paper`를 첫 키로 emit한다. 기존 Wiki 계약은 유지하고 v2 식별 필드를 추가한다.
+-
+-```yaml
+----
+-type: paper
+-template-version: paper-preread-v2
+-summary-mode: preread
+-audience-level: intro
+-profile: empirical
+-source-coverage: fulltext
+-quality-status: ready
+-reading-decision: read
+-decision-confidence: high
+-Reading-Status: "☑️ Not Started"
+-Author: "First Author et al."
+-Journal/Conference: "Venue"
+-Published Year: 2026
+-Topic: "keywords"
+-Review-Date: "YYYY-MM-DD"
+-Comment: "80자 이내, 최대 2문장. 문제 한 구절 + 결과 한 구절"
+-URL: "https://..."
+-arXiv-ID: "N/A"
+-DOI: "N/A"
+-Evidence-Quality: "A"
+-Reproducibility: "B"
+-Category: "Reasoning"
+-isTargetPaper: false
+-linked-bases: "[[Papers.base]]"
+----
+-```
+-
+-공통 13키는 기존 validator 계약을 따른다. **AI 전용** 키 `Category`, `isTargetPaper`, `linked-bases`는 `Public/AI/` 아래에서만 필수다. 비-AI 논문에는 AI 전용 키를 생략한다.
+-
+-## preread 본문 템플릿
+-
+-````markdown
+-# {title_kr}
+-
+-{<<<READING_DECISION>>>}
+-
+-{<<<ONE_MINUTE>>>}
+-
+-{<<<CORE_IDEA>>>}
+-
+-{<<<WHAT_THEY_DID>>>}
+-
+-{<<<KEY_EVIDENCE>>>}
+-
+-{<<<LIMITS>>>}
+-
+-{<<<READING_MAP>>>}
+-
+-{<<<TERMS>>>}
+-
+-{<<<CONTEXT_LINKS>>>}
+-
+-## BibTeX
+-```bibtex
+-{<<<BIBTEX>>>}
+-```
+-````
+-
+-## deep 본문 템플릿
+-
+-preread 블록을 맨 앞에 유지한 뒤 `## 상세 독해 노트` 아래에 실제로 필요한 섹션만 추가한다. 원문 모든 heading을 기계적으로 복제하지 않는다. Zettelkasten과 상세 비교표는 재사용 가치가 있을 때만 추가한다.
+-
+-## free 프로파일 출력 템플릿
+-
+-`structure=free, scholarly=yes`도 canonical paper frontmatter를 유지한다. 본문은 preread 템플릿을 그대로 쓰며 IMRaD heading을 강제하지 않는다. `scholarly=no` 일반 글은 `type: paper`를 사용하지 않고 사용자가 지정한 일반 노트 경로에 저장한다.
+-
+-## 경로
+-
+-`vault_root` 결정 순서:
+-
+-1. 사용자 지정
+-2. `PAPER_DRILLER_VAULT`
+-3. CWD에 `Public/`이 있으면 CWD
+-4. 모두 없으면 사용자에게 경로 확인
+-
+-`destination`은 vault_root 상대 경로다.
+-
+-- AI 논문: `Public/AI/Papers/`
+-- 비-AI 논문: `Public/{domain}/`
+-- Category 하위 폴더를 새로 만들지 않는다.
+-
+-동일 DOI/arXiv-ID/정규화 URL이 있으면 새 파일을 만들지 않고 `update-existing`으로 전환한다. 재실행 시 사용자 필드와 개인 메모를 보존한다.
+-
+-# Phase D' — Humanize (선택, `--humanize`)
+-
+-Phase E validator를 한 번 통과한 뒤에만 실행한다. 순서:
+-
+-1. 조립된 노트에서 **서술 블록만** 뽑는다: READING_DECISION 이유 문단, ONE_MINUTE bullet, CORE_IDEA, WHAT_THEY_DID, LIMITS bullet, TERMS. KEY_EVIDENCE·READING_MAP 표, frontmatter, BibTeX, Wiki 링크는 넘기지 않는다.
+-2. `humanize` 스킬을 KO Fast로 호출한다. 인자: `장르: 리포트`, `강도: 보수`, `--fast --ko`. 내부적으로 `humanize-ko-monolith` 1회다.
+-3. 반환된 윤문본을 같은 블록 자리에 되돌려 놓는다. 표 블록은 원본 그대로.
+-4. 되돌린 뒤 diff로 확인한다. 숫자, 괄호 안 영문 용어, `[위치 미확인]`, `C1`류 행 참조, `[[링크]]`가 하나라도 바뀌면 그 블록은 원본으로 롤백한다.
+-5. Phase E validator를 다시 통과시킨다.
+-
+-이 호출은 preread 예산(최대 2회)에 세지 않는다. humanize가 등급 B 이하를 반환해도 Strict로 자동 승급하지 않는다. 사용자에게 한 줄로 알리고 끝낸다.
+-
+-# Phase E — Format 검증
+-
+-`paper-format-validator`는 hook으로 등록되어 있지 않다(2026-08 harness 정리에서 PostToolUse hook 제거). orchestrator가 Write 직후 **직접 실행**한다. 이 단계를 건너뛰면 노트는 미검증이다.
+-
+-```bash
+-PY="$HOME/.claude/hooks/paper-frontmatter-venv/bin/python"   # PyYAML 포함 (2026-09-22: 기본 python3는 실패할 수 있다)
+-printf '{"tool_name":"Write","tool_input":{"file_path":"%s"}}' "$NOTE_PATH" \
+-  | "$PY" ~/.claude/hooks/paper-format-validator.py
+-```
+-
+-exit 0이면 통과, exit 2면 stderr의 `FORMAT_VIOLATION` 블록을 읽고 최대 3회 타깃 수정 후 재실행한다. stdout에 `FORMAT_WARNING`이 있으면 사용자에게 한 줄로 전달한다.
+-
+-- frontmatter 누락/alias/category
+-- H1 또는 실질 본문 누락
+-- placeholder
+-- source coverage와 quality-status 불일치
+-
+-정적 검증:
+-
+-```bash
+-bash skills/paper-driller/scripts/validate-driller.sh
+-```
+-
+-# Phase F — Wiki Integration
+-
+-파일 작성만으로 완료하지 않는다.
+-
+-1. 중복 DOI/arXiv-ID 재확인
+-2. `linked-bases` 파일 존재 확인
+-3. 관련 기존 노트 1–3개 연결
+-4. `python3 Public/_tools/build_catalog.py` 실행
+-5. 대상 catalog에 새 행이 생겼는지 확인
+-6. `python3 Public/_tools/lint.py` 실행
+-7. 새 오류가 없으면 `_wiki/log.md`에 기록
+-
+-기존 사용자 내용은 보존한다. 자동 재생성이 필요한 경우 다음 블록 경계를 권장한다.
+-
+-```text
+-<!-- BEGIN AUTO:preread -->
+-...
+-<!-- END AUTO:preread -->
+-
+-<!-- BEGIN USER:notes -->
+-...
+-<!-- END USER:notes -->
+-```
+-
+-# 품질 게이트
+-
+-## preread
+-
+-- [ ] `read|skim|skip` 판정과 confidence가 있음
+-- [ ] problem, idea, evidence, limitation, reading map이 모두 있음
+-- [ ] 핵심 수치마다 출처 위치 또는 `[위치 미확인]`
+-- [ ] 모든 claim이 `author-stated|analyst-inference|unknown`으로 구분됨
+-- [ ] source-coverage가 실제 확보 범위와 일치
+-- [ ] 본문 non-whitespace 길이가 schema 상한 이내
+-- [ ] Digest/Abstract/쉬운 설명이 별도 반복되지 않음
+-- [ ] Findings/Results/실험표가 중복되지 않음
+-- [ ] Discussion/이론적 의의/Discussion Points가 중복되지 않음
+-- [ ] 원문을 읽을 목적과 위치가 구체적
+-- [ ] 기본 subagent 1회, 조건부 재검증 포함 최대 2회 (`--humanize`는 별도)
+-- [ ] 서술 블록 문장이 15어절 이하, 첫 등장 용어에 괄호 설명
+-- [ ] CORE_IDEA가 "무엇 → 비유 1개 → 원리 → 쓸모" 순서
+-- [ ] ONE_MINUTE에 locator·숫자 없음, 같은 수치가 두 블록에 없음
+-- [ ] Comment 80자·2문장 이내
+-- [ ] catalog와 lint 검증 완료
+-
+-## deep
+-
+-- [ ] 사용자가 deep을 명시적으로 요청함
+-- [ ] 상세 섹션이 단순 재서술이 아니라 독해·재사용 가치를 가짐
+-- [ ] profile에 맞지 않는 실험·재현성 항목을 강제하지 않음
+-
+-## References
+-
+-- `references/preread-v2-spec.md` — 기본 출력·길이·중복 규칙
+-- `references/readability-spec.md` — 정확성 보존형 쉬운 설명
+-- `references/insight-digest-spec.md` — deep digest
+-- `references/zettelkasten-guide.md` — deep 원자적 인사이트
+-- `references/reproducibility-rubric.md` — deep 재현성 평가
+-- `references/comparison-matrix-guide.md` — deep 비교표
+-- `scripts/validate-driller.sh` — 정적 계약 검증
+--- sources/skills/paper-driller-claude/references/paper-schema.json
++++ sources/skills/paper-driller-codex/references/paper-schema.json
+@@ -1,319 +0,0 @@
+-{
+-  "schema_version": 4,
+-  "frontmatter": {
+-    "engine": "Public/_tools/paper_frontmatter.py (vault) — hook·CLI·validator가 같은 엔진을 쓴다",
+-    "scope": "YAML `type: paper`로 명시된 노트 전부. 경로(Papers/)로 추론하지 않는다.",
+-    "keys": [
+-      "type",
+-      "Reading-Status",
+-      "Read-Depth",
+-      "Author",
+-      "Journal/Conference",
+-      "Published Year",
+-      "Topic",
+-      "Review-Date",
+-      "Comment",
+-      "URL",
+-      "Category",
+-      "linked-bases",
+-      "Lab"
+-    ],
+-    "rule": "정확히 위 13개 키만, 이 순서로. 빈 값(`Key:`)은 유효. 값 추론·별칭 병합·자동 채움 금지. 그 외 키(arXiv-ID, DOI, Evidence-Quality, Reproducibility, isTargetPaper, Benchmark-Type, template-version 등)는 YAML에 두지 않는다.",
+-    "human_owned": [
+-      "Reading-Status",
+-      "Read-Depth"
+-    ],
+-    "human_owned_rule": "Read-Depth는 사람의 읽기 깊이다. 모델이 원문을 읽었다고 사용자가 읽은 것으로 표시하지 않는다. 새 노트는 Read-Depth를 비우고 Reading-Status는 비우거나 `☑️ Not Started`로 둔다.",
+-    "new_note_defaults": {
+-      "Reading-Status": "☑️ Not Started",
+-      "Read-Depth": ""
+-    },
+-    "controlled_update_fields": [
+-      "Review-Date"
+-    ],
+-    "value_rules_for_driller_notes": {
+-      "Published Year": "4자리 정수",
+-      "Review-Date": "YYYY-MM-DD",
+-      "URL": "http(s):// 로 시작. 원문 식별자(arXiv/DOI)는 URL에서 유도한다",
+-      "Category": "categories enum 중 하나 또는 빈 값",
+-      "note": "기존 수동 노트에는 enum·형식 검사를 적용하지 않는다 (키 집합·YAML 유효성·값 자료형만)"
+-    }
+-  },
+-  "driller_meta": {
+-    "purpose": "템플릿·수집 범위·도표 확인 상태 등 생성 내부 메타데이터. YAML이 아니라 본문의 HTML 주석 블록에 둔다.",
+-    "block_begin": "<!-- BEGIN DRILLER:meta",
+-    "block_end": "END DRILLER:meta -->",
+-    "line_format": "key: value (한 줄 스칼라만)",
+-    "placement": "frontmatter 닫는 `---` 바로 뒤, H1 앞, AUTO:body 밖. 코드 펜스 안은 무시. 정확히 하나.",
+-    "sidecar_flag": "--meta META.json — 블록이 없는 옛 노트를 v2/v3 규칙으로 검사할 때 명시적으로 준다",
+-    "note_v3": [
+-      "template-version",
+-      "template-id",
+-      "summary-mode",
+-      "profile",
+-      "source-coverage",
+-      "quality-status",
+-      "visual-check",
+-      "visual-scope"
+-    ],
+-    "preread_v2": [
+-      "template-version",
+-      "summary-mode",
+-      "profile",
+-      "source-coverage",
+-      "quality-status",
+-      "reading-decision",
+-      "decision-confidence"
+-    ],
+-    "optional": [
+-      "audience-level",
+-      "reading-decision",
+-      "decision-confidence",
+-      "visual-scope-note"
+-    ],
+-    "controlled_update_fields": [
+-      "source-coverage",
+-      "quality-status",
+-      "visual-check",
+-      "visual-scope",
+-      "visual-scope-note",
+-      "reading-decision",
+-      "decision-confidence"
+-    ],
+-    "switch_only_fields": [
+-      "template-version",
+-      "template-id",
+-      "summary-mode"
+-    ]
+-  },
+-  "identity": {
+-    "source_field": "URL",
+-    "derived": "arxiv.org/abs/{id}[vN] 또는 arxiv.org/pdf/{id}[vN][.pdf] → arxiv (base, version); doi.org|dx.doi.org/{doi} → doi; 그 외 → 정규화 URL",
+-    "url_normalisation": "scheme, host case, leading www., fragment and one trailing slash are ignored; path case and query are preserved (forum?id=A != forum?id=B)",
+-    "dedup_rule": "같은 arxiv base → 같은 논문. 같은 doi → 같은 논문. 그 외 정규화 URL 완전 일치만 같은 논문."
+-  },
+-  "categories": [
+-    "Architecture",
+-    "Training",
+-    "Benchmark/Evaluation",
+-    "Application",
+-    "Reasoning",
+-    "Survey",
+-    "Dataset",
+-    "Optimization",
+-    "Theory",
+-    "AGI"
+-  ],
+-  "profiles": [
+-    "empirical",
+-    "theoretical",
+-    "survey",
+-    "position",
+-    "dataset-benchmark",
+-    "general-article"
+-  ],
+-  "source_coverage": [
+-    "fulltext",
+-    "section-extract",
+-    "abstract-only",
+-    "unknown"
+-  ],
+-  "summary_modes": [
+-    "preread",
+-    "deep"
+-  ],
+-  "reading_decisions": [
+-    "read",
+-    "skim",
+-    "skip"
+-  ],
+-  "decision_confidence": [
+-    "high",
+-    "medium",
+-    "low"
+-  ],
+-  "quality_status": [
+-    "inbox",
+-    "draft",
+-    "review",
+-    "ready",
+-    "archived"
+-  ],
+-  "reading_status": [
+-    "✅ Done",
+-    "▶️ In progress",
+-    "☑️ Not Started",
+-    "Not Started"
+-  ],
+-  "read_depth_examples": [
+-    "📕 Unread",
+-    "📜 Abstract",
+-    "📄 Summary",
+-    "📖 Full paper"
+-  ],
+-  "templates": {
+-    "paper-preread-v2": {
+-      "summary_mode": "preread",
+-      "summary_callout": "> [!summary] 1분 요약",
+-      "required_h2": [
+-        "읽기 판단",
+-        "핵심 아이디어",
+-        "무엇을 했나",
+-        "핵심 근거",
+-        "어디까지 믿을까",
+-        "원문 읽기 지도"
+-      ],
+-      "optional_h2": [
+-        "읽기 전 용어",
+-        "Wiki 연결",
+-        "BibTeX"
+-      ],
+-      "max_claims": 5,
+-      "max_terms": 3,
+-      "reading_map_min_rows": 2,
+-      "reading_map_max_rows": 4,
+-      "max_body_non_whitespace_chars": 5500,
+-      "mermaid_default": false,
+-      "audience_level": "intro",
+-      "narrative_blocks": [
+-        "READING_DECISION",
+-        "ONE_MINUTE",
+-        "CORE_IDEA",
+-        "WHAT_THEY_DID",
+-        "LIMITS",
+-        "TERMS"
+-      ],
+-      "table_blocks": [
+-        "KEY_EVIDENCE",
+-        "READING_MAP"
+-      ],
+-      "max_sentence_words_narrative": 15,
+-      "core_idea_analogy_count": 1,
+-      "comment_max_chars": 80,
+-      "comment_max_sentences": 2,
+-      "one_minute_locators": false
+-    },
+-    "paper-deep-v2": {
+-      "summary_mode": "deep",
+-      "mermaid_default": "conditional",
+-      "structure": "preread-v2 block (summary callout + 6 required_h2) followed by the extra section; no body length cap",
+-      "required_extra_h2": "상세 독해 노트"
+-    },
+-    "paper-note-v3": {
+-      "summary_mode": [
+-        "preread",
+-        "deep"
+-      ],
+-      "template_dir": "references/templates",
+-      "template_id_pattern": "^[a-z0-9][a-z0-9-]{1,63}$",
+-      "template_metadata_keys": {
+-        "required": [
+-          "id",
+-          "title",
+-          "description",
+-          "required_h2",
+-          "visual_section"
+-        ],
+-        "optional": [
+-          "optional_h2"
+-        ]
+-      },
+-      "auto_body_markers": [
+-        "<!-- BEGIN AUTO:body template-id={template-id} -->",
+-        "<!-- END AUTO:body -->"
+-      ],
+-      "user_block_markers": [
+-        "<!-- BEGIN USER:notes -->",
+-        "<!-- END USER:notes -->"
+-      ],
+-      "max_body_non_whitespace_chars": null,
+-      "visual_item_heading": "### {manifest item id}",
+-      "visual_check_rule": {
+-        "none": "scan=complete, no user scope, zero main-body targets",
+-        "viewed": "every target evidence=viewed",
+-        "caption-only": "every target evidence=caption-only",
+-        "mixed": "targets are a mix of viewed and caption-only",
+-        "unverified": "any target evidence=not-seen, or scan=partial with zero targets"
+-      },
+-      "ready_requires": "scan=complete AND every target main_body=true AND visual-check in [viewed, none] AND source-coverage not in [abstract-only, unknown]",
+-      "deep_extra_h2": "상세 독해 노트",
+-      "deep_rule": "summary-mode=deep requires a non-empty `## 상세 독해 노트` inside AUTO:body after all required_h2",
+-      "auto_begin_template_id_required": true,
+-      "markers_inside_code_fences_are_text": true
+-    }
+-  },
+-  "audience_levels": [
+-    "intro"
+-  ],
+-  "template_versions": [
+-    "paper-preread-v2",
+-    "paper-deep-v2",
+-    "paper-note-v3"
+-  ],
+-  "visual_check": [
+-    "viewed",
+-    "caption-only",
+-    "mixed",
+-    "none",
+-    "unverified"
+-  ],
+-  "visual_scope": [
+-    "main-body",
+-    "user-narrowed"
+-  ],
+-  "switch_approval": "--approved-switch on the --previous check records that the user already approved the switch in conversation; it is not proof of approval and relaxes only driller_meta.switch_only_fields",
+-  "update_frontmatter_comparison": "raw YAML segment per key (indentation, quotes, list layout); only frontmatter.controlled_update_fields may change; DRILLER:meta keys follow driller_meta.controlled_update_fields",
+-  "manifest": {
+-    "manifest_version": 1,
+-    "top_level": {
+-      "required": [
+-        "manifest_version",
+-        "doc_id",
+-        "source",
+-        "scan",
+-        "items"
+-      ],
+-      "optional": [
+-        "doc_version",
+-        "scan_note",
+-        "scope"
+-      ]
+-    },
+-    "doc_id": "kind:value where kind in arxiv|doi|url; value must be well-formed; compared with identifiers derived from the note's URL after the same normalisation",
+-    "url_normalisation": "scheme, host case, leading www., fragment and one trailing slash are ignored; path case and query are preserved (forum?id=A != forum?id=B)",
+-    "doc_version_rule": "if doc_id embeds an arXiv version it must equal doc_version; manifest_version must be the exact integer 1",
+-    "scan": [
+-      "complete",
+-      "partial"
+-    ],
+-    "item": {
+-      "required": [
+-        "id",
+-        "main_body",
+-        "evidence"
+-      ],
+-      "optional": [
+-        "caption",
+-        "locator",
+-        "note"
+-      ]
+-    },
+-    "main_body": [
+-      true,
+-      false,
+-      "unsure"
+-    ],
+-    "evidence": [
+-      "viewed",
+-      "caption-only",
+-      "not-seen"
+-    ],
+-    "scope": {
+-      "requested_by_user": "verbatim user request",
+-      "include": [
+-        "item ids kept after user narrowed the scope"
+-      ]
+-    },
+-    "source": "record of where the list came from (pdf:/path, url:...). Never executed."
+-  }
+-}
+--- sources/skills/paper-driller-claude/references/preread-v2-spec.md
++++ sources/skills/paper-driller-codex/references/preread-v2-spec.md
+@@ -1,201 +0,0 @@
+-# Paper Driller v2 — Pre-read Summary Specification
+-
+-## Purpose
+-
+-기본 산출물은 논문을 대체하는 장문 해설이 아니다. 독자가 원문을 읽기 전에 다음을 빠르게 결정하도록 돕는 **5–8분 분량의 프리리드 요약**이다.
+-
+-1. 이 논문이 어떤 문제를 푸는가?
+-2. 핵심 아이디어는 무엇인가?
+-3. 무엇을 실제로 했고 어떤 근거를 제시했는가?
+-4. 어디까지 믿을 수 있으며 무엇은 아직 모르는가?
+-5. 원문을 읽는다면 어디를 먼저 봐야 하는가?
+-
+-원문의 섹션을 순서대로 재서술하지 않는다. 원문을 읽지 않아도 된다는 인상을 만들지 않으며, 정밀한 수식·증명·실험 설정은 reading map을 통해 원문으로 안내한다.
+-
+-## Audience (고정)
+-
+-독자는 하나다. **이 분야를 처음 보는 똑똑한 사람**(고등학생, 타분야 대학생). 난이도 옵션은 없다.
+-문장 길이·괄호 설명·비유·문체 규칙은 `readability-spec.md`가 단일 원천이다. 이 문서는 블록 구조와 중복 규칙만 정한다.
+-전문가용 밀도는 KEY_EVIDENCE·READING_MAP 표가 담당한다. 서술 블록은 쉽게, 표 블록은 정확하게.
+-
+-## Modes
+-
+-- `preread` — 기본. 5–8분 분량의 의사결정·방향잡기용 요약.
+-- `deep` — 명시적으로 요청받았을 때만. 섹션별 분석, 상세 비교, Zettelkasten, 다이어그램까지 포함할 수 있다.
+-
+-## Default Output Contract
+-
+-```text
+-READING_DECISION
+-ONE_MINUTE
+-CORE_IDEA
+-WHAT_THEY_DID
+-KEY_EVIDENCE
+-LIMITS
+-READING_MAP
+-TERMS
+-CONTEXT_LINKS
+-```
+-
+-### 0. READING_DECISION
+-
+-`read | skim | skip` 중 하나와 `high | medium | low` confidence를 제시한다. 이유는 **독자 적합성만** 1–2문장으로 적는다("X를 연구하면 read, Y가 목적이면 skim"). 문제·수치·한계를 여기서 다시 쓰지 않는다. source coverage 부족은 논문 품질이 아니라 판정 confidence를 낮추는 요인으로 처리한다.
+-
+-### 1. ONE_MINUTE
+-
+-4–6개 bullet만 사용한다.
+-
+-- `문제` — 연구가 다루는 gap 또는 질문
+-- `핵심 아이디어` — 방법 이름이 아니라 작동 원리
+-- `주요 결과` — 가장 중요한 증거 1–2개
+-- `핵심 한계` — 결론의 적용 범위를 제한하는 조건
+-- `읽을 가치` — 어떤 독자에게 왜 유용한가
+-
+-Digest, plain explanation, abstract summary를 별도로 반복하지 않는다.
+-
+-bullet마다 한 문장. **locator(Table/Figure/App.)와 숫자를 쓰지 않는다.** 결론만 쓰고 근거는 KEY_EVIDENCE에 둔다. `핵심 아이디어` bullet은 방법 이름과 원리 한 구절이지 메커니즘 전체가 아니다.
+-
+-### 2. CORE_IDEA
+-
+-2–4개 짧은 문단. 다음 순서를 따른다.
+-
+-```text
+-"이 논문은 X를 Y로 푼다" 한 문장 → 비유 정확히 1개 → 작동 원리(병목 → 통찰 → 구현) → 누구에게 왜 쓸모인지
+-```
+-
+-3–4문단. 비유는 정확히 하나이고 뒤에 정확한 용어로 되돌아온다. 기술 용어는 보존하고 첫 등장에 괄호 설명을 붙인다. anchor·데이터셋·baseline의 구체명은 여기서 나열하지 않고 일반명사("사람이 매긴 정답지")로 쓴다. 구체명은 WHAT_THEY_DID에서 한 번.
+-
+-### 3. WHAT_THEY_DID
+-
+-프로파일에 맞춰 3–6개 bullet 또는 하나의 작은 다이어그램으로 표현한다.
+-
+-- empirical: 데이터, 비교 조건, 방법, 평가 지표
+-- theoretical: 가정, 구성 또는 증명 전략, 정리의 범위
+-- survey: 조사 범위, taxonomy 축, 포함·제외 기준
+-- position: 핵심 논증, 근거 종류, 주요 반론
+-- dataset-benchmark: 데이터 생성, split, metric, baseline
+-
+-섹션별 요약은 만들지 않는다. bullet 앞에 "왜 이걸 했나" 한 구절을 붙인다. 데이터셋·anchor·baseline 구체명의 완전 서술 자리는 이 블록이다.
+-
+-### 4. KEY_EVIDENCE
+-
+-최대 5개의 claim ledger 행을 사용한다.
+-
+-| 주장 | 근거 위치 | 관찰/수치 | 조건·주의 | claim_origin |
+-|---|---|---|---|---|
+-
+-- `claim_origin`은 `author-stated | analyst-inference | unknown` 중 하나다.
+-- 원문 명시 내용과 분석자의 해석을 섞지 않는다.
+-- 모든 정량 주장에 Table/Figure/Section 위치 또는 `[위치 미확인]`을 붙인다.
+-- 같은 수치를 ONE_MINUTE, CORE_IDEA, KEY_EVIDENCE에서 장문으로 반복하지 않는다.
+-- ONE_MINUTE에는 결론만, ledger에는 추적 가능한 상세만 둔다.
+-- 근거가 abstract-only이면 이를 명시한다.
+-
+-### 5. LIMITS
+-
+-세 범주와 출처 경계를 구분한다.
+-
+-- `저자가 인정한 한계` — `author-stated`
+-- `분석자의 해석·우려` — `analyst-inference`
+-- `읽지 못했거나 확인할 수 없는 범위` — `unknown`
+-
+-Discussion, theoretical significance, discussion points, reproducibility를 별도 장문 섹션으로 반복하지 않는다. 재현성 정보는 결론에 영향을 줄 때 여기에 합친다.
+-
+-**빠뜨리면 안 되는 두 줄.** empirical·dataset-benchmark profile에서는 (1) 실험 반복 횟수(seed 수, 조건당 run 수)와 (2) 코드·데이터 공개 여부를 LIMITS 어딘가에 반드시 한 줄씩 쓴다. 원문에 없으면 "보고되지 않았다"로 쓴다. 중복 제거 규칙은 "한 번만"이지 "0번"이 아니다. 2026-09-05 dry-run에서 이 두 줄이 통째로 빠진 사례가 있었다.
+-
+-### 6. READING_MAP
+-
+-원문을 실제로 읽게 만드는 가장 중요한 블록이다.
+-
+-| 읽는 목적 | 먼저 볼 곳 | 확인할 질문 |
+-|---|---|---|
+-
+-2–4행. Section/Table/Figure 번호를 가능한 범위에서 정확히 적는다. 원문 위치를 확인할 수 없으면 `[위치 미확인]`으로 표기한다.
+-
+-### 7. TERMS
+-
+-최대 3개. 3단 정의: 일상어 한 줄 → 정확한 정의 → 이 논문에서 왜 중요한가. **본문에 이미 괄호 설명이 있는 용어는 넣지 않는다.** 용어 정의 자리는 본문 괄호 또는 TERMS 중 하나다. `먼저 알아둘 말`과 `핵심 용어 정리`를 이 목록 하나로 합친다.
+-
+-### 8. CONTEXT_LINKS
+-
+-최대 5개. 거대한 관련 연구 비교표를 기본 생성하지 않는다.
+-
+-- 기반 연구
+-- 직접 선행 또는 후속
+-- 경쟁 접근
+-
+-각 링크에 연결 이유를 한 문장으로 쓴다. 상세 7축 비교 매트릭스는 `deep` 모드에서만 생성한다.
+-
+-## Length Budget
+-
+-frontmatter와 BibTeX를 제외한 기본 본문 목표는 대략 2,500–5,000자이며, non-whitespace **5,500자**를 hard limit으로 사용한다. 초과할 때는 다음 순서로 줄인다.
+-
+-1. 중복 설명 삭제
+-2. 배경·관련연구 축약
+-3. 보조 수치 삭제
+-4. 선택적 용어 삭제
+-5. 상세 절차를 reading map으로 이동
+-
+-핵심 한계, 수치의 조건, source coverage는 삭제하지 않는다.
+-
+-## Duplication Rules
+-
+-다음 쌍은 기본 모드에서 동시에 만들지 않는다.
+-
+-| 기존 블록 | v2 처리 |
+-|---|---|
+-| Digest + 먼저 이해하기 + Abstract | ONE_MINUTE + CORE_IDEA로 병합 |
+-| 왜 이 연구를 하는가 + Introduction | CORE_IDEA 첫 부분으로 병합 |
+-| 발견 + Results + 실험 결과 상세 | KEY_EVIDENCE ledger로 병합 |
+-| Discussion + 이론적 의의 + Discussion Points | LIMITS로 병합 |
+-| 먼저 알아둘 말 + 핵심 용어 정리 | TERMS로 병합 |
+-| 비교 매트릭스 + 관련 연구 | CONTEXT_LINKS로 병합 |
+-| 원자적 인사이트 | 기본 생략; deep 또는 사후 독해 단계에서 생성 |
+-| Mermaid | 작동 원리 이해에 실제 도움이 될 때만 1개 |
+-
+-v2 블록끼리도 역할을 나눈다. 정보 종류마다 **완전 서술 자리는 하나**이고 다른 블록에서는 이름이나 한 구절로만 가리킨다.
+-
+-| 정보 종류 | 완전 서술 자리 | 다른 블록에서는 |
+-|---|---|---|
+-| 작동 원리 | CORE_IDEA | 방법 이름 + 한 구절 |
+-| 수치·실험 조건 | KEY_EVIDENCE | 결론만, 숫자 금지 |
+-| 한계 상세·표본 크기 | LIMITS | 한 구절. 수치는 `C1`처럼 행 번호로 참조 |
+-| 데이터셋·anchor·baseline 이름 | WHAT_THEY_DID | 일반명사 |
+-| 용어 정의 | 본문 괄호 **또는** TERMS, 둘 중 하나 | - |
+-| 판정 이유 | READING_DECISION | - |
+-
+-frontmatter `Comment`는 80자·2문장 이내다. 문제 한 구절 + 결과 한 구절. ONE_MINUTE를 복제하지 않는다.
+-
+-## Source Coverage
+-
+-다음 값을 frontmatter에 남긴다.
+-
+-- `fulltext` — 전문 전체를 읽음
+-- `section-extract` — 주요 섹션만 확보
+-- `abstract-only` — 초록과 메타만 확보
+-- `unknown` — 확보 범위를 검증하지 못함
+-
+-`abstract-only`에서는 방법·결과의 세부를 추측하지 않는다. `quality-status: review`로 기록하고 KEY_EVIDENCE에 근거 부족을 명시한다.
+-
+-## Default Execution Budget
+-
+-preread는 `paper-preread-analyst` 단일 호출로 분석과 편집을 끝낸다. metadata/BibTeX는 수집된 필드를 결정론적으로 매핑한다. 별도 spine·meta·evidence·composer·section fan-out은 deep 전용이다.
+-
+-- 기본 subagent: 1회
+-- 핵심 수치 충돌, low-confidence 핵심 claim, `--verify|--repro`: 같은 analyst 1회 추가 가능
+-- retry 포함 최대: 2회
+-- `--humanize`: validator 통과 후 `humanize` 스킬(KO Fast, `humanize-ko-monolith` 1회)을 서술 블록에만 적용한다. 이 호출은 위 2회 예산에 세지 않는다. 표 블록·frontmatter·BibTeX는 넘기지 않는다.
+-
+-## Completion Criteria
+-
+-- READING_DECISION에 read|skim|skip 판정과 confidence가 있다.
+-- ONE_MINUTE만 읽어도 문제·아이디어·결과·한계를 구분할 수 있다.
+-- 핵심 주장마다 원문의 위치 또는 coverage 한계가 있다.
+-- 모든 claim의 원문/분석자/미확인 경계가 표시된다.
+-- 같은 주장이나 수치의 완전한 서술은 한 번만 있다.
+-- 원문을 읽을 위치와 확인 질문이 READING_MAP에 있다.
+-- 본문이 5,500 non-whitespace chars 이하이다.
+-- 서술 블록의 문장이 15어절 이하이고, 첫 등장 용어에 괄호 설명이 있다(`readability-spec.md`).
+-- CORE_IDEA가 "무엇 → 비유 1개 → 원리 → 쓸모" 순서다.
+-- 같은 수치가 두 블록에 나오지 않는다. ONE_MINUTE에 locator가 없다.
+-- 프리리드 요약이 논문의 대체물이라고 주장하지 않는다.
+--- sources/skills/paper-driller-claude/references/readability-spec.md
++++ sources/skills/paper-driller-codex/references/readability-spec.md
+@@ -1,101 +0,0 @@
+-# Readability Spec — 고정 독자 intro, 정확성 보존형 쉬운 설명
+-
+-paper-driller의 모든 preread 노트는 **한 가지 독자**를 위해 쓴다. 난이도 옵션은 없다.
+-목표는 기술 용어를 없애는 것이 아니라, 정확한 용어를 그대로 두고 옆에 쉬운 설명을 붙이는 것이다.
+-
+-## 독자 (고정)
+-
+-- 똑똑하지만 이 분야를 처음 보는 사람. 고등학생, 타분야 대학생, 인접 분야 신입.
+-- 첫 문단만 읽어도 "이 논문이 무엇을 왜 했는지"를 말할 수 있어야 한다.
+-- 전문가는 같은 노트에서 정확한 용어·수치·위치를 보고 원문으로 돌아갈 수 있어야 한다.
+-- 깔보지 않는다. "쉽게"는 "유치하게"가 아니다.
+-
+-## Core Rule (정확성)
+-
+-1. **정확성 우선**: 원문의 기술 용어, 모델명, 데이터셋명, 수식 기호, 수치, 한계 조건을 보존한다.
+-2. **대체 금지**: 용어를 쉬운 말로 바꿔치기하지 않는다. 반드시 `용어(쉬운 설명)` 형태다.
+-   - Good: `attention head(문장에서 어느 단어를 더 볼지 나눠 맡는 작은 계산 단위)`
+-   - Bad: `단어 보는 장치`만 쓰고 attention head를 삭제
+-3. **불확실하면 표시**: 원문 근거가 부족하면 "원문만으로는 불확실하다" 또는 "보고되지 않았다"라고 쓴다.
+-4. **비유는 보조만**: 비유는 직관을 돕는 용도다. 원 개념을 왜곡하거나 새 주장을 만들면 안 된다. 비유 뒤에는 정확한 용어로 되돌아온다.
+-5. **조건을 보존**: "어떤 모델/데이터/실험 조건에서만 성립하는가"를 쉬운 설명에서도 남긴다.
+-
+-## 문장 규칙 (서술 블록)
+-
+-서술 블록 = READING_DECISION 이유, ONE_MINUTE bullet, CORE_IDEA, WHAT_THEY_DID, LIMITS bullet, TERMS.
+-표 블록(KEY_EVIDENCE, READING_MAP)과 frontmatter, BibTeX에는 적용하지 않는다.
+-
+-- 한 문장 **15어절 이하**. 넘으면 둘로 자른다. TERMS의 3단 정의는 단마다 따로 센다. Wiki 링크 줄은 노트 제목을 빼고 센다.
+-- 한 문장 한 아이디어. 접속사로 두 주장을 잇지 않는다.
+-- 한 문단 4문장 이하.
+-- 첫 문장은 결론 또는 역할을 먼저 말한다.
+-- 추상어 뒤에는 작은 예시를 붙인다. "평가 기준이 흔들린다" 뒤에 "채점자가 매번 바뀌는 셈이다".
+-- 기술 용어는 **첫 등장에만** `용어(쉬운 설명)`. 두 번째부터는 용어만 쓴다.
+-- 수치에는 출처를 붙인다. 예: `+3.2 F1 (Table 2)`. 단, 수치의 완전한 서술 자리는 KEY_EVIDENCE 하나뿐이다(preread-v2-spec의 블록 역할 표).
+-
+-## 사람이 쓴 것처럼 (문체)
+-
+-- 명사형 종결 금지. "성능 향상 확인." 대신 "성능이 올랐다."
+-- 상투 표현 금지: "본 논문은", "시사한다", "고찰한다", "효율적이다", "주목할 만하다", "~에 있어서".
+-- 접속 부사 남발 금지. "또한", "더불어", "한편"이 한 문단에 둘 이상이면 하나를 지운다.
+-- 같은 문장 구조를 세 번 연속 쓰지 않는다.
+-- "~할 수 있다"를 "~한다"로 바꿀 수 있으면 바꾼다. 가능성이 아니라 사실이면 단정한다.
+-- 독자에게 말하듯 쓴다. "이 표를 먼저 보면 된다" 같은 안내가 허용된다.
+-
+-## 블록별 규칙
+-
+-| 블록 | 규칙 |
+-|---|---|
+-| CORE_IDEA | 순서 고정: (1) "이 논문은 X를 Y로 푼다" 한 문장 → (2) 비유 **정확히 1개**, 한두 문장 → (3) 작동 원리, 용어 괄호 설명 포함 → (4) 누구에게 왜 쓸모인지 한 문장. 3~4문단. |
+-| ONE_MINUTE | bullet마다 한 문장. 용어 첫 등장은 괄호 설명. Table/Figure/App. 같은 locator를 쓰지 않는다. 숫자를 쓰지 않는다(결론만). |
+-| WHAT_THEY_DID | bullet 앞에 "왜 이걸 했나" 한 구절. 예: "기준이 흔들리는지 보려고, 세 도메인에서 …". 데이터셋·baseline 구체명은 이 블록에서 한 번. |
+-| LIMITS | 세 분류 유지. 각 bullet 첫 문장은 "그래서 무엇을 믿으면 안 되는가"로 시작. 수치는 KEY_EVIDENCE 행 번호(C1…)로 참조. empirical이면 실험 반복 횟수와 코드·데이터 공개 여부를 각각 한 줄로 반드시 쓴다(없으면 "보고되지 않았다"). |
+-| TERMS | 3단 정의: **일상어 한 줄** → 정확한 정의 → 이 논문에서 왜 중요한가. 본문에 이미 괄호 설명이 있는 용어는 넣지 않는다. |
+-| READING_DECISION 이유 | 독자 적합성만. "X 계열을 연구하면 read, Y가 목적이면 skim". 문제·수치·한계를 다시 쓰지 않는다. |
+-| Comment (frontmatter) | 80자 이내, 최대 2문장. 문제 한 구절 + 결과 한 구절. ONE_MINUTE를 복제하지 않는다. |
+-
+-## 예시 (같은 문단, 규칙 적용 전후)
+-
+-전:
+-> evaluator를 계속 바꾸면 search utility가 non-stationary해져 HGM류 수렴 보장이 무너진다. RQGM은 시간을 잘라 이 충돌을 피한다.
+-
+-후:
+-> AI 에이전트가 스스로 더 나은 버전을 찾아가는 탐색을 상상해 보자. 그런데 "더 낫다"를 판단하는 채점자(evaluator)까지 같이 바꾸면 문제가 생긴다. 채점 기준이 흔들리면 어느 버전이 진짜 나아진 건지 비교할 수 없다. 이 논문의 답은 시간을 학기(epoch)처럼 자르는 것이다. 한 학기 안에서는 채점자를 고정한다(Asm. 2).
+-
+-수치·위치(Asm. 2)는 그대로다. 바뀐 것은 문장 길이, 비유, 괄호 설명뿐이다.
+-
+-## deep 모드 전용 블록 (composer)
+-
+-composer는 deep 모드에서 다음 블록을 추가로 생성한다. 위 문장 규칙과 문체 규칙을 그대로 적용한다.
+-
+-```markdown
+-<<<PLAIN_EXPLANATION>>>
+-### 쉬운 설명
+-[5-7문장. 정확한 기술 용어를 유지하고 첫 등장에 괄호 설명을 붙인다. 비유는 1개.]
+-<<<END>>>
+-
+-<<<WHY_IT_MATTERS>>>
+-### 왜 중요한가
+-[3-5문장. 이 결과가 무엇을 바꾸는지, 단 원문 근거 밖으로 확장하지 않는다.]
+-<<<END>>>
+-
+-<<<READING_GUIDE>>>
+-### 먼저 알아둘 말
+-| 용어 | 쉬운 설명 | 정확성 메모 |
+-|---|---|---|
+-| [원문 용어] | [초심자 설명] | [성립 조건/주의점/원문 위치] |
+-<<<END>>>
+-```
+-
+-## Self-Check
+-
+-- [ ] 기술 용어가 쉬운 말로 대체되지 않고 원 용어가 남아 있다.
+-- [ ] 첫 등장 기술 용어에 괄호 설명이 있고, 두 번째부터는 용어만 쓴다.
+-- [ ] 서술 블록의 모든 문장이 15어절 이하다.
+-- [ ] CORE_IDEA가 "무엇 → 비유 1개 → 원리 → 쓸모" 순서다.
+-- [ ] ONE_MINUTE에 locator와 숫자가 없다.
+-- [ ] TERMS가 3단 정의이고, 본문에서 이미 설명한 용어가 없다.
+-- [ ] 명사형 종결, "본 논문은/시사한다" 류 상투 표현이 없다.
+-- [ ] 비유가 원 개념보다 강한 주장을 만들지 않는다.
+-- [ ] 쉬운 설명에도 수치, 조건, 한계가 빠지지 않았다.
+-- [ ] Comment가 80자·2문장 이내다.
+--- sources/skills/paper-driller-claude/references/templates/general-v1.md
++++ sources/skills/paper-driller-codex/references/templates/general-v1.md
+@@ -1,124 +0,0 @@
+-# general-v1 — 일반 7부 노트
+-
+-```json
+-{
+-  "id": "general-v1",
+-  "title": "일반 7부 노트",
+-  "description": "실제 paper-digest 개요, 학술 배경과 문제, 지표, 방법·벤치마크 구성, 주요 결과, Take-home, 본문 Figure/Table 전체 개별 설명. 대부분의 논문에 쓰는 기본 템플릿이며 `auto`가 가리키는 템플릿이다.",
+-  "required_h2": ["개요", "배경과 문제", "지표", "방법과 벤치마크 구성", "주요 결과", "Take-home", "본문 도표"],
+-  "optional_h2": ["상세 독해 노트", "Wiki 연결", "BibTeX"],
+-  "visual_section": "본문 도표"
+-}
+-```
+-
+-위 JSON은 검증기가 읽는 메타데이터다. 아래는 사람이 읽는 작성 안내다. 이 파일은 코드나 명령을 담지 않으며, 검증기는 이 파일의 내용을 실행하지 않는다.
+-
+-## 누구를 위해 쓰는가
+-
+-원문 PDF를 옆에 띄워 놓고 함께 읽는 사람을 위해 쓴다. 독자는 똑똑하지만 이 분야를 처음 보는 고등학생이라고 생각한다. 그래서 문장은 쉽게 쓰되, 숫자·조건·가정·예외는 원문 그대로 정확하게 남긴다. 용어를 쉬운 말로 바꿔치기하지 않는다. 용어는 그대로 두고 옆에 괄호로 짧은 설명을 붙인다. 예: `attention head(문장의 어느 단어를 더 볼지 나눠 맡는 작은 계산 단위)`.
+-
+-길이 상한은 없다. 필요한 만큼 쓴다. 단, 같은 내용을 여러 절에 길게 되풀이하지 않는다. 같은 숫자를 다른 절에서 다시 언급하는 것은 괜찮다.
+-
+-## 공통 규칙 (모든 절)
+-
+-- **근거를 단다.** 사실을 말할 때는 원문 위치(Section, Table, Figure, 식 번호, 쪽)를 붙인다. 위치를 확인하지 못했으면 `[위치 미확인]`이라고 쓴다.
+-- **출처 라벨을 구분한다.** 저자가 원문에서 말한 것(`author-stated`), 노트 작성자가 원문에서 추론한 것(`analyst-inference`), 원문 범위 밖이라 알 수 없는 것(`unknown`)을 섞지 않는다.
+-- **없는 것을 만들지 않는다.** 원문에 없는 수치, 실험 조건, 저자 주장, 도표를 쓰지 않는다. 기억 속 논문 내용으로 빈칸을 채우지 않는다. 두 표현을 구분한다: 원문 전체를 읽고도 없으면 "보고되지 않았다", 읽지 못한 범위에 있을 수 있으면 "확보한 범위에서 확인하지 못했다". 초록만 있을 때 "보고되지 않았다"라고 쓰면 틀린 말이다.
+-- **표 전체나 증명을 다시 쓰지 않는다.** 노트는 원문 옆에서 읽는 동반 노트다. 표의 모든 셀을 옮기거나 증명을 재현하는 대신, 결론을 **지지하는 결정적 비교**와 결론을 **제한하는 예외(반례)**를 함께 골라 적는다. 나머지 값은 "원문 표 참조"로 남긴다. 길이를 줄일 때는 절 사이 중복부터 없애고, 요청된 도표 항목은 지우지 않는다.
+-- **"모두·항상·최고·유일·원인·필수"는 그 범위의 근거가 있을 때만 쓴다.** 예: 표의 일부 행에서만 성립하는 패턴을 "모든 모델에서"라고 쓰지 않고, 성립하는 행과 성립하지 않는 행을 나눠 적는다. 모델 간 비교만으로 원인을 단정하지 않는다. 증명에 쓰인 요소를 "필수"라고 부르지 않는다(필요성이 증명된 것과 충분한 구성에 쓰인 것을 구분한다). 저자 문장이 표·그림과 맞지 않으면 둘 다 적고 불일치를 표시한다.
+-- **가정과 원문의 한계를 지운 채 요약하지 않는다.** 결과가 성립하는 조건(정밀도, 가정, 데이터, 평가 조건)과 저자가 스스로 밝힌 한계·불일치(예: 초록과 본문의 수치 차이)는 압축 과정에서 보존한다. 지표나 수치의 정의가 원문에 없으면 만들어 넣지 않고 `unknown`으로 둔다.
+-- **범위 한계는 한 번만 밝힌다.** `source-coverage`가 `section-extract`, `abstract-only`, `unknown`이면 `## 개요` 첫머리에 무엇을 읽지 못했는지 한두 문장으로 알린다. 다른 절에서는 되풀이하지 않는다. 채울 수 없는 절에는 "확보한 범위에 없음" 한 줄만 쓰고 넘어간다. 이런 노트는 짧아야 정상이다.
+-
+-## 절별 안내
+-
+-### 1. `## 개요`
+-
+-`paper-digest` 스킬(`~/.claude/skills/paper-digest/SKILL.md`)을 **그 파일의 규칙대로 실제로 실행해** 얻은 결과를 그대로 넣는다. 그 규칙은 한 문단 구조(Context → Insight → Solution → Evidence), 굵게 표시한 핵심 개념 2–4개, 마지막의 Implication 줄과 📎 링크다.
+-
+-- 짧은 요약으로 대체하지 않는다. legacy `paper-digest-composer`의 DIGEST 블록으로 대체하지 않는다.
+-- 저장 직전 다듬기 단계에서도 이 절은 고쳐 쓰지 않는다.
+-- arXiv 주소가 실제로 있을 때만 📎 링크를 붙인다. 없으면 링크를 만들지 않고 "arXiv 주소 없음"이라고 쓴다.
+-- `paper-digest` 파일 자체는 수정하지 않는다.
+-
+-### 2. `## 배경과 문제`
+-
+-이 논문이 나오기 전에 무엇이 있었고, 무엇이 안 풀렸는지 설명한다.
+-
+-- 이 문제가 왜 어려운지, 왜 중요한지.
+-- 이 논문의 핵심 아이디어가 어느 연구 흐름에서 나왔는지(학술적 계보). 원문 Introduction·Related Work에서 저자가 직접 언급한 선행 연구를 우선한다. 작성자가 추가로 연결한 것은 `analyst-inference`로 표시한다.
+-- 저자가 말하는 기존 방법의 한계와 이 논문의 차이점.
+-- 초록만 확보했으면 저자 문장에 나오는 것만 쓴다. 초록 문장들을 이어 붙여 인과관계("~때문에 ~하다")나 선행 연구·다른 벤치마크와의 비교를 만들지 않는다. 그런 문장은 `author-stated`가 아니다.
+-
+-### 3. `## 지표`
+-
+-논문이 무엇으로 성공을 재는지 지표마다 하나씩 설명한다. 표를 써도 되고 목록을 써도 된다. 지표마다 다음을 적는다.
+-
+-- 이름과 뜻 (무엇을 세는가)
+-- 단위 또는 범위 (%, 점수, 초, 토큰 수 등)
+-- 방향 (높을수록 좋은가, 낮을수록 좋은가)
+-- 분모·정규화 (무엇으로 나누는가, 평균인가 합인가)
+-- 측정 조건 (데이터셋, split, 모델 크기, 반복 횟수 등)
+-- 원문 위치
+-
+-지표가 없는 논문(순수 이론, 입장 논문 등)이면 "해당 없음"이라고 쓰고 이유를 한두 문장으로 설명한다. 없는 지표를 만들어 넣지 않는다.
+-
+-### 4. `## 방법과 벤치마크 구성`
+-
+-아이디어가 실제로 어떻게 짜여 있는지 설명한다.
+-
+-- 방법 논문: 입력 → 처리 → 출력의 구조. 핵심 부품이 무엇이고, 각각이 왜 필요한지.
+-- 벤치마크·데이터셋 논문: 데이터를 어떻게 만들었는지, split, 평가 방식, baseline, 누출·편향 방지 장치.
+-- 이론 논문: 가정 → 정리 → 증명 아이디어 → 한계 순으로 쓴다. 공통 가정과 특정 구성에만 붙는 조건을 구분한다. 정의의 튜플, 층별 재귀식, 좌표 갱신식은 원문 위치만 적고 옮기지 않는다.
+-- 비교 대상(baseline)과 실험 설정(모델 크기, 학습량, 반복 횟수, 하드웨어)을 원문에 있는 만큼 적는다.
+-
+-### 5. `## 주요 결과`
+-
+-가장 중요한 결과를 표로 정리한다. 열은 다음과 같다.
+-
+-| 주장 | 근거 위치 | 관찰/수치 | 조건·주의 | 출처 라벨 |
+-|---|---|---|---|---|
+-
+-- 행 수 제한은 없다. 결론을 바꿀 만한 결과는 모두 넣는다. 부정 결과와 ablation도 넣는다.
+-- `출처 라벨`은 `author-stated`, `analyst-inference`, `unknown` 중 하나다.
+-- 수치는 원문 그대로 쓴다. 반올림하거나 단위를 바꾸지 않는다.
+-- 표 아래에 결과가 서로 어떻게 이어지는지 두세 문단으로 설명해도 된다.
+-
+-### 6. `## Take-home`
+-
+-이 논문에서 기억할 것과, 믿을 때 조심할 것을 쓴다.
+-
+-- 한 줄로 요약한 핵심 메시지.
+-- 결론이 성립하는 범위 (어떤 모델·데이터·조건에서만 확인됐는가).
+-- 저자가 인정한 한계(`author-stated`)와 작성자가 보는 우려(`analyst-inference`)를 나누어 쓴다.
+-- 실험 반복 횟수(seed, run 수)와 코드·데이터 공개 여부. 원문 전체를 읽고도 없으면 "보고되지 않았다", 읽지 못한 범위면 "확보한 범위에 없음".
+-- 원문을 읽지 못한 범위(`unknown`).
+-
+-### 7. `## 본문 도표`
+-
+-**본문에 있는 Figure와 Table을 하나도 빠짐없이 각각 설명한다.** 부록(Appendix)과 보충자료(Supplementary)의 도표는 기본 범위에서 뺀다. 어느 것이 본문인지는 원문에서 직접 확인한 manifest를 기준으로 삼는다. 절차는 `references/workflow.md`의 "도표 manifest"를 따른다.
+-
+-형식:
+-
+-```markdown
+-### Figure 3
+-- **무엇을 보여주는가**: ...
+-- **읽는 법**: x축, y축, 단위, 범례, 비교 조건, 표라면 열·행의 뜻
+-- **핵심 관찰**: 원문 숫자와 함께
+-- **의미와 주의**: 저자 해석(`author-stated`)과 작성자 해석(`analyst-inference`) 구분
+-- **확인 상태**: viewed | caption-only | not-seen
+-```
+-
+-- 항목마다 남길 것은 **읽는 법, 결정적 관찰, 의미, 필수 조건**이다. 표 전체를 옮기지 않고, 결론을 지지하는 비교와 결론을 제한하는 예외를 함께 고른다. 예시 문항이나 사례를 보여 주는 그림은 어떤 능력을 요구하는 예시인지만 적고 문항 전문을 옮기지 않는다. 그래프에서 눈으로 읽은 값은 `analyst-inference`(그래프 판독)로 표시한다.
+-- H3 제목은 원문 라벨을 **그대로** 쓴다(`### Figure 3`, `### Table 2`). `Fig. 3`과 `Figure 3`을 임의로 합치거나 번호를 추측해 바꾸지 않는다. 제목 뒤에 ` — 짧은 제목`을 붙여도 된다.
+-- 원문에 나오는 순서를 지킨다.
+-- 여러 패널(a, b, c)이 있는 도표는 한 H3 아래에서 패널별로 설명한다.
+-- 도표를 직접 보지 못하고 캡션만 확보했으면 캡션에서 확인되는 내용만 쓰고 `확인 상태: caption-only`로 표시한다. 캡션도 못 봤으면 `확인 상태: not-seen`과 그 이유만 쓴다. 그래프 모양이나 수치를 추측하지 않는다. `확인 상태` 값은 manifest의 `evidence`와 같아야 한다(검증기가 대조한다). 제목만 있고 설명이 없는 항목은 설명한 것으로 치지 않는다.
+-- "확인하지 못했다"(도표를 못 봤다)와 "논문에 보고되지 않았다"(원문에 그런 수치가 없다)는 다른 말이다. 섞지 않는다.
+-- 본문인지 부록인지 확실하지 않은 도표는 넣되, "본문 여부 미확정"이라고 표시한다.
+-- 본문 도표가 정말 없는 논문이면 이 절에 "본문 도표 없음 (전체 목록 확인 완료)"이라고 쓴다. 목록을 확인하지 못했으면(초록만 확보 등) "도표 목록 미확인"이라고 쓰고 `visual-check: unverified`로 둔다. 0개라고 쓰지 않는다.
+-
+-## 선택 절
+-
+-- `## 상세 독해 노트`: `summary-mode: deep`일 때 7부 뒤에 **반드시** 추가한다(비어 있으면 검증 실패). 섹션별 상세 독해, 수식 전개, 비교표 등 실제로 더 깊이 읽은 내용만 넣는다. 7부를 대신하지 않는다. `preread`에서는 생략한다.
+-- `## Wiki 연결`: 실제로 존재하는 노트만 `[[링크]] — 이유` 형식으로 1–5개.
+-- `## BibTeX`: 확인된 메타데이터로만 만든다. 추측하지 않는다.
+--- sources/skills/paper-driller-claude/references/workflow.md
++++ sources/skills/paper-driller-codex/references/workflow.md
+@@ -1,268 +0,0 @@
+-# Paper Driller v3 — 작업 절차 (workflow)
+-
+-이 문서는 `SKILL.md`가 짧게 말한 규칙을 자세히 푼 것이다. 새 노트(`template-version: paper-note-v3`)는 이 문서를 따른다. 옛 preread v2·deep 절차는 `references/legacy-workflow.md`에 그대로 남아 있고, 새 노트에는 적용하지 않는다.
+-
+-## 0. 용어
+-
+-| 용어 | 뜻 |
+-|---|---|
+-| 템플릿 | 노트의 절(H2) 구성과 작성 안내를 담은 markdown 파일 하나. `references/templates/{id}.md`. 맨 앞 ```json 블록이 메타데이터다. 별도 registry는 없다. 디렉터리 안 파일 목록이 곧 목록이다. |
+-| `general-v1` | 첫 번째 일반 템플릿. 7부 구조. `auto`가 가리키는 유일한 템플릿. |
+-| manifest | 원문에서 직접 확인한 Figure/Table 목록을 적은 임시 JSON. 노트를 검증하는 기준. 노트에서 거꾸로 만들지 않는다. |
+-| AUTO:body | 스킬이 생성하고 다시 생성할 수 있는 본문 구간. 한 노트에 정확히 한 쌍. |
+-| USER:notes | 사용자가 쓰는 구간. 스킬이 절대 고치지 않는다. |
+-
+-## 1. 호출과 템플릿 선택
+-
+-```text
+-/paper-driller <arXiv-ID | DOI | URL | 제목> [--template <id>|auto] [--mode preread|deep] [--profile ...] [--humanize]
+-```
+-
+-| 상황 | 동작 |
+-|---|---|
+-| 새 논문, 템플릿 미지정 | `references/templates/`의 파일 목록을 이름·용도와 함께 보여주고 선택을 기다린다. 템플릿이 하나뿐이어도 묻는다. |
+-| `--mode preread`만 지정 (radar `드릴` 경로 포함) | 플래그는 받아들이되 템플릿 질문은 그대로 한다. `--mode`는 템플릿 선택이 아니다. |
+-| 명시적 `auto` (`--template auto`, `--auto`, "auto로", "알아서 일반으로") | 반드시 `general-v1`. 전문 템플릿을 자동으로 고르지 않는다. |
+-| `--template <id>` | 파일이 있고 `--check-template`을 통과하면 재질문 없이 사용. 없거나 깨졌으면 사용자에게 알리고 선택을 기다린다. |
+-| 논문 성격상 새 전문 구조가 더 낫다고 판단 | 6절 절차로 제안한다. 동의 전에는 파일을 만들지 않는다. 거절하면 이미 고른 템플릿이 있을 때만 그것으로 진행하고, 없으면 목록을 다시 보여 주고 선택을 기다린다. 거절을 `general-v1` 선택으로 해석하지 않는다. 명시적 `auto`는 제안으로 멈추지 않고 `general-v1`이다. |
+-| 기존 노트 있음 (2절 dedup) | 기존 `template-id`를 유지한다. 다른 템플릿이나 `auto`가 함께 왔어도 구조 전환 요청인지 불분명하면 기존 구조 유지. 사용자가 전환을 명시했으면 그 말이 동의다. |
+-| 비대화형 실행(`claude -p`)에서 선택 없음 | "템플릿 선택 필요" 상태와 선택지를 출력하고 종료한다. 노트를 만들지 않는다. radar 완료 상태나 노트 경로도 기록하지 않는다. |
+-
+-`--mode`는 `summary-mode` 값이 된다. 기본 `preread`. `deep`은 선택한 템플릿을 다 채운 뒤 `## 상세 독해 노트`를 덧붙이는 것이다. 검증기는 이 절이 `AUTO:body` 안에 있고, 비어 있지 않으며, 템플릿의 필수 절 뒤에 오는지 확인한다. 템플릿 선택이나 도표 전수 설명을 건너뛰는 옵션이 아니다. 옛 deep 경로(agent 여러 개)는 legacy 문서에만 있다.
+-
+-## 2. 중복 확인이 먼저
+-
+-템플릿을 묻기 **전에** 같은 논문 노트가 있는지 확인한다. frontmatter의 원문 식별자는 `URL` 하나다. `URL`에서 식별자를 유도해 비교한다: `arxiv.org/abs|pdf/{id}` → arXiv id(버전 접미사 제거, 소문자), `doi.org/{doi}` → DOI(소문자), 그 외 → 정규화 URL. 같은 arXiv id 또는 같은 DOI면 같은 논문이고, 그 밖에는 정규화 URL이 완전히 같을 때만 같은 논문이다. URL은 보수적으로 비교한다: 스킴, 호스트 대소문자, 앞의 `www.`, `#` 조각, 끝 슬래시 하나만 무시한다. 경로 대소문자와 query는 그대로 둔다. `openreview.net/forum?id=A`와 `forum?id=B`, `/Paper`와 `/paper`는 다른 논문이다. 검증기의 `derive_doc_ids`/`_norm_url`과 같은 규칙이다. `_wiki/catalog/*.md`를 먼저 훑고, 없으면 `Public/**/*.md` frontmatter를 본다. 옛 노트의 `arXiv-ID`·`DOI` 키는 마이그레이션으로 사라졌으므로 검색 기준으로 쓰지 않는다.
+-
+-있으면 `update-existing`이다.
+-
+-- 기존 `template-version`·`template-id`·`summary-mode`(`DRILLER:meta` 블록)를 유지한다. 옛 v2 노트는 v2로 남는다. 일괄 변환은 하지 않는다.
+-- 자동으로 바꿔도 되는 frontmatter 키는 `Review-Date` 하나다 (`paper-schema.json` `frontmatter.controlled_update_fields`). `DRILLER:meta`에서 자동으로 바꿔도 되는 키는 `source-coverage`, `quality-status`, `visual-check`, `visual-scope`, `visual-scope-note`, `reading-decision`, `decision-confidence`다 (`driller_meta.controlled_update_fields`).
+-- 다음은 자동으로 덮어쓰지 않는다: `URL`, `Author`, `Published Year`, `Journal/Conference`, `Topic`, `Comment`, `Category`, `linked-bases`, `Lab`, 그리고 사람 소유 필드 `Reading-Status`·`Read-Depth`. 값이 충돌하면 보고하고, 해결 전에는 검증 완료라고 말하지 않는다.
+-- 기존 노트의 YAML에 13키 밖의 키(`arXiv-ID`, `DOI`, `Evidence-Quality`, `tags`, 옛 `template-version` 등)가 남아 있으면 그 노트는 아직 마이그레이션되지 않은 것이다. 스킬이 조용히 지우지 않는다. 사용자에게 알리고 `bash Public/_tools/paper_frontmatter.sh fix --dry-run "$NOTE"`로 계획을 보인 뒤 `--apply --backup-dir`로 frontmatter만 옮긴다(본문 바이트 보존). 그 전에는 `--previous` 검증이 통과하지 않는다.
+-- `AUTO:body` 안만 다시 쓴다. 밖의 내용(H1 제목 포함)과 `USER:` 블록은 글자 하나 바꾸지 않는다. `USER:` 블록 안의 `TODO`는 사용자 메모이므로 검사하지 않는다.
+-- frontmatter는 키별 원문 그대로 비교한다. 들여쓰기·따옴표·목록 모양을 바꾸면 변경으로 본다. 검증을 통과시키려고 사용자 YAML을 다시 포맷하지 않는다.
+-- 템플릿 전환은 사용자가 대화에서 명시적으로 승인했을 때만 한다. 그때 검증에 `--approved-switch`를 붙인다. 이 플래그는 이미 받은 동의를 기록할 뿐 동의의 증거가 아니며, `template-version`·`template-id`·`summary-mode` 세 키만 바꿀 수 있게 한다. 승인 뒤에도 사용자 필드·`USER:` 블록·H1·마커 밖 내용은 그대로여야 한다.
+-- `AUTO:body` 마커가 없는 옛 노트는 자동 갱신 대상이 아니다. 바꿀 부분을 diff로 제시하고 승인을 받는다. 통째로 다시 쓰지 않는다.
+-- 검증: `--path NEW.md --previous OLD.md`가 위 규칙을 기계로 확인한다. 승인된 전환은 `--previous OLD.md --approved-switch`.
+-
+-## 3. 원문 수집과 source-coverage
+-
+-가져오는 순서는 legacy와 같다: arXiv MCP → Semantic Scholar → paper-search MCP → `WebFetch` arXiv HTML → 제목 `WebSearch`. `WebFetch`가 캐시된 PDF 경로를 주면 `Read(pages=…)`로 읽는다. cross-host `redirect`가 나오면 안내 URL로 다시 호출한다.
+-
+-새 노트는 **전문**을 목표로 한다. 도표를 전부 설명하려면 본문을 다 봐야 하기 때문이다. 긴 PDF는 page range로 나눠 끝까지 읽는다. 확보 범위를 `source-coverage`에 정직하게 적는다: `fulltext` | `section-extract` | `abstract-only` | `unknown`. `abstract-only`·`unknown`이면 방법·결과 세부를 추측하지 않고 `quality-status: review`로 둔다. `ready`는 금지다.
+-
+-`output_lang`은 사용자 언어를 따른다. 고유명·수식·수치·원문 식별자는 원문 그대로 둔다.
+-
+-## 4. 도표 manifest
+-
+-노트를 쓰기 **전에** 원문에서 Figure/Table 목록을 만들어 임시 JSON 파일로 둔다(예: `${TMPDIR:-/tmp}/paper-driller-{doc}/manifest.json`처럼 작업별 경로). 노트 안에 저장하지 않는다. 검증기는 이 파일과 노트를 대조한다.
+-
+-```json
+-{
+-  "manifest_version": 1,
+-  "doc_id": "arxiv:2601.15380",
+-  "doc_version": "v2",
+-  "source": "pdf:/path/to/cached.pdf",
+-  "scan": "complete",
+-  "scan_note": "",
+-  "items": [
+-    {"id": "Figure 1", "caption": "...", "locator": "p.2", "main_body": true, "evidence": "viewed"},
+-    {"id": "Table 3", "caption": "...", "locator": "p.7", "main_body": "unsure", "evidence": "caption-only", "note": "Appendix 경계가 불명확"},
+-    {"id": "Figure 9", "caption": "...", "locator": "p.15", "main_body": false, "evidence": "not-seen", "note": "Appendix B"}
+-  ]
+-}
+-```
+-
+-규칙:
+-
+-- `doc_id`는 `arxiv:` | `doi:` | `url:` 접두사가 있는 문자열이다. 값은 형식이 맞아야 한다(arXiv id, `10.xxxx/…` DOI, `http(s)://` URL). 노트 frontmatter의 같은 종류 값과 같은 규칙으로 정규화해 대조한다. 다르면 도표 검증 실패. 버전이 양쪽에 모두 적혀 있고 다르면 실패(`doc_version` 또는 `arxiv:...v2`). `doc_id`에 버전이 들어 있으면 `doc_version`은 그 값과 같아야 한다. `manifest_version`은 정수 `1`이다(`1.0` 아님).
+-- `source`는 어디서 목록을 얻었는지 적는 기록이다. 명령이 아니며 실행하지 않는다.
+-- `scan`: 원문 전체를 끝까지 훑었으면 `complete`, 아니면 `partial` + `scan_note`.
+-- `id`는 원문 라벨 그대로. `Figure 3`, `Fig. 3`, `그림 3`을 합치지 않는다. 특이한 번호를 추측한 번호로 바꾸지 않는다. 같은 id 중복 금지.
+-- `main_body`: `true`(본문) | `false`(부록·보충자료) | `"unsure"`. 문자열 `"false"`는 잘못된 값이다. 번호나 위치만으로 부록 여부를 정하지 않는다. 캡션·섹션 제목·쪽 배치를 본다.
+-- `evidence`: `viewed`(직접 봄) | `caption-only`(캡션만) | `not-seen`. 노트의 항목별 `확인 상태` 줄은 이 값과 같아야 한다. 검증기는 두 값의 일치만 확인하고, 실제로 봤는지는 증명하지 못한다.
+-- `^(Figure|Table)\s*\d+` 같은 단순 검색 결과를 완전한 목록으로 취급하지 않는다. HTML figure 요소, PDF 캡션을 우선한다.
+-- 사용자가 범위를 줄였으면 `scope` 블록을 추가한다: `{"requested_by_user": "사용자의 실제 요청 문장", "include": ["Figure 1", "Table 2"]}`. 그리고 노트에 `visual-scope: user-narrowed`와 `visual-scope-note`(같은 요청 문장)를 적는다. 문자열 하나만으로 동의를 주장하지 않는다. 템플릿 선택만으로 범위가 줄지 않는다.
+-
+-노트가 다뤄야 하는 대상(target)은 `main_body`가 `true` 또는 `"unsure"`인 항목이다. `scope`가 있으면 `include` 목록이다.
+-
+-`visual-check` 값은 한 규칙으로 정한다(검증기의 `expected_visual_check`).
+-
+-| 값 | 조건 |
+-|---|---|
+-| `viewed` | 모든 대상이 `viewed` |
+-| `caption-only` | 모든 대상이 `caption-only` |
+-| `mixed` | `viewed`와 `caption-only`가 섞임 |
+-| `unverified` | 대상 중 `not-seen`이 있음, 또는 `scan: partial`인데 대상이 0개 |
+-| `none` | `scan: complete`이고 `scope` 없이 대상이 0개일 때만 |
+-
+-`quality-status: ready`는 `scan: complete`, 모든 대상 `main_body: true`, `visual-check`가 `viewed` 또는 `none`, `source-coverage`가 `fulltext`/`section-extract`일 때만 허용한다. 캡션만 본 경우, 미확정 항목, 부분 스캔은 모두 `review`다.
+-
+-## 5. 작성 규칙 (모든 템플릿 공통)
+-
+-템플릿이 제목을 바꿀 수는 있어도 다음은 끌 수 없다.
+-
+-- 사실마다 원문 위치 또는 `[위치 미확인]`.
+-- 출처 라벨 `author-stated` | `analyst-inference` | `unknown` 구분.
+-- 원문에 없는 수치·조건·주장·도표를 만들지 않는다.
+-- `source-coverage`와 도표 확인 상태의 한계를 노트에 밝힌다. 전문이 아니면 첫 절에 한 번만 밝히고, 채울 수 없는 절에는 "확보한 범위에 없음" 한 줄만 쓴다. 절마다 긴 한계 문단을 되풀이하지 않는다.
+-- "보고되지 않았다"(원문 전체를 읽고도 없음)와 "확보한 범위에서 확인하지 못했다"(읽지 못한 범위에 있을 수 있음)를 구분한다. 기억 속 논문 내용으로 빈칸을 채우지 않는다. 초록 문장들을 이어 붙여 인과관계나 선행 연구 비교를 만들지 않는다.
+-- 본문 Figure/Table 전수 개별 설명(사용자가 명시적으로 줄이지 않는 한).
+-- 사용자 내용 보존.
+-
+-문체: 이 분야를 처음 보는 고등학생이 읽는다고 생각한다. 용어는 지우지 말고 첫 등장에 괄호 설명을 붙인다. 비유는 이해를 돕는 용도로만 쓰고, 비유 뒤에는 정확한 용어로 돌아온다. 15어절 제한, 비유 개수 제한, 수치 반복 금지, 전체 길이 상한은 새 노트에 적용하지 않는다. 그 규칙들(`readability-spec.md`, `preread-v2-spec.md`)은 v2 노트 전용이다.
+-
+-`general-v1`의 `## 개요`는 `paper-digest/SKILL.md`의 규칙으로 실제 작성한 결과를 그대로 넣는다. 다른 템플릿은 절 제목이 달라도 되며, 그 템플릿이 개요 자리로 정한 절에 같은 규칙을 적용한다. `--humanize`를 켰어도 개요·표·frontmatter·BibTeX·도표 절의 수치는 다듬기에 넘기지 않는다. 다듬은 뒤 숫자·괄호 안 용어·`[위치 미확인]`·`[[링크]]`가 바뀌었으면 그 블록은 원본으로 되돌린다.
+-
+-## 6. 새 전문 템플릿 제안·등록
+-
+-논문이 일반 7부와 잘 안 맞을 때(예: 순수 이론, 시스템 논문, 서베이) 이렇게 한다.
+-
+-1. 사용자에게 제안한다: 왜 필요한지, 절 제목 목록, 저장할 id(`^[a-z0-9][a-z0-9-]{1,63}$`, 예 `theory-v1`), 도표 절 이름. 공통 규칙(5절)은 그대로 적용된다고 말한다.
+-2. **"만들고 저장해도 됩니까?"** 명시적 동의를 받는다. 동의 없으면 저장하지 않는다. 이미 고른 템플릿이 있으면 그것으로 진행하고, 없으면 목록을 다시 보여 주고 선택을 기다린다. 거절은 `general-v1` 선택이 아니다.
+-3. 동의하면 `references/templates/{id}.md` 하나를 쓴다. 맨 앞 ```json 메타데이터(`id`, `title`, `description`, `required_h2`, `optional_h2`, `visual_section`), 그 뒤 작성 안내. 기존 파일을 덮어쓰지 않는다. 구조를 바꾸려면 새 id다.
+-4. 저장 직후 검사한다. 실패하면 파일을 고치거나 지우고 다시 검사한다.
+-
+-```bash
+-PY="$HOME/.claude/hooks/paper-frontmatter-venv/bin/python"   # PyYAML 포함 인터프리터
+-"$PY" ~/.claude/hooks/paper-format-validator.py --check-template ~/.claude/skills/paper-driller/references/templates/{id}.md
+-```
+-
+-검사 항목: id 형식, 파일명 = id, 템플릿 디렉터리 바로 안(경로 이동·심볼릭 링크 거부), 메타데이터 자료형, 빈·중복 제목, `visual_section`이 `required_h2`에 있음, 안내 본문 존재. 템플릿 파일의 내용은 절대 실행하지 않는다.
+-
+-## 7. 저장 위치와 파일 구조
+-
+-`vault_root`: 사용자 지정 → `PAPER_DRILLER_VAULT` → CWD에 `Public/`이 있으면 CWD → 없으면 사용자에게 확인. `destination`은 vault_root 상대 경로다. AI 논문 `Public/AI/Papers/`, 비-AI 논문 `Public/{domain}/`. Category 하위 폴더를 새로 만들지 않는다. **PDF가 있는 위치에서 저장 경로를 추측하지 않는다.** 학술 논문은 `type: paper`를 첫 키로 둔다. `scholarly=no` 일반 글은 `type: paper`를 쓰지 않는다.
+-
+-frontmatter는 **정확히 13개 키, 이 순서**다 (vault `Public/_tools/paper_frontmatter.py`가 단일 기준, hook이 강제한다). 빈 값은 `Key:`로 둔다. `arXiv-ID`·`DOI`·`Evidence-Quality`·`Reproducibility`·`isTargetPaper`·`Benchmark-Type`과 템플릿 키는 YAML에 쓰지 않는다. 템플릿·수집·도표 메타데이터는 frontmatter 바로 뒤의 `DRILLER:meta` HTML 주석 블록에 `key: value` 한 줄씩 적는다 (Obsidian 읽기 화면에는 보이지 않는다).
+-
+-```markdown
+----
+-type: paper
+-Reading-Status: "☑️ Not Started"
+-Read-Depth:
+-Author: "First Author et al."
+-Journal/Conference: "Venue"
+-Published Year: 2026
+-Topic: "keywords"
+-Review-Date: "YYYY-MM-DD"
+-Comment: "문제 한 구절 + 결과 한 구절"
+-URL: "https://arxiv.org/abs/XXXX.XXXXX"
+-Category: "Reasoning"
+-linked-bases: "[[Papers.base]]"
+-Lab:
+----
+-<!-- BEGIN DRILLER:meta
+-template-version: paper-note-v3
+-template-id: general-v1
+-summary-mode: preread
+-profile: empirical
+-source-coverage: fulltext
+-quality-status: ready
+-visual-check: viewed
+-visual-scope: main-body
+-END DRILLER:meta -->
+-# {한국어 제목}
+-
+-<!-- BEGIN AUTO:body template-id=general-v1 -->
+-## 개요
+-...
+-## 본문 도표
+-### Figure 1
+-...
+-<!-- END AUTO:body -->
+-
+-<!-- BEGIN USER:notes -->
+-<!-- END USER:notes -->
+-```
+-
+-- 13개 키는 어디에 저장하든 모두 있어야 한다. `Category`·`linked-bases`·`Lab`은 비-AI 논문이면 비워 둔다. 값을 추측해 채우지 않는다.
+-- `Read-Depth`는 **사람의** 읽기 깊이다. 스킬이 원문을 읽었다고 채우지 않는다. 새 노트는 항상 비운다. `Reading-Status`는 비우거나 `☑️ Not Started`다. 갱신 시 두 값은 그대로 둔다.
+-- `DRILLER:meta` 블록은 정확히 하나, frontmatter 뒤·H1 앞·`AUTO:body` 밖에 둔다. 코드 펜스 안에 적힌 블록은 글자일 뿐이다. 허용 키는 `paper-schema.json`의 `driller_meta` 목록뿐이다. 블록이 없는 옛 노트를 v2/v3 규칙으로 검사하려면 `--meta META.json`을 준다.
+-- `reading-decision`·`decision-confidence`는 선택이다. 판단을 실제로 했을 때만 `DRILLER:meta`에 적는다. 호환을 위해 만들어 넣지 않는다.
+-- `visual-scope: user-narrowed`이면 `visual-scope-note`가 필수다.
+-- H1 제목은 `AUTO:body` 밖에 둔다. `## Wiki 연결`, `## BibTeX`는 AUTO 안 선택 절이다.
+-- 마커는 정확히 한 쌍. 시작 마커의 `template-id`는 필수이며 frontmatter와 같아야 한다. 코드 블록 안에 적힌 마커는 표시용 글자일 뿐 마커가 아니다(AUTO 전체를 코드 블록으로 감싸면 마커 0개로 실패). 검증기는 AUTO 안에서만 절·도표를 세고, 코드 블록과 `USER:` 블록 안 제목은 세지 않는다. `template-version`을 지운 v3 형태 노트는 legacy로 취급되지 않고 실패한다.
+-
+-## 8. 검증
+-
+-검사는 두 층이다.
+-
+-- **(a) frontmatter 13키 검사** — `Public/_tools/paper_frontmatter.py check` (래퍼 `paper_frontmatter.sh`). 모든 `type: paper` 노트의 공통 계약이며 Claude Code hook(`~/.claude/hooks/paper-frontmatter-hook.sh`, PreToolUse에서 잘못된 Write/Edit를 차단)과 같은 판정이다. 본문(H1, 길이, 절)은 보지 않는다. 수동 노트·옛 노트는 이것만 통과하면 된다.
+-- **(b) 생성물 완료 검사** — `~/.claude/hooks/paper-format-validator.py`. driller가 만든 노트의 절 구성·도표 manifest·갱신 보존을 보는 **선택** 검사다. hook이 아니므로 Write 직후 직접 실행한다. 새 노트의 **완료 조건은 manifest까지 넣은 이 검사 통과**다. `DRILLER:meta`도 `--meta`도 없는 노트는 legacy 경로(H1·최소 본문)로 보는데, 이는 driller 산출물 점검용이지 vault 전체의 준수 판정이 아니다. 옛 v2 노트에 v2 규칙을 적용하려면 `--meta META.json`을 붙인다.
+-
+-기본 `python3`에는 PyYAML이 없을 수 있다. 전용 venv 인터프리터를 한 번 정의해 쓴다.
+-
+-```bash
+-PY="$HOME/.claude/hooks/paper-frontmatter-venv/bin/python"   # 없으면: python3 ~/.claude/hooks/install-paper-frontmatter-hooks.py --setup-venv
+-# (a) frontmatter만 (엔진, hook과 같은 판정) — 래퍼가 PyYAML 있는 인터프리터를 고른다
+-bash "$VAULT/Public/_tools/paper_frontmatter.sh" check "$NOTE"
+-# (b) 완료 검사 (신규)
+-"$PY" ~/.claude/hooks/paper-format-validator.py --path "$NOTE" --manifest "$MANIFEST"
+-# (b) 갱신 검사
+-"$PY" ~/.claude/hooks/paper-format-validator.py --path "$NOTE" --manifest "$MANIFEST" --previous "$OLD_COPY"
+-# (b) 사용자가 승인한 템플릿 전환 (플래그는 동의의 기록이지 증거가 아니다)
+-"$PY" ~/.claude/hooks/paper-format-validator.py --path "$NOTE" --manifest "$MANIFEST" --previous "$OLD_COPY" --approved-switch
+-# (b) 형식만 (manifest 없음) — 도표 완전성은 검사하지 않는다
+-"$PY" ~/.claude/hooks/paper-format-validator.py --path "$NOTE"
+-# legacy stdin 방식도 그대로 동작한다
+-printf '{"tool_name":"Write","tool_input":{"file_path":"%s"}}' "$NOTE" | "$PY" ~/.claude/hooks/paper-format-validator.py
+-```
+-
+-출력 읽는 법:
+-
+-- `CHECKED: frontmatter, structure, template:general-v1, visuals` — 실제로 검사한 항목.
+-- `SKIPPED: visuals (no manifest …)` — 검사하지 않은 항목. 이 줄이 있으면 완료가 아니다.
+-- `RESULT: PASS|FAIL`, exit 0|2. FAIL이면 stderr의 `FORMAT_VIOLATION` 목록을 고치고 다시 실행한다(최대 3회, 그래도 실패하면 사용자에게 보고).
+-- CLI `--path`는 파일 없음, 디렉터리, 비-Markdown, 디코딩 실패, frontmatter 없음, `type: paper` 아님, 13키 계약 위반(금지 키·누락 키·순서·중복 키·깨진 YAML), 알 수 없는 `template-version`, schema·엔진 로드 실패를 모두 FAIL로 낸다. `SKIP_PAPER_VALIDATOR`는 CLI에 적용되지 않는다. 범위는 오직 `type: paper`다. 파일명(`_overview` 등)이나 폴더로 제외하지 않는다.
+-- 명시적으로 준 manifest가 잘못됐으면 SKIPPED가 아니라 FAIL이다. v2·legacy 노트에 manifest를 주면 형식과 논문 일치만 검사하고 도표 검사는 `SKIPPED:`로 표시한다.
+-- `--path`에 잘못된 입력(자료형이 틀린 manifest, 모순된 버전, 잘못된 DOI/URL, 깨진 템플릿 메타데이터)을 주면 traceback 없이 exit 2와 해당 필드 오류를 낸다.
+-
+-검증기는 노트와 manifest의 **일치**를 확인한다. manifest 자체가 빠뜨린 도표나 원문 해석 오류는 잡지 못한다. 그 책임은 작성자에게 있다.
+-
+-정적 계약 검사: `bash ~/.claude/skills/paper-driller/scripts/validate-driller.sh`.
+-
+-## 9. Wiki Integration
+-
+-legacy와 같다.
+-
+-1. 중복 재확인 (`URL`에서 유도한 arXiv id/DOI/정규화 URL)
+-2. `linked-bases` 파일 존재 확인
+-3. 관련 기존 노트 1–3개 연결
+-4. `python3 Public/_tools/build_catalog.py`
+-5. 대상 catalog에 새 행 확인
+-6. `python3 Public/_tools/lint.py`
+-7. 새 오류가 없으면 `_wiki/log.md`에 기록
+-
+-## 10. 다른 스킬과의 관계
+-
+-- `paper-radar` `드릴`은 `/paper-driller … --mode preread`를 부른다. 이 호출은 그대로 받되 템플릿 선택 단계로 이어진다. 노트가 실제로 만들어지기 전에는 radar에 노트 경로를 기록하지 않는다.
+-- `paper-understand`는 수정하지 않았다. 새 노트에서의 대응은 다음과 같다.
+-
+-| understand가 찾는 것 | v3 노트에서 |
+-|---|---|
+-| `source-coverage` | 같은 키 |
+-| `reading-decision` | 있으면 같은 키, 없으면 없는 것(만들지 않음) |
+-| claim ledger | `general-v1`: `## 주요 결과` 표의 행(주장·근거 위치·수치·조건·출처 라벨). 다른 템플릿: 그 템플릿이 결과·근거를 담는 절 |
+-| reading map | `general-v1`: `## 주요 결과`의 근거 위치 열 + `## 본문 도표`의 각 항목. 다른 템플릿: 근거 위치 열 + 그 템플릿의 `visual_section` 항목 |
+-
+-- `paper-digest`는 개요 절에서 그 규칙대로 실행할 뿐, 파일을 바꾸지 않는다.
+-
+-## 11. 선택 흐름 시나리오 (문서 검토용)
+-
+-자동 실행기가 없어 아래는 테스트가 아니라 검토용 표다.
+-
+-| 입력 | 기대 동작 |
+-|---|---|
+-| `/paper-driller 2601.15380` | dedup → 없음 → 템플릿 목록 제시, 대기 |
+-| `/paper-driller 2601.15380 --mode preread` (radar) | 위와 같음. `summary-mode: preread` 예약 |
+-| `/paper-driller 2601.15380 --template auto` | `general-v1`로 바로 진행 |
+-| `/paper-driller 2601.15380 --template theory-v1` (파일 있음·검사 통과) | 재질문 없이 진행 |
+-| 같은 명령, 파일 없음 | 알리고 목록 제시, 대기 |
+-| 새 논문, 모델이 전문 구조 제안 | 제안·동의 요청. 동의 전 저장 없음 |
+-| 위 제안 거절, 아직 고른 템플릿 없음 | 목록 다시 제시, 대기. 노트·템플릿 파일 없음 |
+-| 새 논문 + `auto`, 모델이 전문 구조가 낫다고 봄 | 제안하지 않거나 한 줄로만 언급하고 `general-v1`로 진행 |
+-| 기존 v2 노트 + `--template auto` | 기존 v2 유지. 전환 의도 확인 질문 |
+-| 기존 v3 노트 + "general-v1으로 바꿔줘" | 전환 진행. `AUTO:body`만 교체, USER 보존. 검증은 `--previous OLD --approved-switch` |
+-| `claude -p "/paper-driller 2601.15380"` | 선택 필요 상태 출력 후 종료. 파일 없음 |
+--- sources/skills/paper-driller-claude/references/zettelkasten-guide.md
++++ sources/skills/paper-driller-codex/references/zettelkasten-guide.md
+@@ -88,7 +88,7 @@
+ 
+ ### ✅ 좋은 인사이트
+ - "LoRA의 rank 4로도 full fine-tuning의 97% 성능 달성 (Table 3, Llama-7B 기준)" → 구체적, 조건 명시, 출처 있음
+-- "Self-play가 reward hacking 없이 수렴하려면 reward model도 함께 조정되어야 함" → 조건부 인사이트, 실패에서 배운 교훈
++- "Self-play가 reward hacking 없이 수렴하려면 reward model도 함께 업데이트 필요" → 조건부 인사이트, 실패에서 배운 교훈
+ 
+ ### ❌ 나쁜 인사이트
+ - "Transformer가 좋은 성능을 보인다" → 너무 일반적, 조건 없음
+--- sources/skills/paper-driller-claude/scripts/validate-driller.sh
++++ sources/skills/paper-driller-codex/scripts/validate-driller.sh
+@@ -1,24 +1,10 @@
+ #!/usr/bin/env bash
+-# paper-driller 정적 검증 하네스. 모든 체크 통과 시 exit 0.
+-# v3(템플릿 선택·manifest 검증) 계약과 legacy v2 계약을 함께 확인한다.
++# paper-driller 정적 검증 하버스. 모든 체크 통과 시 exit 0.
+ set -u
+ ROOT="${CLAUDE_HOME:-$HOME/.claude}"
+ AGENTS="$ROOT/agents"
+-SKILLDIR="$ROOT/skills/paper-driller"
+-SKILL="$SKILLDIR/SKILL.md"
+-REFS="$SKILLDIR/references"
+-WORKFLOW="$REFS/workflow.md"
+-LEGACY="$REFS/legacy-workflow.md"
+-GENERAL="$REFS/templates/general-v1.md"
+-REF="$REFS/insight-digest-spec.md"
+-READABILITY_REF="$REFS/readability-spec.md"
+-PREREAD_REF="$REFS/preread-v2-spec.md"
+-SCHEMA_REF="$REFS/paper-schema.json"
+-VALIDATOR="$ROOT/hooks/paper-format-validator.py"
+-FM_HOOK="$ROOT/hooks/paper-frontmatter-hook.py"
+-FM_INSTALLER="$ROOT/hooks/install-paper-frontmatter-hooks.py"
+-VAULT="${PAPER_VAULT_ROOT:-~/Library/Mobile Documents/iCloud~md~obsidian/Documents/obsidian-notes}"
+-ENGINE="$VAULT/Public/_tools/paper_frontmatter.py"
++SKILL="$ROOT/skills/paper-driller/SKILL.md"
++REF="$ROOT/skills/paper-driller/references/insight-digest-spec.md"
+ fail=0
+ pass(){ echo "PASS  $1"; }
+ bad(){ echo "FAIL  $1"; fail=1; }
+@@ -40,11 +26,10 @@
+ }
+ exists(){ [ -f "$1" ] && pass "exists: ${1#$ROOT/}" || bad "missing: ${1#$ROOT/}"; }
+ absent(){ [ ! -e "$1" ] && pass "absent: ${1#$ROOT/}" || bad "should be deleted: ${1#$ROOT/}"; }
+-grep_has(){ grep -q -- "$2" "$1" 2>/dev/null && pass "ref '$2' in $(basename "$1")" || bad "ref '$2' MISSING in $(basename "$1")"; }
+-grep_absent(){ grep -q -- "$2" "$1" 2>/dev/null && bad "stale ref '$2' in $(basename "$1")" || pass "no-stale '$2' in $(basename "$1")"; }
++grep_has(){ grep -q "$2" "$1" 2>/dev/null && pass "ref '$2' in $(basename "$1")" || bad "ref '$2' MISSING in $(basename "$1")"; }
++grep_absent(){ grep -q "$2" "$1" 2>/dev/null && bad "stale ref '$2' in $(basename "$1")" || pass "no-stale '$2' in $(basename "$1")"; }
+ 
+-# --- 파일 존재/부재 (legacy agent는 보존, 신규 reference는 필수) ---
+-exists "$AGENTS/paper-preread-analyst.md"
++# --- 파일 존재/부재 ---
+ exists "$AGENTS/paper-spine.md"
+ exists "$AGENTS/paper-section-driller.md"
+ exists "$AGENTS/paper-digest-composer.md"
+@@ -52,18 +37,9 @@
+ exists "$AGENTS/paper-evidence.md"
+ exists "$AGENTS/paper-comparison.md"
+ exists "$REF"
+-exists "$READABILITY_REF"
+-exists "$PREREAD_REF"
+-exists "$SCHEMA_REF"
+-exists "$WORKFLOW"
+-exists "$LEGACY"
+-exists "$GENERAL"
+-exists "$VALIDATOR"
+-exists "$ROOT/skills/paper-digest/SKILL.md"
+ absent "$AGENTS/paper-holistic-analyzer.md"
+ 
+-# --- 모델/effort (legacy agent 계약 유지) ---
+-check_model "$AGENTS/paper-preread-analyst.md" sonnet; check_effort "$AGENTS/paper-preread-analyst.md" high
++# --- 모델/effort ---
+ check_model "$AGENTS/paper-spine.md" opus;            check_effort "$AGENTS/paper-spine.md" max
+ check_model "$AGENTS/paper-digest-composer.md" opus;  check_effort "$AGENTS/paper-digest-composer.md" max
+ check_model "$AGENTS/paper-section-driller.md" sonnet; check_effort "$AGENTS/paper-section-driller.md" xhigh
+@@ -71,218 +47,35 @@
+ check_model "$AGENTS/paper-comparison.md" sonnet;      check_effort "$AGENTS/paper-comparison.md" xhigh
+ check_model "$AGENTS/paper-meta.md" haiku;             check_no_effort "$AGENTS/paper-meta.md"
+ 
+-# --- SKILL.md (v3) ---
+-lines=$(wc -l < "$SKILL" | tr -d ' ')
+-[ "$lines" -le 150 ] && pass "SKILL.md length $lines <= 150" || bad "SKILL.md length $lines > 150"
+-grep_has "$SKILL" "Paper Driller v3"
+-grep_has "$SKILL" "--template"
+-grep_has "$SKILL" "auto"
+-grep_has "$SKILL" "general-v1"
+-grep_has "$SKILL" "paper-note-v3"
+-grep_has "$SKILL" "workflow.md"
+-grep_has "$SKILL" "legacy-workflow.md"
+-grep_has "$SKILL" "paper-schema.json"
+-grep_has "$SKILL" "paper-format-validator.py"
+-grep_has "$SKILL" "--check-template"
+-grep_has "$SKILL" "--manifest"
+-grep_has "$SKILL" "--mode preread|deep"
+-grep_has "$SKILL" "기본값: preread"
++# --- SKILL.md 참조 일관성 ---
++grep_has "$SKILL" "paper-spine"
++grep_absent "$SKILL" "paper-holistic-analyzer"
++grep_has "$SKILL" "insight-digest-spec"
++
++# --- 공유 reference 참조 (composer + SKILL Bite 모드) ---
++grep_has "$AGENTS/paper-digest-composer.md" "insight-digest-spec"
++
++# --- smoke-fix 계약 체크 (2026-06-03) ---
++SPINE="$AGENTS/paper-spine.md"
++SECT="$AGENTS/paper-section-driller.md"
++# F6: 헤더 stale 제거
++grep_absent "$SKILL" "1개 arxiv 논문"
++# F1: Phase A 비-arxiv 전문 경로 (PDF 캐시 Read + redirect)
++grep_has "$SKILL" "캐시된 PDF"
++grep_has "$SKILL" "redirect"
++# F5: 출력 언어 전달
++grep_has "$SKILL" "output_lang"
++grep_has "$SPINE" "output_lang"
++grep_has "$SECT" "output_lang"
++# F3: profile 2축 (structure × scholarly)
++grep_has "$SKILL" "structure"
++grep_has "$SKILL" "scholarly"
++grep_has "$SPINE" "structure:"
++grep_has "$SPINE" "scholarly:"
++# F4: free(일반) 출력 템플릿
++grep_has "$SKILL" "free 프로파일 출력 템플릿"
++# F7: vault root 해석
+ grep_has "$SKILL" "vault_root"
+-grep_has "$SKILL" "destination"
+-grep_has "$SKILL" "type: paper"
+-grep_has "$SKILL" "source-coverage"
+-grep_has "$SKILL" "visual-check"
+-grep_has "$SKILL" "visual-scope"
+-grep_has "$SKILL" "Wiki Integration"
+-grep_has "$SKILL" "author-stated | analyst-inference | unknown"
+-grep_has "$SKILL" "AUTO:body"
+-grep_has "$SKILL" "USER:notes"
+-grep_has "$SKILL" "paper-digest"
+-grep_has "$SKILL" "PDF 위치에서 저장 경로를 추측하지 않는다"
+-# frontmatter schema v4 (13 keys, DRILLER:meta body block, URL identity)
+-grep_has "$SKILL" "정확히 13개 키"
+-grep_has "$SKILL" "Read-Depth"
+-grep_has "$SKILL" "DRILLER:meta"
+-grep_has "$SKILL" "paper_frontmatter.py"
+-grep_has "$SKILL" "--meta"
+-grep_absent "$SKILL" "arXiv-ID\`/\`DOI\`/정규화"
+-grep_absent "$SKILL" "Public/AI/\` 아래에서만 필수"
+-grep_has "$SKILL" "readability-spec"
+-grep_has "$SKILL" "insight-digest-spec"
+-grep_absent "$SKILL" "paper-holistic-analyzer"
+-grep_absent "$SKILL" "--level"
+-grep_absent "$SKILL" "Benchmark·Evaluation"
+-grep_absent "$SKILL" "Papers/\[Category\]/"
+-grep_absent "$SKILL" "1개 arxiv 논문"
+-# Astra4 correction contract
+-grep_has "$SKILL" "--approved-switch"
+-grep_has "$SKILL" "not-seen"
+-grep_has "$SKILL" "확보한 범위에서 확인하지 못했다"
+-grep_has "$SKILL" "paper-deep-v2"
+-grep_has "$SKILL" "query는 그대로"
+-# integration correction 2026-09-22: PyYAML 있는 인터프리터, 검사 두 층 분리, 래퍼
+-grep_has "$SKILL" "paper-frontmatter-venv"
+-grep_has "$SKILL" "paper_frontmatter.sh"
+-grep_absent "$SKILL" 'python3 ~/.claude/hooks/paper-format-validator.py'
+-grep_absent "$SKILL" 'python3 "$VAULT/Public/_tools/paper_frontmatter.py"'
+-
+-# --- workflow.md ---
+-grep_has "$WORKFLOW" "manifest_version"
+-grep_has "$WORKFLOW" "doc_id"
+-grep_has "$WORKFLOW" "main_body"
+-grep_has "$WORKFLOW" "not-seen"
+-grep_has "$WORKFLOW" "user-narrowed"
+-grep_has "$WORKFLOW" "controlled_update_fields"
+-grep_has "$WORKFLOW" "--previous"
+-grep_has "$WORKFLOW" "--check-template"
+-grep_has "$WORKFLOW" "캐시된 PDF"
+-grep_has "$WORKFLOW" "redirect"
+-grep_has "$WORKFLOW" "output_lang"
+-grep_has "$WORKFLOW" "build_catalog.py"
+-grep_has "$WORKFLOW" "paper-understand"
+-grep_has "$WORKFLOW" "claude -p"
+-grep_has "$WORKFLOW" "--approved-switch"
+-grep_has "$WORKFLOW" "TMPDIR"
+-grep_absent "$WORKFLOW" "/tmp/paper-driller/"
+-grep_has "$WORKFLOW" "거절을 \`general-v1\` 선택으로 해석하지 않는다"
+-grep_has "$WORKFLOW" "경로 대소문자와 query는 그대로 둔다"
+-grep_has "$WORKFLOW" "template-id\`는 필수"
+-grep_has "$WORKFLOW" "BEGIN DRILLER:meta"
+-grep_has "$WORKFLOW" "Read-Depth:"
+-grep_has "$WORKFLOW" "paper_frontmatter.py"
+-grep_has "$WORKFLOW" "derive_doc_ids"
+-grep_absent "$WORKFLOW" 'arXiv-ID: "N/A"'
+-grep_absent "$WORKFLOW" "Evidence-Quality: "
+-grep_absent "$WORKFLOW" "isTargetPaper: "
+-grep_has "$WORKFLOW" "paper-frontmatter-venv"
+-grep_has "$WORKFLOW" "paper_frontmatter.sh"
+-grep_absent "$WORKFLOW" 'python3 ~/.claude/hooks/paper-format-validator.py'
+-grep_absent "$WORKFLOW" 'python3 "$VAULT/Public/_tools/paper_frontmatter.py"'
+-
+-# --- general-v1 템플릿 ---
+-grep_has "$GENERAL" '"id": "general-v1"'
+-grep_has "$GENERAL" '"visual_section": "본문 도표"'
+-grep_has "$GENERAL" "paper-digest"
+-grep_has "$GENERAL" "### Figure 3"
+-grep_has "$GENERAL" "해당 없음"
+-grep_has "$GENERAL" "viewed | caption-only | not-seen"
+-grep_has "$GENERAL" "범위 한계는 한 번만 밝힌다"
+-grep_has "$GENERAL" "인과관계"
+-grep_has "$GENERAL" "도표 목록 미확인"
+-if python3 "$VALIDATOR" --check-template "$GENERAL" >/dev/null 2>&1; then pass "validator --check-template general-v1"; else bad "validator --check-template general-v1"; fi
+-# 템플릿 디렉터리 안의 모든 템플릿이 정적 검사를 통과해야 한다
+-for t in "$REFS"/templates/*.md; do
+-  [ -e "$t" ] || continue
+-  if python3 "$VALIDATOR" --check-template "$t" >/dev/null 2>&1; then pass "template ok: $(basename "$t")"; else bad "template INVALID: $(basename "$t")"; fi
+-done
+-
+-# --- schema / validator ---
+-if python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$SCHEMA_REF" 2>/dev/null; then pass "schema JSON parses"; else bad "schema JSON invalid"; fi
+-grep_has "$SCHEMA_REF" '"paper-note-v3"'
+-grep_has "$SCHEMA_REF" '"controlled_update_fields"'
+-grep_has "$SCHEMA_REF" '"visual_check"'
+-grep_has "$SCHEMA_REF" '"manifest"'
+-grep_has "$SCHEMA_REF" '"audience_level": "intro"'
+-grep_has "$SCHEMA_REF" '"comment_max_chars": 80'
+-grep_has "$SCHEMA_REF" '"paper-deep-v2"'
+-grep_has "$SCHEMA_REF" '"deep_extra_h2"'
+-grep_has "$SCHEMA_REF" '"url_normalisation"'
+-grep_has "$SCHEMA_REF" '"schema_version": 4'
+-grep_has "$SCHEMA_REF" '"Read-Depth"'
+-grep_has "$SCHEMA_REF" '"driller_meta"'
+-grep_has "$SCHEMA_REF" '"identity"'
+-grep_absent "$SCHEMA_REF" '"ai_only"'
+-grep_absent "$SCHEMA_REF" '"arXiv-ID"'
+-if python3 - "$SCHEMA_REF" <<'PY' 2>/dev/null
+-import json,sys
+-s=json.load(open(sys.argv[1]))
+-keys=s["frontmatter"]["keys"]
+-exp=["type","Reading-Status","Read-Depth","Author","Journal/Conference","Published Year","Topic","Review-Date","Comment","URL","Category","linked-bases","Lab"]
+-sys.exit(0 if keys==exp else 1)
+-PY
+-then pass "schema frontmatter.keys == 13 canonical keys"; else bad "schema frontmatter.keys != 13 canonical keys"; fi
+-if [ -f "$ENGINE" ]; then
+-  pass "engine exists: Public/_tools/paper_frontmatter.py"
+-  if grep -q '"Read-Depth",' "$ENGINE" && grep -q '"Lab",' "$ENGINE"; then pass "engine PAPER_KEYS has Read-Depth/Lab"; else bad "engine PAPER_KEYS missing Read-Depth/Lab"; fi
+-else
+-  bad "engine missing: $ENGINE (set PAPER_VAULT_ROOT)"
+-fi
+-exists "$FM_HOOK"
+-exists "$FM_INSTALLER"
+-exists "$ROOT/hooks/paper-frontmatter-hook.sh"
+-[ -f "$VAULT/Public/_tools/paper_frontmatter.sh" ] && pass "exists: vault Public/_tools/paper_frontmatter.sh" || bad "missing: vault Public/_tools/paper_frontmatter.sh"
+-grep_has "$FM_HOOK" "stop_hook_active"
+-grep_has "$FM_HOOK" "MultiEdit"
+-grep_has "$VALIDATOR" "def derive_doc_ids"
+-grep_has "$VALIDATOR" "DRILLER:meta"
+-grep_has "$VALIDATOR" "def load_engine"
+-grep_absent "$VALIDATOR" "for anc in \[p, \*p.parents\]"   # 대상 노트 상위 디렉터리에서 엔진을 찾지 않는다
+-grep_has "$VALIDATOR" "def _vault_root"
+-grep_has "$VALIDATOR" "--meta"
+-grep_absent "$VALIDATOR" "SCOPE_GLOBS"
+-grep_absent "$VALIDATOR" "is_ai_domain"
+-grep_has "$VALIDATOR" "--approved-switch"
+-grep_has "$VALIDATOR" "def raw_frontmatter_segments"
+-grep_has "$VALIDATOR" "def find_auto_markers"
+-grep_has "$VALIDATOR" "urlsplit"
+-grep_has "$VALIDATOR" "paper-schema.json"
+-grep_has "$VALIDATOR" "--check-template"
+-grep_has "$VALIDATOR" "--manifest"
+-grep_has "$VALIDATOR" "--previous"
+-grep_has "$VALIDATOR" "def expected_visual_check"
+-if python3 -m py_compile "$VALIDATOR" 2>/dev/null; then pass "validator compiles"; else bad "validator does not compile"; fi
+-
+-# --- legacy 계약 (legacy-workflow.md로 이동, 내용 보존) ---
+-grep_has "$LEGACY" "paper-preread-analyst"
+-grep_has "$LEGACY" "기본 subagent 호출 예산: 1회"
+-grep_has "$LEGACY" "paper-spine"
+-grep_has "$LEGACY" "free 프로파일 출력 템플릿"
+-grep_has "$LEGACY" "Phase D' — Humanize"
+-grep_has "$LEGACY" "paper-driller-qc.jsonl"
+-grep_has "$LEGACY" "audience-level: intro"
+-grep_has "$LEGACY" "AI 전용"
+-grep_absent "$LEGACY" "paper-holistic-analyzer"
+-grep_has "$LEGACY" "paper-deep-v2"
+-
+-# --- 공유 legacy reference 참조 (agent 파일은 변경하지 않음) ---
+-grep_has "$AGENTS/paper-digest-composer.md" "insight-digest-spec"
+-grep_has "$AGENTS/paper-digest-composer.md" "readability-spec"
+-grep_has "$AGENTS/paper-digest-composer.md" "preread-v2-spec"
+-grep_has "$AGENTS/paper-preread-analyst.md" "preread-v2-spec"
+-grep_has "$AGENTS/paper-preread-analyst.md" "<<<READING_DECISION>>>"
+-grep_has "$AGENTS/paper-preread-analyst.md" "claim_origin"
+-grep_has "$AGENTS/paper-section-driller.md" "readability-spec"
+-grep_has "$AGENTS/paper-spine.md" "output_lang"
+-grep_has "$AGENTS/paper-section-driller.md" "output_lang"
+-grep_has "$AGENTS/paper-spine.md" "structure:"
+-grep_has "$AGENTS/paper-spine.md" "scholarly:"
+-grep_has "$AGENTS/paper-spine.md" "profile:"
+-grep_has "$AGENTS/paper-spine.md" "source_coverage:"
+-EVIDENCE="$AGENTS/paper-evidence.md"
+-grep_has "$EVIDENCE" 'mode`: `deep`'
+-grep_absent "$EVIDENCE" "# Mode: preread"
+-grep_has "$EVIDENCE" "출력 1 — claim ledger"
+-grep_has "$EVIDENCE" "source_location"
+-grep_has "$EVIDENCE" "최대 5개"
+-grep_has "$AGENTS/paper-preread-analyst.md" "<<<ONE_MINUTE>>>"
+-grep_has "$AGENTS/paper-preread-analyst.md" "<<<READING_MAP>>>"
+-grep_has "$AGENTS/paper-preread-analyst.md" "기본 1회, retry/검증 포함 최대 2회"
+-grep_has "$AGENTS/paper-preread-analyst.md" "## 독자 (고정)"
+-grep_has "$AGENTS/paper-preread-analyst.md" "비유 1개"
+-grep_has "$AGENTS/paper-preread-analyst.md" "audience_level"
+-grep_has "$AGENTS/paper-preread-analyst.md" "코드·데이터 공개 여부"
+-grep_has "$READABILITY_REF" "15어절"
+-grep_has "$READABILITY_REF" "독자 (고정)"
+-grep_has "$PREREAD_REF" "완전 서술 자리"
+-grep_has "$PREREAD_REF" "## Audience (고정)"
+-grep_has "$PREREAD_REF" "빠뜨리면 안 되는 두 줄"
+-COMPOSER="$AGENTS/paper-digest-composer.md"
+-grep_absent "$COMPOSER" "# Mode: preread"
+-grep_absent "$COMPOSER" "TERMS 최대 7개"
+-grep_absent "$COMPOSER" "3–6행"
+-grep_has "$COMPOSER" "## 어디까지 믿을까"
+-grep_has "$COMPOSER" "<<<READING_DECISION>>>"
+-grep_has "$COMPOSER" "claim_origin"
+ 
+ echo "----"
+ [ "$fail" -eq 0 ] && { echo "ALL PASS"; exit 0; } || { echo "SOME FAIL"; exit 1; }

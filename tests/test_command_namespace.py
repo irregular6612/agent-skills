@@ -90,10 +90,11 @@ class CommandNamespaceTests(unittest.TestCase):
             self.assertFalse(claude_entry(ROOT,e,{'commands':items})['recognized'])
 
     def test_counts_names_and_immutable_humanize_approval_snapshot(self):
-        self.assertEqual(len(self.manifest['links']),138)
-        for category,count in [('skills',30),('commands',2),('agents',31)]:
+        self.assertEqual(len(self.manifest['links']),155)
+        for category,count in [('skills',37),('commands',2),('agents',34)]:
             self.assertEqual(sum(e['harness']=='claude' and e['destination'].startswith(category+'/') for e in self.manifest['links']),count)
-        for relative in ('sources/commands/command-humanize/command.md','sources/skills/humanize-claude/SKILL.md'):
+        # F7 wrapper approval stays immutable; the skill can be reviewed as a shared revision.
+        for relative in ('sources/commands/command-humanize/command.md',):
             old=subprocess.check_output(['git','show','0cb38e2edc88e6bd82956489e225b47ae8767f69:'+relative],cwd=ROOT)
             self.assertEqual(old,(ROOT/relative).read_bytes())
         skill=next(e for e in self.manifest['links'] if e['harness']=='claude' and e['destination']=='skills/humanize')
