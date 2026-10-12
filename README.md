@@ -109,6 +109,9 @@ the prior README claim that it did not is obsolete.
 ```bash
 ./setup --validate
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -p test_setup.py -v
+# Isolated native CLI/network tests (no model calls or paid API):
+python3 tests/live_native_smoke.py
+python3 tests/live_native_duplicates.py
 ```
 
 Independent fresh-clone and actual-home release validation belong to the

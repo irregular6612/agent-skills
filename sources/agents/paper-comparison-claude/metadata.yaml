@@ -1,7 +1,0 @@
-description: 'paper-driller skill 전용 extras agent. 관련 연구 3-5편의 비교 매트릭스를 생성한다. 관련 논문
-  메타(제목/연도/abstract/코드공개)는 paper-driller가 pre-fetch하여 입력으로 제공. MCP/WebFetch 접근 금지.
-
-  '
-tools: Read
-model: sonnet
-effort: xhigh

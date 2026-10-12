@@ -1,8 +1,0 @@
-description: 'paper-driller deep 모드 전용 최종 합성 agent. deep 노트 상단의 preread 블록(읽기 판단·1분
-  요약· 핵심 아이디어·근거·한계·읽기 지도)을 section/evidence 출력에서 합성하고, 그 아래 상세 Zettelkasten·용어·관련
-  연구 블록을 확장한다. preread 기본 경로에서는 호출되지 않는다. 파일을 Write하지 않는다.
-
-  '
-tools: Read
-model: opus
-effort: max

@@ -38,6 +38,10 @@ class SetupTests(unittest.TestCase):
         for item in self.manifest['links']:
             p=self.home/('.'+item['harness'])/item['destination']
             self.assertTrue(p.is_symlink(),str(p)); self.assertEqual(p.resolve(),(ROOT/item['source']).resolve())
+            if item['destination'].endswith(('.md','.toml')):
+                self.assertTrue(p.is_file(),str(p))
+                if item['harness']=='claude' and item['destination'].startswith('agents/'):
+                    text=p.read_text(); self.assertTrue(text.startswith('---\n'),str(p)); self.assertIn('name:',text.split('---',2)[1])
         for category in ('skills','agents','commands'):
             p=self.home/'.claude'/category
             if p.exists(): self.assertFalse(p.is_symlink())
@@ -93,7 +97,7 @@ class SetupTests(unittest.TestCase):
         source=self.base/'repo/sources/a'; source.mkdir(parents=True); (source/'bad').symlink_to(self.home)
         with patch.object(setup,'ROOT',self.base/'repo'),self.assertRaises(ValueError): setup.source('sources/a')
     def test_duplicate_destination_contract_rejected(self):
-        fake=self.base/'repo'; (fake/'sources').mkdir(parents=True); (fake/'sources/a').write_text('asset')
+        fake=self.base/'repo'; (fake/'sources/a').mkdir(parents=True); (fake/'sources/a/SKILL.md').write_text('asset')
         entry={'harness':'claude','source':'sources/a','destination':'skills/a'}
         (fake/'manifest.yaml').write_text(json.dumps({'schema_version':2,'contract':'item-symlink','links':[entry,entry]}))
         with patch.object(setup,'ROOT',fake),self.assertRaisesRegex(ValueError,'duplicate'): setup.load_contract()
@@ -159,8 +163,13 @@ class SetupTests(unittest.TestCase):
         self.assertEqual(current,['superpowers@ssot-pinned']); self.assertFalse((self.home/'.claude/plugins/cache/old-official/superpowers').exists())
         installed=snapshot(self.home); native.install(False); self.assertEqual(installed,snapshot(self.home))
         native.uninstall(False); engine.uninstall(); self.assertEqual(before,snapshot(self.home,True))
+    def test_native_markdown_destination_rejects_directory_source(self):
+        fake=self.base/'repo'; (fake/'sources/agent').mkdir(parents=True); (fake/'sources/agent/prompt.md').write_text('body')
+        entry={'harness':'claude','source':'sources/agent','destination':'agents/a.md'}
+        (fake/'manifest.yaml').write_text(json.dumps({'schema_version':2,'contract':'item-symlink','links':[entry]}))
+        with patch.object(setup,'ROOT',fake),self.assertRaisesRegex(ValueError,'file entrypoint'): setup.load_contract()
     def test_overlapping_manifest_items_rejected(self):
-        fake=self.base/'repo'; (fake/'sources').mkdir(parents=True); (fake/'sources/a').write_text('asset')
+        fake=self.base/'repo'; (fake/'sources/a').mkdir(parents=True); (fake/'sources/a/SKILL.md').write_text('asset')
         entries=[{'harness':'claude','source':'sources/a','destination':d} for d in ('skills/a','skills/a/SKILL.md')]
         (fake/'manifest.yaml').write_text(json.dumps({'schema_version':2,'contract':'item-symlink','links':entries}))
         with patch.object(setup,'ROOT',fake),self.assertRaisesRegex(ValueError,'overlapping'): setup.load_contract()

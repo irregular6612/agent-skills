@@ -530,273 +530,307 @@
       "id": "academic-planner-claude",
       "harness": "claude",
       "destination": "agents/academic-planner.md",
-      "source": "sources/agents/academic-planner-claude",
+      "source": "sources/agents/academic-planner-claude.md",
       "origin": "sources/agents/academic-planner-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "academic-reviewer-claude",
       "harness": "claude",
       "destination": "agents/academic-reviewer.md",
-      "source": "sources/agents/academic-reviewer-claude",
+      "source": "sources/agents/academic-reviewer-claude.md",
       "origin": "sources/agents/academic-reviewer-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "academic-writing-assistant-claude",
       "harness": "claude",
       "destination": "agents/academic-writing-assistant.md",
-      "source": "sources/agents/academic-writing-assistant-claude",
+      "source": "sources/agents/academic-writing-assistant-claude.md",
       "origin": "sources/agents/academic-writing-assistant-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "claude-for-dslab-academic-planner-claude",
       "harness": "claude",
       "destination": "agents/claude-for-dslab/academic-planner.md",
-      "source": "sources/agents/claude-for-dslab-academic-planner-claude",
+      "source": "sources/agents/claude-for-dslab-academic-planner-claude.md",
       "origin": "sources/agents/claude-for-dslab-academic-planner-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "claude-for-dslab-academic-reviewer-claude",
       "harness": "claude",
       "destination": "agents/claude-for-dslab/academic-reviewer.md",
-      "source": "sources/agents/claude-for-dslab-academic-reviewer-claude",
+      "source": "sources/agents/claude-for-dslab-academic-reviewer-claude.md",
       "origin": "sources/agents/claude-for-dslab-academic-reviewer-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "claude-for-dslab-report-planner-claude",
       "harness": "claude",
       "destination": "agents/claude-for-dslab/report-planner.md",
-      "source": "sources/agents/claude-for-dslab-report-planner-claude",
+      "source": "sources/agents/claude-for-dslab-report-planner-claude.md",
       "origin": "sources/agents/claude-for-dslab-report-planner-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "claude-for-dslab-report-reviewer-claude",
       "harness": "claude",
       "destination": "agents/claude-for-dslab/report-reviewer.md",
-      "source": "sources/agents/claude-for-dslab-report-reviewer-claude",
+      "source": "sources/agents/claude-for-dslab-report-reviewer-claude.md",
       "origin": "sources/agents/claude-for-dslab-report-reviewer-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "code-cleanup-optimizer-claude",
       "harness": "claude",
       "destination": "agents/code-cleanup-optimizer.md",
-      "source": "sources/agents/code-cleanup-optimizer-claude",
+      "source": "sources/agents/code-cleanup-optimizer-claude.md",
       "origin": "sources/agents/code-cleanup-optimizer-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "code-reviewer-claude",
       "harness": "claude",
       "destination": "agents/code-reviewer.md",
-      "source": "sources/agents/code-reviewer-claude",
+      "source": "sources/agents/code-reviewer-claude.md",
       "origin": "sources/agents/code-reviewer-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "debugger-claude",
       "harness": "claude",
       "destination": "agents/debugger.md",
-      "source": "sources/agents/debugger-claude",
+      "source": "sources/agents/debugger-claude.md",
       "origin": "sources/agents/debugger-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "execution-logger-claude",
       "harness": "claude",
       "destination": "agents/execution-logger.md",
-      "source": "sources/agents/execution-logger-claude",
+      "source": "sources/agents/execution-logger-claude.md",
       "origin": "sources/agents/execution-logger-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "experiment-interpreter-claude",
       "harness": "claude",
       "destination": "agents/experiment-interpreter.md",
-      "source": "sources/agents/experiment-interpreter-claude",
+      "source": "sources/agents/experiment-interpreter-claude.md",
       "origin": "sources/agents/experiment-interpreter-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "experiment-verifier-claude",
       "harness": "claude",
       "destination": "agents/experiment-verifier.md",
-      "source": "sources/agents/experiment-verifier-claude",
+      "source": "sources/agents/experiment-verifier-claude.md",
       "origin": "sources/agents/experiment-verifier-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "humanize-fidelity-auditor-claude",
       "harness": "claude",
       "destination": "agents/humanize-fidelity-auditor.md",
-      "source": "sources/agents/humanize-fidelity-auditor-claude",
+      "source": "sources/agents/humanize-fidelity-auditor-claude.md",
       "origin": "sources/agents/humanize-fidelity-auditor-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "humanize-ko-detector-claude",
       "harness": "claude",
       "destination": "agents/humanize-ko-detector.md",
-      "source": "sources/agents/humanize-ko-detector-claude",
+      "source": "sources/agents/humanize-ko-detector-claude.md",
       "origin": "sources/agents/humanize-ko-detector-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "humanize-ko-monolith-claude",
       "harness": "claude",
       "destination": "agents/humanize-ko-monolith.md",
-      "source": "sources/agents/humanize-ko-monolith-claude",
+      "source": "sources/agents/humanize-ko-monolith-claude.md",
       "origin": "sources/agents/humanize-ko-monolith-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "humanize-ko-rewriter-claude",
       "harness": "claude",
       "destination": "agents/humanize-ko-rewriter.md",
-      "source": "sources/agents/humanize-ko-rewriter-claude",
+      "source": "sources/agents/humanize-ko-rewriter-claude.md",
       "origin": "sources/agents/humanize-ko-rewriter-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "humanize-naturalness-reviewer-claude",
       "harness": "claude",
       "destination": "agents/humanize-naturalness-reviewer.md",
-      "source": "sources/agents/humanize-naturalness-reviewer-claude",
+      "source": "sources/agents/humanize-naturalness-reviewer-claude.md",
       "origin": "sources/agents/humanize-naturalness-reviewer-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "humanize-taxonomist-claude",
       "harness": "claude",
       "destination": "agents/humanize-taxonomist.md",
-      "source": "sources/agents/humanize-taxonomist-claude",
+      "source": "sources/agents/humanize-taxonomist-claude.md",
       "origin": "sources/agents/humanize-taxonomist-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "humanize-web-architect-claude",
       "harness": "claude",
       "destination": "agents/humanize-web-architect.md",
-      "source": "sources/agents/humanize-web-architect-claude",
+      "source": "sources/agents/humanize-web-architect-claude.md",
       "origin": "sources/agents/humanize-web-architect-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "modular-code-architect-claude",
       "harness": "claude",
       "destination": "agents/modular-code-architect.md",
-      "source": "sources/agents/modular-code-architect-claude",
+      "source": "sources/agents/modular-code-architect-claude.md",
       "origin": "sources/agents/modular-code-architect-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "paper-comparison-claude",
       "harness": "claude",
       "destination": "agents/paper-comparison.md",
-      "source": "sources/agents/paper-comparison-claude",
+      "source": "sources/agents/paper-comparison-claude.md",
       "origin": "sources/agents/paper-comparison-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "paper-digest-composer-claude",
       "harness": "claude",
       "destination": "agents/paper-digest-composer.md",
-      "source": "sources/agents/paper-digest-composer-claude",
+      "source": "sources/agents/paper-digest-composer-claude.md",
       "origin": "sources/agents/paper-digest-composer-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "paper-evidence-claude",
       "harness": "claude",
       "destination": "agents/paper-evidence.md",
-      "source": "sources/agents/paper-evidence-claude",
+      "source": "sources/agents/paper-evidence-claude.md",
       "origin": "sources/agents/paper-evidence-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "paper-meta-claude",
       "harness": "claude",
       "destination": "agents/paper-meta.md",
-      "source": "sources/agents/paper-meta-claude",
+      "source": "sources/agents/paper-meta-claude.md",
       "origin": "sources/agents/paper-meta-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "paper-preread-analyst-claude",
       "harness": "claude",
       "destination": "agents/paper-preread-analyst.md",
-      "source": "sources/agents/paper-preread-analyst-claude",
+      "source": "sources/agents/paper-preread-analyst-claude.md",
       "origin": "sources/agents/paper-preread-analyst-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "paper-section-driller-claude",
       "harness": "claude",
       "destination": "agents/paper-section-driller.md",
-      "source": "sources/agents/paper-section-driller-claude",
+      "source": "sources/agents/paper-section-driller-claude.md",
       "origin": "sources/agents/paper-section-driller-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "paper-spine-claude",
       "harness": "claude",
       "destination": "agents/paper-spine.md",
-      "source": "sources/agents/paper-spine-claude",
+      "source": "sources/agents/paper-spine-claude.md",
       "origin": "sources/agents/paper-spine-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "report-planner-claude",
       "harness": "claude",
       "destination": "agents/report-planner.md",
-      "source": "sources/agents/report-planner-claude",
+      "source": "sources/agents/report-planner-claude.md",
       "origin": "sources/agents/report-planner-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "report-reviewer-claude",
       "harness": "claude",
       "destination": "agents/report-reviewer.md",
-      "source": "sources/agents/report-reviewer-claude",
+      "source": "sources/agents/report-reviewer-claude.md",
       "origin": "sources/agents/report-reviewer-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "security-reviewer-claude",
       "harness": "claude",
       "destination": "agents/security-reviewer.md",
-      "source": "sources/agents/security-reviewer-claude",
+      "source": "sources/agents/security-reviewer-claude.md",
       "origin": "sources/agents/security-reviewer-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "spec-bridge-claude",
       "harness": "claude",
       "destination": "agents/spec-bridge.md",
-      "source": "sources/agents/spec-bridge-claude",
+      "source": "sources/agents/spec-bridge-claude.md",
       "origin": "sources/agents/spec-bridge-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "task-planner-analyzer-claude",
       "harness": "claude",
       "destination": "agents/task-planner-analyzer.md",
-      "source": "sources/agents/task-planner-analyzer-claude",
+      "source": "sources/agents/task-planner-analyzer-claude.md",
       "origin": "sources/agents/task-planner-analyzer-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "test-writer-claude",
       "harness": "claude",
       "destination": "agents/test-writer.md",
-      "source": "sources/agents/test-writer-claude",
+      "source": "sources/agents/test-writer-claude.md",
       "origin": "sources/agents/test-writer-claude",
-      "format": "markdown-frontmatter"
+      "format": "markdown-frontmatter",
+      "adapter": "approved Claude frontmatter/prompt assembly, stored as native Markdown original"
     },
     {
       "id": "academic-planner-codex",
@@ -1074,7 +1108,7 @@
       "id": "command-humanize-redo",
       "harness": "claude",
       "destination": "commands/humanize-redo.md",
-      "source": "sources/commands/command-humanize-redo",
+      "source": "sources/commands/command-humanize-redo/command.md",
       "origin": "sources/commands/command-humanize-redo",
       "format": "markdown"
     },
@@ -1082,7 +1116,7 @@
       "id": "command-humanize",
       "harness": "claude",
       "destination": "commands/humanize.md",
-      "source": "sources/commands/command-humanize",
+      "source": "sources/commands/command-humanize/command.md",
       "origin": "sources/commands/command-humanize",
       "format": "markdown"
     },
@@ -1102,7 +1136,7 @@
       "id": "command-humanize-redo",
       "harness": "codex",
       "destination": "prompts/humanize-redo.md",
-      "source": "sources/commands/command-humanize-redo",
+      "source": "sources/commands/command-humanize-redo/command.md",
       "origin": "sources/commands/command-humanize-redo",
       "format": "reference-markdown"
     },
@@ -1110,7 +1144,7 @@
       "id": "command-humanize",
       "harness": "codex",
       "destination": "prompts/humanize.md",
-      "source": "sources/commands/command-humanize",
+      "source": "sources/commands/command-humanize/command.md",
       "origin": "sources/commands/command-humanize",
       "format": "reference-markdown"
     },

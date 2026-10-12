@@ -78,7 +78,13 @@ def load_contract(check_sources=True):
             if harness==entry['harness'] and (PurePosixPath(other) in destination.parents or destination in PurePosixPath(other).parents):
                 raise ValueError('overlapping item destinations: '+entry['destination'])
         seen.add(key)
-        if check_sources: source(entry['source'])
+        if check_sources:
+            entrypoint=source(entry['source'])
+            category=destination.parts[0]
+            if category=='skills' and (not entrypoint.is_dir() or not (entrypoint/'SKILL.md').is_file()):
+                raise ValueError('skill requires a directory containing SKILL.md: '+entry['source'])
+            if category in {'agents','commands','prompts','CLAUDE.md','AGENTS.md'} and not entrypoint.is_file():
+                raise ValueError('native file entrypoint cannot be a directory: '+entry['destination'])
         else: relative(entry['source'])
     lock=json.loads(source(manifest['dependencies']).read_text())
     policy=json.loads(source(manifest['denylist']).read_text())

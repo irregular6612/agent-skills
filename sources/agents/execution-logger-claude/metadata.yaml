@@ -1,8 +1,0 @@
-description: Maintains the PLAN.md roadmap file for iterative-code-loop sessions by
-  appending structured entries to Execution Log, Troubles, and Decisions sections
-  and updating Summary metadata on phase transitions. Use when an iterative-code-loop
-  cycle completes, a trouble event occurs, a phase transitions, a decision is made,
-  or a session finalizes. Invoked by the iterative-code-loop skill orchestrator after
-  every subagent call.
-tools: Read, Edit, Write
-model: haiku

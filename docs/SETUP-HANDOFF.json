@@ -14,7 +14,7 @@
         "-v"
       ],
       "exit_code": 0,
-      "tests_run": 23,
+      "tests_run": 24,
       "version": "Python 3.9.6"
     },
     {
@@ -30,7 +30,7 @@
         "-v"
       ],
       "exit_code": 0,
-      "tests_run": 23,
+      "tests_run": 24,
       "version": "Python 3.12.8"
     },
     {

@@ -1,9 +1,0 @@
-description: 'paper-driller skill 전용 통합 섹션 agent. spine이 식별한 한 섹션(또는 chunk)을 입력받아,
-  paper-driller가 주입한 SPINE 공유 맥락을 토대로 그 섹션의 구조화된 요약을 생성한다. imrad 구조에서는 section_type(abstract/introduction/method/results/
-  discussion)별 원칙·rationale 블록을, free 구조에서는 범용 섹션 요약을 만든다. MCP/WebFetch 접근 금지; 입력
-  텍스트 밖 추측 금지.
-
-  '
-tools: Read
-model: sonnet
-effort: xhigh

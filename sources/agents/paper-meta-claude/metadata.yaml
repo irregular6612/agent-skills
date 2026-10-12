@@ -1,6 +1,0 @@
-description: 'paper-driller skill 전용 extras agent. 논문 메타데이터(제목/저자/연도/venue/ arXiv/DOI/URL)와
-  BibTeX, Category 분류를 생성한다. MCP/WebFetch 접근 금지.
-
-  '
-tools: Read
-model: haiku

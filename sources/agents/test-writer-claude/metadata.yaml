@@ -1,8 +1,0 @@
-description: Authors test code following best practices (AAA pattern, fixture design,
-  mocking boundaries, test pyramid). Specializes in writing production-code-agnostic
-  test suites that verify behavior, not implementation. Use when new code needs test
-  coverage, when the iterative-code-loop detects a test-less project in write mode,
-  when TDD mode requires failing tests first, or when code-reviewer identifies a missing
-  test gap.
-tools: Read, Edit, Write, Grep, Glob, Bash
-model: sonnet

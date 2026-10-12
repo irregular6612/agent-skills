@@ -1,9 +1,0 @@
-description: 'Use this agent to verify ML experiment interpretations against actual
-  log data. It cross-checks every numerical claim, validates logical reasoning, ensures
-  hypotheses are falsifiable, and detects hallucination. Returns structured pass/fail
-  with specific feedback. <example>Context: An experiment interpretation has been
-  written and needs verification.\nuser: "Verify the analysis written for the evolve_h_only
-  experiment"\nassistant: "I''ll use the experiment-verifier agent to cross-check
-  all numbers against the actual logs."\n<commentary>Verification of experiment analysis
-  requires the experiment-verifier agent to ensure data integrity.</commentary></example>'
-model: sonnet
