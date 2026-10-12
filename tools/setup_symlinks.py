@@ -45,12 +45,41 @@ def no_symlink_parents(path, include_leaf=False):
         if part.exists() and not part.is_dir():
             raise ValueError('non-directory path component: '+str(part))
 
+# A local venv is execution state, not an asset. Only this documented engine
+# boundary is opaque; it can never be selected as a manifest source itself.
+LOCAL_RUNTIME = 'sources/skills/paper-banana-claude/engine/.venv'
+
+def local_runtime(path):
+    if str(path.relative_to(ROOT)) != LOCAL_RUNTIME: return False
+    no_symlink_parents(path, True)
+    if not path.is_dir(): raise ValueError('runtime boundary must be a real directory')
+    # Inspect the index/ignore rule, never the venv payload. A forced git add
+    # must not turn the local exception into a distributable source exception.
+    import subprocess
+    env = dict(os.environ, GIT_OPTIONAL_LOCKS='0')
+    tracked = subprocess.run(['git','ls-files','--',LOCAL_RUNTIME], cwd=ROOT, env=env, capture_output=True)
+    ignored = subprocess.run(['git','check-ignore','-q','--',LOCAL_RUNTIME+'/'], cwd=ROOT, env=env, capture_output=True)
+    if tracked.returncode or tracked.stdout or ignored.returncode:
+        raise ValueError('local runtime must be ignored and untracked: '+LOCAL_RUNTIME)
+    return True
+
 def source(value):
     p = ROOT / str(relative(value))
     no_symlink_parents(p)
     if p.is_symlink() or not p.exists():
         raise ValueError('missing or symlink source: '+str(p))
-    for q in ([p] if p.is_file() else p.rglob('*')):
+    def entries():
+        yield p
+        if p.is_dir():
+            def walk_error(error): raise error
+            for base, dirs, files in os.walk(p, followlinks=False, onerror=walk_error):
+                for name in dirs[:]:
+                    q = Path(base)/name
+                    if local_runtime(q):
+                        dirs.remove(name)
+                    else: yield q
+                for name in files: yield Path(base)/name
+    for q in entries():
         if q.is_symlink() or blocked(str(q.relative_to(ROOT))):
             raise ValueError('unsafe source entry: '+str(q))
         if not q.is_file() and not q.is_dir():
@@ -377,6 +406,10 @@ class Installer:
         return r
 
     def matches(self,path,record):
+        if record.get('restoring'):
+            backup=self.state_dir/record['backup']
+            if not exists(backup): return exists(path) and self.restore_identity(path)==record['restoring']
+            if not exists(path): return self.restore_identity(backup)==record['restoring']
         if record['kind']=='link': return path.is_symlink() and os.readlink(path)==record['installed']
         if record['kind']=='moved': return not exists(path)
         return path.is_file() and not path.is_symlink() and hashlib.sha256(path.read_bytes()).hexdigest()==record['installed']
@@ -416,16 +449,37 @@ class Installer:
             path.unlink(); old.update(kind='moved',installed=None); self.save()
         else: self.backup(rel,'moved',None)
 
+    def restore_identity(self,path):
+        s=path.lstat()
+        return [s.st_dev,s.st_ino,s.st_mode,s.st_size,s.st_mtime_ns]
+
+    def restore_parent(self,path):
+        # Recreate only ancestors of a verified journal destination. Unlike
+        # mkdir(), these are original parents and are not installer-owned.
+        no_symlink_parents(path)
+        if path.parent==self.home or path.parent.exists(): return
+        self.restore_parent(path.parent)
+        no_symlink_parents(path)
+        path.parent.mkdir()
+
     def uninstall(self):
         for r in self.state['records']:
             path=self.path(r['path'])
             if not self.matches(path,r): raise ValueError('uninstall refuses modified item: '+r['path'])
-            if r['backup'] and not exists(self.state_dir/r['backup']): raise ValueError('missing backup: '+r['backup'])
+            if r['backup'] and not exists(self.state_dir/r['backup']) and not r.get('restoring'): raise ValueError('missing backup: '+r['backup'])
         for r in reversed(self.state['records'][:]):
             path=self.path(r['path']); print('RESTORE '+str(path)); self.changed=True
             if self.dry: continue
+            backup=self.state_dir/r['backup'] if r['backup'] else None
+            if backup and not exists(backup) and r.get('restoring'):
+                # Rename completed before the journal checkpoint. The inode
+                # identity was checked at preflight; do not unlink the original.
+                self.state['records'].remove(r); self.save(); continue
+            if backup:
+                self.restore_parent(path)
+                r['restoring']=self.restore_identity(backup); self.save()
             if exists(path): path.unlink()  # verified owned symlinks/configs only, never recursive delete
-            if r['backup']: os.rename(self.state_dir/r['backup'],path)
+            if backup: os.rename(backup,path)
             self.state['records'].remove(r); self.save()
         if not self.dry and self.state['directories']:
             for rel in reversed(self.state['directories']):
@@ -456,6 +510,8 @@ def main():
     guard=(ROOT/'setup').open('rb')
     fcntl.flock(guard,fcntl.LOCK_EX|fcntl.LOCK_NB)
     engine=Installer(home,args.dry_run)
+    if not args.uninstall and any(f.get('removed') for f in engine.state['native'].values()):
+        raise ValueError('rollback is pending; resume with --uninstall before setup')
     # Validate every HOME destination and template/config before any changes.
     for entry in manifest['links']: engine.path('.'+entry['harness']+'/'+entry['destination'])
     retirees=[]

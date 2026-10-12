@@ -221,6 +221,14 @@ class NativePlugins:
             self.e.state['native'].setdefault(target,{'created_plugin':False,'created_marketplace':False})
             flags=self.e.state['native'][target]
             flags.setdefault('original_marketplaces',[{'name':r['name'],'location':r.get('installLocation') or r.get('root') or r.get('path')} for r in markets])
+            if target=='codex':
+                flags.setdefault('original_plugins',[self.plugin_metadata(r) for r in self.before.get(target,records)])
+            if 'original_registry' not in flags:
+                flags['original_registry']={}
+                for rel in REGISTRY[target]:
+                    record=self.e.record(rel)
+                    original=self.e.state_dir/record['backup'] if record.get('backup') else None
+                    flags['original_registry'][rel]=self.registry_identity(original) if original else None
             flags.setdefault('retired_marketplaces',[])
             self.e.save()
             try:
@@ -277,6 +285,7 @@ class NativePlugins:
             if self.e.dry:
                 print('NATIVE RESTORE '+target); self.e.changed=True; continue
             if not shutil.which(target): raise ValueError('native CLI missing for uninstall: '+target)
+            if flags.get('removed'): continue  # rollback resumes after file restore
             for r in self.e.state['records']:
                 if not self.e.matches(self.e.path(r['path']),r): raise ValueError('uninstall refuses modified item: '+r['path'])
             try:
@@ -286,16 +295,100 @@ class NativePlugins:
                     self.run(target,['plugin','marketplace','remove','ssot-pinned','--json']+(['--scope','user'] if target=='claude' else []))
                     if any(r.get('name')=='ssot-pinned' for r in self.marketplaces(target)): raise ValueError('marketplace removal readback failed')
             finally: self.update_registry_hashes(target)
-            self.restore_markets[target]=flags.get('original_marketplaces',[])
-            del self.e.state['native'][target]; self.e.save()
+            # Keep expectations durable until files AND native readback succeed.
+            flags['removed']=True; self.e.save()
+
+    def plugin_metadata(self,record):
+        result={'_id':record['_id']}
+        for key in ('version','enabled','gitCommitSha'):
+            if key in record: result[key]=record[key]
+        if isinstance(record.get('source'),dict):
+            result['source']={k:v for k,v in record['source'].items() if k in {'source','url','sha','path','ref','repo','subdir'}}
+        return result
+
+    def restoration_registries(self,target,flags):
+        from setup_symlinks import exists, no_symlink_parents
+        saved=flags.setdefault('restore_registry',{})
+        for i,rel in enumerate(REGISTRY[target]):
+            path=self.e.path(rel)
+            if path.is_symlink() or (exists(path) and not path.is_file()): raise ValueError('unsafe restoration registry: '+rel)
+            if rel in flags.get('original_registry',{}):
+                actual=self.registry_identity(path) if exists(path) else None
+                if actual!=flags['original_registry'][rel]: raise ValueError('original restoration registry changed by user: '+rel)
+            name='native-restore/'+target+'-'+str(i)
+            if rel in saved:
+                if saved[rel].get('backup')!=name: raise ValueError('unsafe restoration snapshot path')
+                expected=saved[rel]['digest']
+                actual=hashlib.sha256(path.read_bytes()).hexdigest() if exists(path) else None
+                if expected!=actual: raise ValueError('restoration registry changed by user: '+rel)
+                continue
+            backup=self.e.state_dir/name; no_symlink_parents(backup)
+            if exists(backup): raise ValueError('restoration registry snapshot already exists')
+            if exists(path):
+                backup.parent.mkdir(mode=0o700,exist_ok=True); shutil.copy2(path,backup)
+                digest=hashlib.sha256(path.read_bytes()).hexdigest()
+            else: digest=None
+            saved[rel]={'backup':name,'digest':digest}; self.e.save()
+        return saved
+
+    def registry_identity(self,path):
+        metadata=path.stat()
+        return {'digest':hashlib.sha256(path.read_bytes()).hexdigest(),'mode':metadata.st_mode,'mtime_ns':metadata.st_mtime_ns}
+
+    def put_registries(self,saved):
+        from setup_symlinks import exists, no_symlink_parents
+        for rel,record in saved.items():
+            path=self.e.path(rel)
+            if path.is_symlink() or (exists(path) and not path.is_file()): raise ValueError('unsafe native restoration registry: '+rel)
+            if record['digest'] is None:
+                if exists(path): path.unlink()
+            else:
+                backup=self.e.state_dir/record['backup']; no_symlink_parents(backup)
+                if backup.is_symlink() or not backup.is_file(): raise ValueError('unsafe restoration snapshot')
+                if hashlib.sha256(backup.read_bytes()).hexdigest()!=record['digest']: raise ValueError('restoration snapshot changed')
+                self.e.restore_parent(path); shutil.copy2(backup,path)
+
+    def restore_plugins(self,target,flags,saved):
+        originals=flags.get('original_plugins')
+        if originals is None:
+            if target=='codex': raise ValueError('old Codex journal lacks original plugin metadata; native restoration cannot be verified')
+            return
+        actual={r['_id']:r for r in self.plugins(target)}
+        for original in originals:
+            selector=original['_id']
+            if not re.fullmatch(r'[a-z0-9._-]+@[a-z0-9._-]+',selector): raise ValueError('unsafe original plugin selector')
+            if selector not in actual:
+                # Only registrations retired by this installer may be recreated.
+                if selector.split('@')[0] not in {'superpowers','bagjuhyeon-agent-ssot'}: raise ValueError('unrelated original plugin disappeared: '+selector)
+                self.run(target,['plugin','add',selector,'--json'])
+                self.put_registries(saved)  # CLI add enables; preserve original enabled state
+                print('NATIVE RESTORE PLUGIN '+target+' '+selector)
+        actual={r['_id']:self.plugin_metadata(r) for r in self.plugins(target)}
+        if set(actual)!={r['_id'] for r in originals}: raise ValueError('original plugin selector restoration readback failed: '+target)
+        for original in originals:
+            observed=actual[original['_id']]
+            if any(observed.get(k)!=v for k,v in original.items()):
+                raise ValueError('original plugin version/enabled/source restoration readback failed: '+original['_id'])
+
     def verify_restored(self):
         if self.e.dry: return
-        for target,originals in self.restore_markets.items():
-            actual={r['name']:r for r in self.marketplaces(target)}
-            names={r if isinstance(r,str) else r['name'] for r in originals}
-            if set(actual)!=names: raise ValueError('original marketplace restoration readback failed: '+target)
-            for r in originals:
-                if isinstance(r,str) or not r.get('location'): continue
-                item=actual[r['name']]
-                location=item.get('installLocation') or item.get('root') or item.get('path')
-                if location!=r['location']: raise ValueError('original marketplace source restoration readback failed: '+target+' '+r['name'])
+        for target,flags in list(self.e.state['native'].items()):
+            if not flags.get('removed'): raise ValueError('native rollback removal not complete')
+            saved=self.restoration_registries(target,flags)
+            try:
+                originals=flags.get('original_marketplaces',[])
+                actual={r['name']:r for r in self.marketplaces(target)}
+                names={r if isinstance(r,str) else r['name'] for r in originals}
+                if set(actual)!=names: raise ValueError('original marketplace restoration readback failed: '+target)
+                for r in originals:
+                    if isinstance(r,str) or not r.get('location'): continue
+                    item=actual[r['name']]
+                    location=item.get('installLocation') or item.get('root') or item.get('path')
+                    if location!=r['location']: raise ValueError('original marketplace source restoration readback failed: '+target+' '+r['name'])
+                self.restore_plugins(target,flags,saved)
+            finally:
+                self.put_registries(saved)
+            del self.e.state['native'][target]; self.e.save()
+            for record in saved.values():
+                backup=self.e.state_dir/record['backup']
+                if backup.exists(): backup.unlink()
