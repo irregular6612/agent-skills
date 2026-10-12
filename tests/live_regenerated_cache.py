@@ -83,7 +83,8 @@ H2=W/'runtime-home'; H2.mkdir(); env.update(HOME=str(H2),CLAUDE_CONFIG_DIR=str(H
 run([str(R/'setup'),'--assets-only'])
 source=R/'sources/skills/paper-banana-claude/engine/mcp_server/__init__.py'
 runtime=source.parent/'__pycache__'; assert not runtime.exists()
-py_compile.compile(str(source),doraise=True)
+runtime.mkdir()
+py_compile.compile(str(source),cfile=str(runtime/('__init__.'+sys.implementation.cache_tag+'.pyc')),doraise=True)
 try:
     for flags in (['--validate'],['--assets-only','--dry-run'],['--assets-only']):
         out=run([str(R/'setup'),*flags],2 if args.baseline else 0)

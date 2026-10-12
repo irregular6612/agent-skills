@@ -72,9 +72,12 @@ if f11_f12:
 run([str(R/'setup')],'install')
 if f11_f12:
     import compileall
+    import sys
     engine=R/'sources/skills/paper-banana-claude/engine'
     assert not list(engine.rglob('__pycache__'))
-    assert compileall.compile_dir(str(engine),quiet=1)
+    prefix=sys.pycache_prefix; sys.pycache_prefix=None
+    try: assert compileall.compile_dir(str(engine),quiet=1)
+    finally: sys.pycache_prefix=prefix
     runtime_created=list(engine.rglob('__pycache__'))
     cache=H/'.claude/plugins/cache/generated-local-cache/superpowers'
     p=cache/'5bf4e7801107/.claude-plugin/plugin.json'; p.parent.mkdir(parents=True)
