@@ -91,10 +91,17 @@ that managed file/link to its installed state, then retry uninstall. Repo edits
 are immediately visible through the item links without reinstalling. Add a new
 manifest item and rerun setup to create a new link.
 
-Native Claude can rehydrate a cache while uninstalling it and leave an orphaned
-copy. Setup preserves that generated copy under local `quarantine/` separately
-from the ORIGINAL backup; it is not restored over the original. Native-generated
-bootstrap state (e.g. `.claude.json`, CLI logs, or empty cache directories) is
+Native cache regeneration is not attributed to a particular process. Setup
+recognizes only a previously retired selector/path recorded in its journal and
+a real cache tree whose revision directories contain matching plugin metadata.
+It preserves the whole regenerated tree under local `quarantine/`, separately
+from the ORIGINAL backup. It never merges it with or restores it over the
+original. The rename is journaled for retry before/after interruption. Unknown
+leaf contents, symlink roots/parents, missing backups and modified managed
+configs still fail closed. Older tombstones without selector evidence are not
+automatically upgraded. See `docs/SETUP-REGENERATED-CACHE.md` for exact limits.
+Native-generated bootstrap state (e.g. `.claude.json`, CLI logs, or empty cache
+directories) is
 harness-owned and is deliberately not collected, deleted, or byte-restored.
 Uninstall restores controlled config/registrations and original conflict items,
 not the entire HOME snapshot. The rollback journal is not a crash-proof filesystem

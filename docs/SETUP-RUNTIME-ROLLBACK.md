@@ -1,5 +1,9 @@
 # F8–F10 runtime and native rollback corrections
 
+Historical F8–F10 implementation evidence follows. F12 extends the runtime
+policy and F11 journals regenerated-cache preservation; the current contract is
+in `SETUP-REGENERATED-CACHE.md`. The isolation/authentication limits below remain.
+
 This is an implementation candidate, not a release approval. The authenticated
 Codex `superpowers@openai-curated-remote` roundtrip is still unverified. A fake
 HOME returns `chatgpt authentication required for remote plugin catalog`; the

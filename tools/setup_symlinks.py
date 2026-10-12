@@ -45,22 +45,30 @@ def no_symlink_parents(path, include_leaf=False):
         if part.exists() and not part.is_dir():
             raise ValueError('non-directory path component: '+str(part))
 
-# A local venv is execution state, not an asset. Only this documented engine
-# boundary is opaque; it can never be selected as a manifest source itself.
+# Execution state is opaque, never a selectable manifest asset. Bytecode is
+# allowed only in the enumerated engine packages, not arbitrary PRIVATE paths.
 LOCAL_RUNTIME = 'sources/skills/paper-banana-claude/engine/.venv'
+BYTECODE_PACKAGES = ('mcp_server', 'paperbanana', 'paperbanana/agents',
+    'paperbanana/data', 'paperbanana/evaluation', 'paperbanana/guidelines',
+    'paperbanana/providers', 'paperbanana/providers/image_gen',
+    'paperbanana/providers/vlm', 'paperbanana/reference', 'paperbanana/core')
+LOCAL_RUNTIMES = {LOCAL_RUNTIME} | {
+    'sources/skills/paper-banana-claude/engine/'+p+'/__pycache__'
+    for p in BYTECODE_PACKAGES}
 
 def local_runtime(path):
-    if str(path.relative_to(ROOT)) != LOCAL_RUNTIME: return False
+    rel = str(path.relative_to(ROOT))
+    if rel not in LOCAL_RUNTIMES: return False
     no_symlink_parents(path, True)
     if not path.is_dir(): raise ValueError('runtime boundary must be a real directory')
-    # Inspect the index/ignore rule, never the venv payload. A forced git add
+    # Inspect the index/ignore rule, never the runtime payload. A forced git add
     # must not turn the local exception into a distributable source exception.
     import subprocess
     env = dict(os.environ, GIT_OPTIONAL_LOCKS='0')
-    tracked = subprocess.run(['git','ls-files','--',LOCAL_RUNTIME], cwd=ROOT, env=env, capture_output=True)
-    ignored = subprocess.run(['git','check-ignore','-q','--',LOCAL_RUNTIME+'/'], cwd=ROOT, env=env, capture_output=True)
+    tracked = subprocess.run(['git','ls-files','--',rel], cwd=ROOT, env=env, capture_output=True)
+    ignored = subprocess.run(['git','check-ignore','-q','--',rel+'/'], cwd=ROOT, env=env, capture_output=True)
     if tracked.returncode or tracked.stdout or ignored.returncode:
-        raise ValueError('local runtime must be ignored and untracked: '+LOCAL_RUNTIME)
+        raise ValueError('local runtime must be ignored and untracked: '+rel)
     return True
 
 def source(value):
@@ -386,13 +394,14 @@ class Installer:
 
     def record(self,rel): return next((r for r in self.state['records'] if r['path']==rel),None)
 
-    def backup(self,rel,kind,installed):
+    def backup(self,rel,kind,installed,cache_selector=None):
         path=self.path(rel)
         old=self.record(rel)
         if old:
             if not self.matches(path,old): raise ValueError('managed item changed by user: '+rel)
             return old
         r={'path':rel,'kind':kind,'installed':installed,'backup':None}
+        if cache_selector is not None: r['retired_cache']=cache_selector
         if exists(path):
             if path.is_symlink() and kind=='file': raise ValueError('config symlink refused: '+rel)
             if kind=='file' and not path.is_file(): raise ValueError('config is not a regular file: '+rel)
@@ -411,7 +420,20 @@ class Installer:
             if not exists(backup): return exists(path) and self.restore_identity(path)==record['restoring']
             if not exists(path): return self.restore_identity(backup)==record['restoring']
         if record['kind']=='link': return path.is_symlink() and os.readlink(path)==record['installed']
-        if record['kind']=='moved': return not exists(path)
+        if record['kind']=='moved':
+            if record.get('retired_cache'):
+                self.cache_retirement(record)
+                backup=self.state_dir/record['backup'] if record.get('backup') else None
+                if not backup or not exists(backup): raise ValueError('missing original cache backup')
+                no_symlink_parents(backup,True)
+                if record.get('quarantining'):
+                    pending=record['quarantining']; destination=self.quarantine_path(pending['path'])
+                    present=path if exists(path) else destination
+                    if exists(path) and exists(destination): return False
+                    return exists(present) and self.restore_identity(present)==pending['identity']
+                if exists(path): self.regenerated_cache(path,record)
+                return True
+            return not exists(path)
         return path.is_file() and not path.is_symlink() and hashlib.sha256(path.read_bytes()).hexdigest()==record['installed']
 
     def link(self,rel,src):
@@ -438,16 +460,80 @@ class Installer:
         with temp.open('xb') as f: f.write(data)
         temp.chmod(mode); os.replace(temp,path); r.update(kind='file',installed=digest); self.save()
 
-    def move(self,rel):
+    def move(self,rel,cache_selector=None):
         path=self.path(rel)
         if not exists(path): return
+        old=self.record(rel)
+        if old and old.get('retired_cache'):
+            self.quarantine_caches(); return
         print('RETIRE '+str(path)); self.changed=True
         if self.dry: return
-        old=self.record(rel)
         if old:
             if old['kind']!='link' or not self.matches(path,old): raise ValueError('refusing to retire modified/non-link managed item: '+rel)
             path.unlink(); old.update(kind='moved',installed=None); self.save()
-        else: self.backup(rel,'moved',None)
+        else:
+            if cache_selector is not None:
+                self.cache_retirement({'path':rel,'retired_cache':cache_selector,'kind':'moved','installed':None})
+                no_symlink_parents(path,True)
+            self.backup(rel,'moved',None,cache_selector)
+
+    def cache_retirement(self,record):
+        selector=record['retired_cache']
+        if not isinstance(selector,str) or not re.fullmatch(r'[a-z0-9._-]+@[a-z0-9._-]+',selector):
+            raise ValueError('unsafe retired cache selector')
+        plugin,market=selector.split('@')
+        harness=PurePosixPath(record['path']).parts[0]
+        if (plugin not in {'superpowers','bagjuhyeon-agent-ssot'} or market=='ssot-pinned' or
+                (plugin=='bagjuhyeon-agent-ssot' and market!='generated-local-cache') or
+                harness not in {'.claude','.codex'} or
+                record['path']!=harness+'/plugins/cache/'+market+'/'+plugin or
+                record['kind']!='moved' or record['installed'] is not None):
+            raise ValueError('retired cache selector/path mismatch')
+
+    def regenerated_cache(self,path,record):
+        self.cache_retirement(record)
+        no_symlink_parents(path,True)
+        plugin=record['retired_cache'].split('@')[0]
+        metadata='.claude-plugin' if record['path'].startswith('.claude/') else '.codex-plugin'
+        children=list(path.iterdir())
+        if not children: raise ValueError('unrecognized regenerated cache: '+record['path'])
+        for child in children:
+            if not re.fullmatch(r'[a-zA-Z0-9._-]+',child.name): raise ValueError('unsafe regenerated cache revision')
+            manifest=child/metadata/'plugin.json'; no_symlink_parents(manifest)
+            if manifest.is_symlink() or not manifest.is_file(): raise ValueError('unrecognized regenerated cache manifest')
+            payload=json.loads(manifest.read_text())
+            if not isinstance(payload,dict) or payload.get('name')!=plugin or not isinstance(payload.get('version'),str) or not payload['version']:
+                raise ValueError('regenerated cache plugin mismatch')
+        # Only plugin metadata is inspected. All payload, including user edits,
+        # is preserved by rename, never merged with or restored over the backup.
+
+    def quarantine_path(self,rel):
+        if not isinstance(rel,str) or not re.fullmatch(r'quarantine/[0-9]+',rel): raise ValueError('unsafe quarantine path')
+        path=self.state_dir/rel; no_symlink_parents(path,True)
+        return path
+
+    def quarantine_caches(self):
+        for record in self.state['records']:
+            if not record.get('retired_cache') or record.get('restoring'): continue
+            path=self.path(record['path'])
+            if not self.matches(path,record): raise ValueError('retired cache changed during quarantine')
+            pending=record.get('quarantining')
+            if not pending and not exists(path): continue
+            print('QUARANTINE '+str(path)); self.changed=True
+            if self.dry: continue
+            if not pending:
+                rel='quarantine/'+str(len(self.state.get('quarantine',[])))
+                destination=self.quarantine_path(rel)
+                if exists(destination): raise ValueError('native orphan backup already exists')
+                pending={'path':rel,'identity':self.restore_identity(path)}
+                record['quarantining']=pending
+                self.state.setdefault('quarantine',[]).append(rel); self.save()
+            destination=self.quarantine_path(pending['path'])
+            if exists(path):
+                if exists(destination): raise ValueError('refusing to overwrite quarantine')
+                destination.parent.mkdir(mode=0o700,exist_ok=True)
+                os.rename(path,destination)
+            del record['quarantining']; self.save()
 
     def restore_identity(self,path):
         s=path.lstat()
@@ -467,6 +553,7 @@ class Installer:
             path=self.path(r['path'])
             if not self.matches(path,r): raise ValueError('uninstall refuses modified item: '+r['path'])
             if r['backup'] and not exists(self.state_dir/r['backup']) and not r.get('restoring'): raise ValueError('missing backup: '+r['backup'])
+        self.quarantine_caches()
         for r in reversed(self.state['records'][:]):
             path=self.path(r['path']); print('RESTORE '+str(path)); self.changed=True
             if self.dry: continue
@@ -550,11 +637,13 @@ def main():
                 data=merge_toml(text,template).encode()
             pending.append((rel,data))
         native.preflight(args.assets_only)
+        engine.quarantine_caches()
         for rel in retirees: engine.move(rel)
         for entry in manifest['links']:
             engine.link('.'+entry['harness']+'/'+entry['destination'],source(entry['source']))
         for rel,data in pending: engine.write(rel,data)
         native.install(args.assets_only)
+        engine.quarantine_caches()
     if engine.changed:
         print('Backups/state: '+str(engine.state_dir))
         print('Restore: cd '+shlex.quote(str(ROOT))+' && ./setup --uninstall'+(' --assets-only' if args.assets_only else ''))

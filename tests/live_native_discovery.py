@@ -58,7 +58,30 @@ class Wire:
         self.err.close(); self.p.stdin.close(); self.p.stdout.close()
         (E/(self.name+'-wire.json')).write_text(json.dumps(self.frames,ensure_ascii=False,indent=2)+'\n')
 
+f11_f12=os.environ.get('AGENT_SKILLS_F11_F12')=='1'
+runtime_created=[]; original_configs={}
+if f11_f12:
+    c=W/'retired-catalog'; p=c/'payload/.claude-plugin/plugin.json'; p.parent.mkdir(parents=True,exist_ok=True)
+    p.write_text(json.dumps({'name':'superpowers','version':'1.0.0','description':'synthetic original'}))
+    p=c/'.claude-plugin/marketplace.json'; p.parent.mkdir(exist_ok=True)
+    p.write_text(json.dumps({'name':'generated-local-cache','owner':{'name':'fixture'},'plugins':[{'name':'superpowers','source':'./payload'}]}))
+    run(['claude','plugin','marketplace','add',str(c),'--scope','user','--json'],'original-market')
+    run(['claude','plugin','install','superpowers@generated-local-cache','--scope','user','--json'],'original-plugin')
+    for rel in ('.claude/settings.json','.claude/plugins/known_marketplaces.json','.claude/plugins/installed_plugins.json'):
+        p=H/rel; s=p.stat(); original_configs[rel]=(p.read_bytes(),s.st_mode,s.st_mtime_ns)
 run([str(R/'setup')],'install')
+if f11_f12:
+    import compileall
+    engine=R/'sources/skills/paper-banana-claude/engine'
+    assert not list(engine.rglob('__pycache__'))
+    assert compileall.compile_dir(str(engine),quiet=1)
+    runtime_created=list(engine.rglob('__pycache__'))
+    cache=H/'.claude/plugins/cache/generated-local-cache/superpowers'
+    p=cache/'5bf4e7801107/.claude-plugin/plugin.json'; p.parent.mkdir(parents=True)
+    p.write_text(json.dumps({'name':'superpowers','version':'1.0.0'}))
+    run([str(R/'setup'),'--validate'],'runtime-validate')
+    assert 'QUARANTINE' in run([str(R/'setup'),'--dry-run'],'regenerated-dry')
+    assert 'QUARANTINE' in run([str(R/'setup')],'regenerated-rerun')
 manifest=json.loads((R/'manifest.yaml').read_text())
 for e in manifest['links']:
     p=H/('.'+e['harness'])/e['destination']
@@ -105,8 +128,19 @@ for name,role in roles.items():
 result={'managed_links':len(manifest['links']),'claude_slash_definitions':slash_definitions,'claude_commands':sum(r['category']=='commands' for r in slash_definitions),'claude_agent_definitions':definitions,'claude_native_name_collisions':{n:c for n,c in Counter(a['name'] for a in native_agents).items() if c>1},'claude_skills':sum(e['harness']=='claude' and e['destination'].startswith('skills/') for e in manifest['links']),'codex_skills':sum(e['harness']=='codex' and e['destination'].startswith('skills/') for e in manifest['links']),'codex_roles':len(roles),'model_turns_sent':0}
 assert not result['claude_native_name_collisions']
 (E/'discovery.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
+assert run([str(R/'setup'),'--dry-run'],'post-readback-dry')==''
+assert run([str(R/'setup')],'post-readback-rerun')==''
 run([str(R/'setup'),'--uninstall'],'uninstall')
 state=json.loads((H/'.agent-skills-setup/state.json').read_text())
 assert not state['records'] and not state['native']
 assert all(not (H/('.'+e['harness'])/e['destination']).is_symlink() for e in manifest['links'])
+assert run([str(R/'setup'),'--uninstall'],'second-uninstall')==''
+if f11_f12:
+    for rel,identity in original_configs.items():
+        p=H/rel; s=p.stat(); assert (p.read_bytes(),s.st_mode,s.st_mtime_ns)==identity,rel
+    for p in runtime_created:
+        for child in p.iterdir(): child.unlink()
+        p.rmdir()
+    result.update(runtime_packages=len(runtime_created),regenerated_cache_quarantined=True,post_readback_noop=True,original_configs_bytes_mode_mtime=True)
+    (E/'discovery.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
 print('PASS:',len(definitions),'Claude definitions with matching runtime descriptions, zero duplicates;',result['claude_skills'],'Claude skills;',result['codex_skills'],'Codex skills;',len(roles),'effective Codex roles;',len(manifest['links']),'exact links; uninstall clean controlled records; zero model turns')

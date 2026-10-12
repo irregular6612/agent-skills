@@ -110,6 +110,8 @@ class NativePlugins:
             p=Path(location)
             if not p.is_absolute() or '..' in p.parts or expected not in p.parents: raise ValueError('unexpected plugin cache path: '+location)
         self.e.path(str(expected.relative_to(self.e.home)))
+        from setup_symlinks import no_symlink_parents
+        no_symlink_parents(expected,True)
         return expected
     def capture_registries(self,target):
         from setup_symlinks import exists
@@ -250,21 +252,12 @@ class NativePlugins:
                 if not selected or selected.get('version')!=spec['version'] or selected.get('enabled') is not True: raise ValueError('native lock version/enabled readback failed')
                 for r in self.retired(target,self.plugins(target)):
                     cache=self.cache_path(target,r)
-                    self.e.move(str(cache.relative_to(self.e.home)))
+                    self.e.move(str(cache.relative_to(self.e.home)),cache_selector=r['_id'])
                     self.remove(target,r['_id'])
                     # Claude may rehydrate a missing installed cache while uninstalling
                     # and leave it orphaned. Preserve that generated copy too, but do
                     # not restore it over the original backup on uninstall.
-                    if cache.exists() or cache.is_symlink():
-                        destination=self.e.state_dir/'quarantine'/str(len(self.e.state.get('quarantine',[])))
-                        from setup_symlinks import no_symlink_parents, exists
-                        no_symlink_parents(destination)
-                        if exists(destination): raise ValueError('native orphan backup already exists')
-                        destination.parent.mkdir(mode=0o700,exist_ok=True)
-                        os.rename(cache,destination)
-                        self.e.state.setdefault('quarantine',[]).append(str(destination.relative_to(self.e.state_dir)))
-                        self.e.save()
-                        print('BACKUP native orphan '+str(cache)+' -> '+str(destination))
+                    self.e.quarantine_caches()
                 for name in obsolete:
                     # Original registry bytes restore the registration; move native
                     # catalog caches out of reach of the CLI's recursive deletion.
@@ -281,6 +274,7 @@ class NativePlugins:
         if skip:
             if self.e.state['native']: raise ValueError('native plugins are managed; omit --assets-only to restore them')
             return
+        self.e.quarantine_caches()
         for target,flags in list(self.e.state['native'].items()):
             if self.e.dry:
                 print('NATIVE RESTORE '+target); self.e.changed=True; continue
