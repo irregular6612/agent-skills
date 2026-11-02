@@ -87,7 +87,6 @@
       "mattpocock-skills",
       "diagram-design",
       "claude-official-skills",
-      "codex-plugin-cc",
       "understand-anything",
       "context7",
       "playwright",
@@ -1280,21 +1279,6 @@
           ]
         }
       ]
-    },
-    {
-      "id": "codex-plugin-cc",
-      "group": "plugins",
-      "title": "Codex plugin for Claude Code (openai)",
-      "description": "Delegate to / review with Codex; needs its plugin runtime, so installed as a plugin.",
-      "plugins": {
-        "claude": {
-          "name": "codex",
-          "marketplace": {
-            "name": "openai-codex",
-            "source": "openai/codex-plugin-cc"
-          }
-        }
-      }
     },
     {
       "id": "understand-anything",

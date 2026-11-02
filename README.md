@@ -128,7 +128,6 @@ python3 install.py graph --open                     # 의존성 그래프 열기
 
 | 패키지 | plugin | marketplace |
 |---|---|---|
-| `codex-plugin-cc` | `codex` (claude) | [openai/codex-plugin-cc](https://github.com/openai/codex-plugin-cc) |
 | `understand-anything` | `understand-anything` (claude) | [Lum1104/Understand-Anything](https://github.com/Lum1104/Understand-Anything) |
 | `context7` | `context7` (claude) | [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official) |
 | `playwright` | `playwright` (claude) | [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official) |
