@@ -354,6 +354,44 @@ def wanted(env, pkg, sub):
     return declared, glob, patterns, files
 
 
+def explicit_overlay(env, src):
+    """Codex reads agents/openai.yaml, not SKILL.md's disable-model-invocation. For skills that
+    should only run when called by name, build a twin of the upstream folder (links to every
+    upstream file) plus an agents/openai.yaml with allow_implicit_invocation: false."""
+    vendor = env.state_dir / "vendor"
+    overlay = env.state_dir / "overlays" / "codex-explicit" / src.relative_to(vendor)
+    if env.dry or not src.is_dir():
+        return overlay
+    overlay.mkdir(parents=True, exist_ok=True)
+    wanted = {e.name for e in src.iterdir()} | {"agents"}
+    for stale in overlay.iterdir():
+        if stale.name not in wanted:
+            remove_path(stale)
+    for entry in src.iterdir():
+        if entry.name == "agents":
+            continue
+        link = overlay / entry.name
+        if not (link.is_symlink() and os.readlink(str(link)) == str(entry)):
+            if lexists(link):
+                remove_path(link)
+            link.symlink_to(entry)
+    agents = overlay / "agents"
+    if agents.is_symlink():
+        agents.unlink()
+    agents.mkdir(exist_ok=True)
+    upstream = src / "agents"
+    for entry in (upstream.iterdir() if upstream.is_dir() else []):
+        if entry.name != "openai.yaml" and not lexists(agents / entry.name):
+            (agents / entry.name).symlink_to(entry)
+    text = (upstream / "openai.yaml").read_text(encoding="utf-8") if (upstream / "openai.yaml").is_file() else ""
+    text = re.sub(r"(?ms)^policy:\n(?:[ \t]+.*\n?)*", "", text).rstrip("\n")
+    text = (text + "\n" if text else "") + "policy:\n  allow_implicit_invocation: false\n"
+    target = agents / "openai.yaml"
+    if not target.is_file() or target.read_text(encoding="utf-8") != text:
+        target.write_text(text, encoding="utf-8")
+    return overlay
+
+
 def expand(env, cat, selection):
     """selection: list of (package_id, sub or None). Returns units, fetching what is needed."""
     # One fetch per upstream repository, covering every path this selection needs.
@@ -420,6 +458,9 @@ def expand(env, cat, selection):
     for u in units:
         if u.kind == "path" and mode_scoped(u.dest):
             u.mode = env.target_mode
+        if (u.kind == "path" and u.harness == "codex" and u.dest.startswith("skills/")
+                and cat["by_id"][u.package].get("codex_explicit_only") and u.origin != "own"):
+            u.src = explicit_overlay(env, u.src)
     return units
 
 
@@ -625,6 +666,9 @@ def link_entry(link, target, notes):
         if os.readlink(str(link)) != str(target):
             link.unlink()
             link.symlink_to(target)
+    elif link.is_file() and re.search(r"(stamp|cache)", link.name, re.I):
+        link.unlink()  # a cache the tool rewrote in place of the link: share the real one again
+        link.symlink_to(target)
     elif lexists(link):
         notes.append("{} is a real file, not a link to {} (it is not shared)".format(link, target))
     else:

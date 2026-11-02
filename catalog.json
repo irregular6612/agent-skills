@@ -49,7 +49,8 @@
       "claude-subagent-library",
       "dev-agents",
       "research-agents",
-      "portfolio-agents"
+      "portfolio-agents",
+      "aside-browser"
     ],
     "day": [
       "ditto-writer",
@@ -84,14 +85,11 @@
       "eli5",
       "karpathy-guidelines",
       "mattpocock-skills",
-      "diagram-design",
       "claude-official-skills",
       "understand-anything",
       "context7",
-      "playwright",
       "code-review",
       "ralph-loop",
-      "remember",
       "learning-output-style",
       "cloudflare-mcp",
       "pstack:principle-attack-the-premise",
@@ -119,7 +117,9 @@
       "pstack:show-me-your-work",
       "pstack:poteto-mode",
       "pstack:how",
-      "pstack:why"
+      "pstack:why",
+      "aside-browser",
+      "agent-browser"
     ],
     "night": [
       "ditto-writer",
@@ -146,7 +146,9 @@
       "dev-agents",
       "research-agents",
       "portfolio-agents",
-      "pstack"
+      "pstack",
+      "aside-browser",
+      "agent-browser"
     ]
   },
   "packages": [
@@ -159,7 +161,12 @@
         {
           "harness": "claude",
           "dest": "skills/ditto-writer",
-          "src": "sources/skills/ditto-writer-claude"
+          "src": "sources/skills/ditto-writer"
+        },
+        {
+          "harness": "codex",
+          "dest": "skills/ditto-writer",
+          "src": "sources/skills/ditto-writer"
         }
       ]
     },
@@ -664,6 +671,24 @@
       ]
     },
     {
+      "id": "aside-browser",
+      "group": "mine",
+      "title": "aside-browser",
+      "description": "Logged-in personal web tasks (mail, calendar, messengers, personal context) through the Aside CLI; everything else goes to agent-browser. Needs the aside CLI.",
+      "items": [
+        {
+          "harness": "claude",
+          "dest": "skills/aside-browser",
+          "src": "sources/skills/aside-browser"
+        },
+        {
+          "harness": "codex",
+          "dest": "skills/aside-browser",
+          "src": "sources/skills/aside-browser"
+        }
+      ]
+    },
+    {
       "id": "dev-agents",
       "group": "agents",
       "title": "Dev subagents (code-reviewer, debugger, test-writer, ...)",
@@ -968,7 +993,7 @@
       "id": "k-dense",
       "group": "external",
       "title": "Scientific Agent Skills (K-Dense) — writing/research subset",
-      "description": "10 research-writing skills from K-Dense-AI/scientific-agent-skills (the repo has 177; pick any).",
+      "description": "9 research-writing skills from K-Dense-AI/scientific-agent-skills (the repo has 177; pick any).",
       "source": {
         "repo": "K-Dense-AI/scientific-agent-skills",
         "ref": "a25cf9ec00e2745d03f8704acf6f6919694ccd9a",
@@ -1010,14 +1035,6 @@
         {
           "name": "markdown-mermaid-writing",
           "path": "skills/markdown-mermaid-writing",
-          "harness": [
-            "claude",
-            "codex"
-          ]
-        },
-        {
-          "name": "peer-review",
-          "path": "skills/peer-review",
           "harness": [
             "claude",
             "codex"
@@ -1071,7 +1088,8 @@
           "claude",
           "codex"
         ]
-      }
+      },
+      "codex_explicit_only": true
     },
     {
       "id": "cloudflare-skills",
@@ -1243,36 +1261,6 @@
       }
     },
     {
-      "id": "diagram-design",
-      "group": "external",
-      "title": "diagram-design (cathrynlavery) — skill + commands",
-      "description": "Editorial architecture/flow/chart diagrams as HTML/SVG; /export-diagram, /import-mermaid ...",
-      "source": {
-        "repo": "cathrynlavery/diagram-design",
-        "ref": "0cf73c3fcc56667ad91a9a04c439ac6ccfabc9d1",
-        "license": "MIT"
-      },
-      "skills": [
-        {
-          "name": "diagram-design",
-          "path": "skills/diagram-design",
-          "harness": [
-            "claude",
-            "codex"
-          ]
-        }
-      ],
-      "files_glob": [
-        {
-          "path": "commands",
-          "dest": "commands",
-          "harness": [
-            "claude"
-          ]
-        }
-      ]
-    },
-    {
       "id": "claude-official-skills",
       "group": "external",
       "title": "Anthropic official plugin skills (per skill)",
@@ -1339,21 +1327,6 @@
       }
     },
     {
-      "id": "playwright",
-      "group": "plugins",
-      "title": "playwright (Claude official plugin)",
-      "description": "MCP: browser automation",
-      "plugins": {
-        "claude": {
-          "name": "playwright",
-          "marketplace": {
-            "name": "claude-plugins-official",
-            "source": "anthropics/claude-plugins-official"
-          }
-        }
-      }
-    },
-    {
       "id": "code-review",
       "group": "plugins",
       "title": "code-review (Claude official plugin)",
@@ -1376,21 +1349,6 @@
       "plugins": {
         "claude": {
           "name": "ralph-loop",
-          "marketplace": {
-            "name": "claude-plugins-official",
-            "source": "anthropics/claude-plugins-official"
-          }
-        }
-      }
-    },
-    {
-      "id": "remember",
-      "group": "plugins",
-      "title": "remember (Claude official plugin)",
-      "description": "Session memory hooks",
-      "plugins": {
-        "claude": {
-          "name": "remember",
           "marketplace": {
             "name": "claude-plugins-official",
             "source": "anthropics/claude-plugins-official"
@@ -1460,6 +1418,27 @@
             "codex"
           ],
           "requires": "npm install --global rea-agents"
+        }
+      ]
+    },
+    {
+      "id": "agent-browser",
+      "group": "external",
+      "title": "agent-browser (vercel-labs) — browser automation CLI skill",
+      "description": "Browser automation for agents via the agent-browser CLI (Chrome over CDP, accessibility snapshots). Needs: npm install -g agent-browser && agent-browser install.",
+      "source": {
+        "repo": "vercel-labs/agent-browser",
+        "ref": "5868f7c05020e047c00e68e4abf9253cce864f41",
+        "license": "Apache-2.0"
+      },
+      "skills": [
+        {
+          "name": "agent-browser",
+          "path": "skills/agent-browser",
+          "harness": [
+            "claude",
+            "codex"
+          ]
         }
       ]
     }

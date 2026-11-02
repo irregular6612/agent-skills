@@ -55,6 +55,28 @@ class Helpers(unittest.TestCase):
                          ["a", "pstack/LICENSE", "pstack/skills"])
 
 
+class Overlay(Sandbox):
+    def test_codex_explicit_overlay_links_upstream_and_adds_policy(self):
+        sys.path.insert(0, str(REPO))
+        import install, argparse
+        os.environ["AGENT_SKILLS_STATE"] = str(self.home / ".agent-skills")
+        try:
+            env = install.Env(argparse.Namespace(harness="codex", dry_run=False, force=False, mode=None, method=None))
+        finally:
+            del os.environ["AGENT_SKILLS_STATE"]
+        src = self.home / ".agent-skills" / "vendor" / "o__r" / "abc" / "skills" / "x"
+        (src / "agents").mkdir(parents=True)
+        (src / "SKILL.md").write_text("---\nname: x\n---\n")
+        (src / "agents" / "openai.yaml").write_text("interface:\n  display_name: X\npolicy:\n  allow_implicit_invocation: true\n")
+        out = install.explicit_overlay(env, src)
+        self.assertEqual(Path(os.readlink(out / "SKILL.md")), src / "SKILL.md")
+        yaml = (out / "agents" / "openai.yaml").read_text()
+        self.assertIn("display_name: X", yaml)
+        self.assertIn("allow_implicit_invocation: false", yaml)
+        self.assertNotIn("allow_implicit_invocation: true", yaml)
+        self.assertEqual(src.joinpath("agents", "openai.yaml").read_text().count("true"), 1)  # upstream untouched
+
+
 class OwnPackages(Sandbox):
     def test_catalog_lists_every_package(self):
         out = self.run_cli("list", "--harness", "claude,codex").stdout

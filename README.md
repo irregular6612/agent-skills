@@ -119,7 +119,7 @@ Codex night 폴더의 `config.toml`은 평소 설정에서 subagent 등록만 ni
 
 | 패키지 | 대상 | 설명 |
 |---|---|---|
-| `ditto-writer` | claude | 내가 직접 쓴 글로 만든 문체·저자 프로필로, 사람이 쓴 것처럼 글을 다시 쓰는 루프(writer 1 + 매 라운드 새 블라인드 리뷰어 Anthropic·OpenAI). 트리거 — 내 말투로 바꿔줘… |
+| `ditto-writer` | claude + codex | 내가 직접 쓴 글로 만든 문체·저자 프로필로, 사람이 쓴 것처럼 글을 다시 쓰는 루프(writer 1 + 매 라운드 새 블라인드 리뷰어 Anthropic·OpenAI). 트리거 — 내 말투로 바꿔줘… |
 | `humanize` | claude + codex | AI(ChatGPT·Claude·Gemini)가 쓴 한글·영문 텍스트를 사람이 쓴 것처럼 윤문(한글 Fast/Strict 듀얼 모드, 영문 voice 기반). 내용·사실·수치·인용은 한 글자도 안 … |
 | `iterative-academic-writer` | claude + codex | Use when writing academic documents — 논문 섹션(Introduction, Methods, Results, Discussion), 연구 제안서, SoP, 학업계획서, 기… |
 | `paper-radar` | claude | 개인 관심 트랙 기반 논문 발굴·선별 레이더. 반복 실행(daily/weekly)해 여러 트랙에서 후보를 모으고, 이전 radar state와 기존 Wiki에 대해 중복 제거한 뒤 학습 가치로 랭킹… |
@@ -140,6 +140,7 @@ Codex night 폴더의 `config.toml`은 평소 설정에서 subagent 등록만 ni
 | `weekly-report-writer` | codex | Automatically generate academic-style weekly research reports by analyzing Git changes in the current project … |
 | `claude-command-library` | codex | Reuse, inspect, adapt, or run migrated Claude Code slash commands from ~/.codex/commands inside Codex. |
 | `claude-subagent-library` | codex | Reuse, inspect, adapt, or run migrated Claude Code specialist prompts as Codex-compatible custom agents. |
+| `aside-browser` | claude + codex | 로그인된 개인 계정 작업(메일·일정·메신저·개인 맥락)을 Aside CLI로 처리. 나머지 브라우저 작업은 agent-browser. `aside` CLI 필요 |
 | `dev-agents` | claude + codex | General engineering subagents: code-reviewer, debugger, code-cleanup-optimizer, modular-code-architect, securi… |
 | `research-agents` | claude + codex | Research workflow subagents: experiment-interpreter, experiment-verifier, academic-planner, academic-writing-a… |
 | `portfolio-agents` | codex | Codex-only stock portfolio analysis roles: chart, fundamentals, news |
@@ -150,7 +151,7 @@ Codex night 폴더의 `config.toml`은 평소 설정에서 subagent 등록만 ni
 | 패키지 | 원작자 repo | 커밋 | 라이선스 | 포함 skill |
 |---|---|---|---|---|
 | `taste-skill` | [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill) | `84ff339` | MIT | brandkit, design-taste-frontend, full-output-enforcement, image-to-code, industrial-brutalist-ui, minimalist-ui, redesign-existing-projects |
-| `k-dense` | [K-Dense-AI/scientific-agent-skills](https://github.com/K-Dense-AI/scientific-agent-skills) | `a25cf9e` | MIT | autoskill, citation-management, latex-posters, literature-review, markdown-mermaid-writing, peer-review, pptx-posters, research-grants, scientific-schematics, scientific-slides |
+| `k-dense` | [K-Dense-AI/scientific-agent-skills](https://github.com/K-Dense-AI/scientific-agent-skills) | `a25cf9e` | MIT | autoskill, citation-management, latex-posters, literature-review, markdown-mermaid-writing, pptx-posters, research-grants, scientific-schematics, scientific-slides |
 | `pstack` | [cursor/plugins](https://github.com/cursor/plugins/tree/main/pstack) | `ae5650f` | MIT | `pstack/skills/` 아래 전부 (원칙 skill, benchmark-checklist, blast-radius, /poteto-mode의 hillclimb 플레이북 등). day에는 겹치지 않는 26개, night에는 전부 |
 | `cloudflare-skills` | [cloudflare/skills](https://github.com/cloudflare/skills) | `1a33048` | Apache-2.0 | `skills/` 아래 전부 |
 | `document-skills` | [anthropics/skills](https://github.com/anthropics/skills) | `ca45fc4` | Proprietary (see upstream LICENSE.txt) | docx, pdf, pptx, xlsx |
@@ -159,9 +160,9 @@ Codex night 폴더의 `config.toml`은 평소 설정에서 subagent 등록만 ni
 | `karpathy-guidelines` | [forrestchang/andrej-karpathy-skills](https://github.com/forrestchang/andrej-karpathy-skills) | `2c60614` | unspecified upstream | CLAUDE.md → 전역 지침 |
 | `superpowers` | [obra/superpowers](https://github.com/obra/superpowers) | `2ce8aa1` | MIT | `skills/` 아래 전부 |
 | `mattpocock-skills` | [mattpocock/skills](https://github.com/mattpocock/skills) | `4ae2317` | MIT | `skills/engineering/` 아래 전부 |
-| `diagram-design` | [cathrynlavery/diagram-design](https://github.com/cathrynlavery/diagram-design) | `0cf73c3` | MIT | diagram-design, commands |
 | `claude-official-skills` | [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official) | `a7ba5b9` | Apache-2.0 | frontend-design, skill-creator, claude-automation-recommender |
 | `rea` | [morluto/rea](https://github.com/morluto/rea) | `144843c` | MIT | reverse-engineer-anything + `rea` MCP 서버 (`npm install --global rea-agents` 필요) |
+| `agent-browser` | [vercel-labs/agent-browser](https://github.com/vercel-labs/agent-browser) | `5868f7c` | Apache-2.0 | agent-browser (`npm install -g agent-browser && agent-browser install` 필요) |
 
 ### 외부 plugin (claude/codex CLI로 설치 — MCP·hook·plugin 런타임이 필요한 것만)
 
@@ -169,10 +170,8 @@ Codex night 폴더의 `config.toml`은 평소 설정에서 subagent 등록만 ni
 |---|---|---|
 | `understand-anything` | `understand-anything` (claude) | [Lum1104/Understand-Anything](https://github.com/Lum1104/Understand-Anything) |
 | `context7` | `context7` (claude) | [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official) |
-| `playwright` | `playwright` (claude) | [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official) |
 | `code-review` | `code-review` (claude) | [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official) |
 | `ralph-loop` | `ralph-loop` (claude) | [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official) |
-| `remember` | `remember` (claude) | [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official) |
 | `learning-output-style` | `learning-output-style` (claude) | [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official) |
 | `cloudflare-mcp` | `cloudflare` (claude) | [cloudflare/skills](https://github.com/cloudflare/skills) |
 
