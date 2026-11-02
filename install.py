@@ -184,6 +184,12 @@ def vendor_dir(env, source):
     return env.state_dir / "vendor" / (owner + "__" + name) / source["ref"][:12]
 
 
+def minimal_paths(paths):
+    """Drop paths already covered by a parent in the same set (skills/ covers skills/x)."""
+    norm = sorted({p.strip("/") for p in paths})
+    return [p for p in norm if not any(p != q and p.startswith(q + "/") for q in norm)]
+
+
 def fetch(env, source, patterns):
     """Fetch only `patterns` (repo-relative paths) of source.repo at source.ref."""
     if not re.fullmatch(r"[0-9a-f]{40}", source["ref"]):
@@ -193,9 +199,9 @@ def fetch(env, source, patterns):
     have = set()
     if marker.exists():
         have = set(json.loads(marker.read_text(encoding="utf-8")).get("patterns", []))
-        if set(patterns) <= have:
+        if all(any(p.strip("/") == h or p.strip("/").startswith(h + "/") for h in have) for p in patterns):
             return dest
-    want = sorted(have | set(patterns))
+    want = minimal_paths(have | set(patterns))
     say("  fetch  {}@{}  ({})".format(source["repo"], source["ref"][:12], ", ".join(want)))
     if env.dry:
         return dest
@@ -222,10 +228,7 @@ def fetch_git(source, patterns, out):
     url = "https://github.com/" + source["repo"] + ".git"
     work = out / ".git-work"
     run(["git", "clone", "--quiet", "--filter=blob:none", "--no-checkout", url, str(work)])
-    sparse = []
-    for p in patterns:
-        p = p.strip("/")
-        sparse.append("/" + p if "." in Path(p).name else "/" + p + "/")
+    sparse = ["/" + p.strip("/") for p in patterns]  # matches a file or a whole directory
     run(["git", "-C", str(work), "sparse-checkout", "set", "--no-cone"] + sparse)
     run(["git", "-C", str(work), "checkout", "--quiet", source["ref"]])
     head = run(["git", "-C", str(work), "rev-parse", "HEAD"]).stdout.strip()

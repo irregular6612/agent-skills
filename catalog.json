@@ -83,7 +83,6 @@
       "notebooklm",
       "eli5",
       "karpathy-guidelines",
-      "superpowers",
       "mattpocock-skills",
       "diagram-design",
       "claude-official-skills",
@@ -94,7 +93,33 @@
       "ralph-loop",
       "remember",
       "learning-output-style",
-      "cloudflare-mcp"
+      "cloudflare-mcp",
+      "pstack:principle-attack-the-premise",
+      "pstack:principle-boundary-discipline",
+      "pstack:principle-build-the-lever",
+      "pstack:principle-encode-lessons-in-structure",
+      "pstack:principle-experience-first",
+      "pstack:principle-explain-the-number",
+      "pstack:principle-foundational-thinking",
+      "pstack:principle-guard-the-context-window",
+      "pstack:principle-make-operations-idempotent",
+      "pstack:principle-migrate-callers-then-delete-legacy-apis",
+      "pstack:principle-minimize-reader-load",
+      "pstack:principle-model-the-domain",
+      "pstack:principle-outcome-oriented-execution",
+      "pstack:principle-prove-it-works",
+      "pstack:principle-redesign-from-first-principles",
+      "pstack:principle-separate-before-serializing-shared-state",
+      "pstack:principle-sequence-verifiable-units",
+      "pstack:principle-type-system-discipline",
+      "pstack:benchmark-checklist",
+      "pstack:blast-radius",
+      "pstack:correct",
+      "pstack:sharpen",
+      "pstack:show-me-your-work",
+      "pstack:poteto-mode",
+      "pstack:how",
+      "pstack:why"
     ]
   },
   "packages": [
@@ -1014,15 +1039,15 @@
     {
       "id": "pstack",
       "group": "external",
-      "title": "pstack (Cloeille) — engineering rigor stack",
-      "description": "poteto-mode orchestrator + how/architect/interrogate/swarm/unslop and principle-* skills.",
+      "title": "pstack (poteto, Cursor official plugin) — engineering principles & workflows",
+      "description": "poteto's pstack from cursor/plugins (MIT): principle-* skills, benchmark-checklist, blast-radius, correct, sharpen, show-me-your-work, /poteto-mode with playbooks such as hillclimb. Most skills only run when called by name. Pick single skills with pstack:<name>.",
       "source": {
-        "repo": "Cloeille/pstack",
-        "ref": "d9454cc1ecba5f28b136deacdfe2df959cf7cdec",
+        "repo": "cursor/plugins",
+        "ref": "ae5650febf4320793844c12c4adaa937f417f8da",
         "license": "MIT"
       },
       "skills_glob": {
-        "path": "skills",
+        "path": "pstack/skills",
         "harness": [
           "claude",
           "codex"

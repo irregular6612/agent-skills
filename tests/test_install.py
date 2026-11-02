@@ -47,6 +47,14 @@ class Sandbox(unittest.TestCase):
         return json.loads((self.home / ".agent-skills" / "state.json").read_text())
 
 
+class Helpers(unittest.TestCase):
+    def test_minimal_paths_drops_children_of_fetched_parents(self):
+        sys.path.insert(0, str(REPO))
+        import install
+        self.assertEqual(install.minimal_paths({"pstack/skills", "pstack/skills/how", "pstack/LICENSE", "/a/"}),
+                         ["a", "pstack/LICENSE", "pstack/skills"])
+
+
 class OwnPackages(Sandbox):
     def test_catalog_lists_every_package(self):
         out = self.run_cli("list", "--harness", "claude,codex").stdout
