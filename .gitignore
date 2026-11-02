@@ -1,46 +1,26 @@
-# --- secrets: never commit ---
+# secrets
 .env
 .env.*
 !.env.example
 *.local.json
 credentials*.json
 storage_state.json
+auth.json
 
-# --- python ---
+# python / node
 .venv/
 venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
-.ruff_cache/
-.mypy_cache/
-
-# --- node ---
 node_modules/
 
-# --- generated / runtime artifacts ---
+# generated / runtime
 outputs/
 *.log
-
-# --- macOS ---
-.DS_Store
-
-# vendored upstream clone — re-fetch instead of vendoring
-# https://github.com/karpathy/autoresearch
-claude-code/karpathy/autoresearch/
-
-# local installer/test state — never publish
 .test-tmp/
-.setup-venv/
-.agent-skills-setup/
+
+# local tool state
+.remember/
+.DS_Store
 ._*
-*.sqlite
-*.sqlite3
-*.db
-auth.json
-history.jsonl
-sessions/
-projects/
-memory/
-cache/
-logs/

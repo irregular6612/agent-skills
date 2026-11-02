@@ -1,6 +1,5 @@
 #!/bin/bash
-# macOS Bash 3.2 compatible; all installation logic uses Python stdlib.
+# Kept for old instructions (`./setup`). Everything now lives in install.py.
 set -eu
 ROOT="$(cd "$(dirname "$0")" && pwd -P)"
-export PYTHONDONTWRITEBYTECODE=1
-exec python3 "$ROOT/tools/setup_symlinks.py" "$@"
+exec python3 "$ROOT/install.py" "$@"

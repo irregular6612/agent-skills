@@ -1,157 +1,171 @@
-# agent-skills: item-symlink SSOT
+# agent-skills
 
-Install from a durable checkout outside iCloud:
+Claude Code와 Codex에서 쓰는 제 skill·subagent·설정을 **파일 하나로 골라서 설치하고, 골라서 지우는** 저장소입니다.
 
-```bash
-git clone https://github.com/irregular6612/agent-skills ~/Workspace/agent-skills
-cd ~/Workspace/agent-skills
-./setup --dry-run
-./setup
-```
+- **내 skill**은 `sources/`에 원본 하나만 둡니다. Claude Code와 Codex 양쪽이 같은 원본을 symlink로 씁니다(SSOT).
+- **남의 skill**은 이 저장소에 복사해 두지 않습니다. `catalog.json`에 원작자 repo, 고정 커밋, 경로만 적어 두고, 설치할 때 원작자 repo에서 받아 옵니다.
+- superpowers 같은 외부 plugin도 skill 단위로 받아서 골라 설치합니다. MCP 서버, hook, plugin 전용 런타임이 꼭 필요한 것만 공식 `claude plugin` CLI로 설치합니다.
+- 설치할 때마다 지금 설치된 skill, subagent, MCP 서버의 **의존성 그래프**(Obsidian 스타일 HTML)를 다시 만듭니다.
 
-`./setup` uses macOS Bash and Python 3 stdlib. It requires the Claude and Codex
-native plugin CLIs on PATH for a full installation; missing CLIs fail explicitly.
-No global Python package installation, paid API, launchd changes, or publishing.
-`--assets-only` is an explicit offline asset test mode, NOT a complete plugin setup.
+## 설치
 
-## Contract
-
-- `manifest.yaml` (JSON-compatible YAML) enumerates item symlinks. The complete
-  `skills`, `agents`, `commands`, or `prompts` roots are never linked wholesale.
-- `sources/skills/<native-skill-name>/` contains one canonical original per
-  reviewed common skill, including supporting assets. Both harnesses link to it.
-  Explicit supersession records and functional diffs determine consolidation;
-  copied mtimes do not determine recency. Native role metadata stays in thin
-  adapters that read canonical domain bodies, not full copied workflows.
-  See `docs/SYMLINK-INVENTORY.json` and `docs/HARNESS-VARIANTS.json`.
-  Current correction decisions and active counts are in `docs/SETUP-CORRECTIONS.md`;
-  historical inventories are provenance, not the current installation manifest.
-- `~/.claude/CLAUDE.md` and `~/.codex/AGENTS.md` link to `sources/instructions/`.
-  The current inventory confirmed an empty Claude guideline; the existing repo
-  Codex guideline is preserved. A different future machine's existing guidelines
-  are backed up, never silently imported into or used to overwrite the checkout.
-- Codex TOML agents link individually and their `config_file` entries are merged
-  into config.toml. Claude commands are exposed as Codex reference prompts;
-  this is not a claim that every Claude command is natively executable in Codex.
-- `templates/claude-settings.json` shares owned paper hooks and permission rules;
-  `templates/codex-config.json` shares agent/plugin declarations. Existing machine
-  config, unknown keys, permissions, comments in TOML, and project trust stay local.
-  Config files remain regular files, never symlinks. Single-quoted scalar keys
-  are supported. Managed dotted keys, inline tables, array tables, and target
-  multiline values fail before ANY HOME/native writes on Python 3.9 and 3.12.
-  Use explicit `[agents.role]` tables with scalar assignments for managed fields.
-  Python 3.11+ additionally validates full TOML with tomllib. Both macOS-default
-  Python 3.9.6/Bash 3.2 and Python 3.12 were exercised in this run.
-- Destinations are checked after Unicode NFD normalization and case folding,
-  including overlapping paths. This portable conservative policy rejects aliases
-  even on case-sensitive filesystems, without writing a probe into HOME.
-- Claude skills and slash-command wrappers share a native command namespace.
-  Managed names must be unique across both categories before any HOME/native writes.
-  `/humanize` remains the unchanged skill; use `/humanize-command` for the explicit
-  text/file wrapper and `/humanize-redo` for a second pass. Approved old
-  `commands/humanize.md` copies/links are backed up and retired, then restored with
-  their original bytes/link/mode/mtime on uninstall. The old command source stays
-  unchanged as an approval snapshot; modified copies/links fail before any writes.
-  Unknown/external assets outside those explicit managed paths remain untouched.
-- Claude native agent names must be unique. Three byte-identical prompt bodies
-  share canonical definitions; the different DSLab reviewer is named
-  `dslab-academic-reviewer`. `retired_links` backs up/removes approved old aliases
-  and restores them on uninstall; modified aliases fail before any writes.
-- `.system`, unrelated plugin caches, the external `.agents` taste-skill payload,
-  agentcat-usage, lost-me and unmanaged hooks are preserved. Seven verified taste
-  skills are vendored at immutable commit `84ff339312d29955ce2040c02fd6e5bedb934608`
-  with their MIT license. Managed `.claude/skills` and `.codex/skills` items link
-  reversibly to exact upstream bytes. Existing conflicts are backed up/restored.
-  See `docs/TASTE-PROVENANCE.json` and `docs/SSOT-CONSOLIDATION.md`.
-  Exclusion is NOT deletion
-  of a user's preexisting denylisted skills/plugins.
-- `dependencies/lock.yaml` pins superpowers at immutable upstream commits:
-  Claude v6.4.1 and Codex v6.4.2. Metadata-only native catalogs select those commits
-  as `superpowers@ssot-pinned`. Upstream plugin payloads live only in each
-  harness's native cache, never vendored by setup into the repo. Other superpowers
-  registrations and the old copied `bagjuhyeon-agent-ssot@generated-local-cache`
-  registration are backed up/retired through the native CLI. Obsolete dedicated
-  catalogs containing only those plugins are also backed up/unregistered and read
-  back, even if their plugin is already gone. Mixed/unrelated catalogs and those
-  used by unrelated installed plugins remain untouched. Uninstall restores exact
-  registry bytes and native catalog caches, then reads back marketplace names/sources.
-- Auth/credentials/tokens, history, sessions, projects/memory, logs, cache, SQLite,
-  `.DS_Store`, and the denylist are never imported from HOME. Only the explicit
-  config/registry files needing reversible changes are backed up locally.
-
-## Backup, restore, and editing
-
-Real conflicting items, including dangling or external symlinks, are moved (not
-recursively deleted) into `$HOME/.agent-skills-setup/backups/`. The journal maps
-original locations to backups. Each move and the restore command are printed.
-The state and backups are local-only; never add them to Git.
+macOS / Linux:
 
 ```bash
-./setup --uninstall
+curl -fsSL https://raw.githubusercontent.com/irregular6612/agent-skills/master/install.sh | bash
 ```
 
-Uninstall removes only links this checkout created and restores exact original
-files/symlinks/configs/plugin caches. Already-correct preexisting symlinks are not
-claimed and remain after uninstall. User edits to managed local config or a
-replaced link fail closed before further writes; save your local edits, restore
-that managed file/link to its installed state, then retry uninstall. Repo edits
-are immediately visible through the item links without reinstalling. Add a new
-manifest item and rerun setup to create a new link.
+Windows (PowerShell, 아직 검증 전):
 
-Native cache regeneration is not attributed to a particular process. Setup
-recognizes only a previously retired selector/path recorded in its journal and
-a real cache tree whose revision directories contain matching plugin metadata.
-It preserves the whole regenerated tree under local `quarantine/`, separately
-from the ORIGINAL backup. It never merges it with or restores it over the
-original. The rename is journaled for retry before/after interruption. Unknown
-leaf contents, symlink roots/parents, missing backups and modified managed
-configs still fail closed. Older tombstones without selector evidence are not
-automatically upgraded. See `docs/SETUP-REGENERATED-CACHE.md` for exact limits.
-Native-generated bootstrap state (e.g. `.claude.json`, CLI logs, or empty cache
-directories) is
-harness-owned and is deliberately not collected, deleted, or byte-restored.
-Uninstall restores controlled config/registrations and original conflict items,
-not the entire HOME snapshot. The rollback journal is not a crash-proof filesystem
-transaction; interrupted I/O/native commands may need inspection of the printed
-backups before retry. Never delete backups merely to bypass a conflict.
-
-`--dry-run` reads local metadata only and makes no filesystem/network/native CLI
-changes. It prints only proposed changes, and prints nothing on an already fully
-installed fixture. Network/plugin errors return nonzero, never fabricated success.
-A partial native installation retains a journal for `--uninstall`.
-
-## Layout and verification
-
-```text
-setup                           single command entrypoint
-tools/setup_symlinks.py          path checks, journal, links, config merge/restore
-tools/setup_plugins.py           native pin, duplicate cleanup/readback/restore
-manifest.yaml                   item destinations + provenance
-sources/{skills,agents,commands,instructions,hooks}/
-templates/                      whitelisted shared config only
-dependencies/lock.yaml           immutable plugin and verified taste-skill coordinates
-dependencies/marketplaces/       native catalog metadata, no plugin payload
-policy/denylist.yaml             matt-pocock/mattpocock/auto-code exclusions
-docs/inventory/t_8f75d661/        upstream read-only migration/inventory evidence
+```powershell
+irm https://raw.githubusercontent.com/irregular6612/agent-skills/master/install.ps1 | iex
 ```
 
-The historical `claude-code/` and `codex/` trees remain reference material for the
-previous marketplace layout. They are NOT setup inputs; only manifest sources
-are active SSOT originals. The denylisted legacy auto-code tree is removed from
-the current checkout/package (history remains). No old marketplace installation
-is needed for owned direct-link assets. Codex now has a native plugin system;
-the prior README claim that it did not is obsolete.
+저장소를 `~/.agent-skills/repo`에 받은 뒤 선택 화면을 엽니다. 번호(`1 3 5-8`), 패키지 id, 패키지 안의 skill 하나(`k-dense:literature-review`), 프리셋 이름(`mine`, `juhyeon-full`) 중 무엇이든 입력하면 됩니다.
+
+필요한 것: Python 3.9+ (표준 라이브러리만 씁니다), git. plugin 항목을 고를 때만 `claude` / `codex` CLI가 필요합니다.
+
+## 사용법
 
 ```bash
-./setup --validate
-PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -p 'test_*.py' -v
-# Isolated native CLI/network tests (no model calls or paid API):
-python3 tests/live_native_smoke.py
-python3 tests/live_native_duplicates.py
-python3 tests/live_native_marketplaces.py
-python3 tests/live_native_discovery.py
+python3 install.py                                  # 대화형 선택
+python3 install.py list                             # 카탈로그와 설치 상태 ([x])
+python3 install.py install ditto-writer humanize    # 골라서 설치
+python3 install.py install superpowers:brainstorming k-dense:literature-review   # 패키지 안의 skill 하나만
+python3 install.py install --preset juhyeon-full    # 제 전체 세팅
+python3 install.py uninstall humanize               # 골라서 제거 (인자 없으면 대화형)
+python3 install.py uninstall --all                  # 이 도구가 설치한 것 전부 제거
+python3 install.py graph --open                     # 의존성 그래프 열기
 ```
 
-Independent fresh-clone and actual-home release validation belong to the
-pre-created dev-verifier/dev-operator cards. Do not treat these implementation
-self-tests as release approval, and do not push this implementation automatically.
+자주 쓰는 옵션은 아래와 같습니다.
+- `--harness claude,codex`: 대상을 고릅니다. 기본값은 이 기기에 있는 쪽입니다.
+- `--mode link|copy`: 기본값은 mac/linux가 link, windows가 copy입니다.
+- `--dry-run`: 실제로 바꾸지 않고 무엇이 바뀔지만 보여 줍니다.
+- `-y`: 확인 질문 없이 진행합니다.
+- `--force`: 설치 후 직접 수정한 항목도 교체하거나 제거합니다.
+
+한 줄 설치에 인자를 넘길 수도 있습니다: `curl -fsSL …/install.sh | bash -s -- install ditto-writer -y`
+
+## 동작 방식
+
+| 무엇 | 어디에 |
+|---|---|
+| 내 skill·agent·command·hook 원본 | `sources/` → `~/.claude/…`, `~/.codex/…`에 symlink |
+| 외부 skill | `~/.agent-skills/vendor/<owner>__<repo>/<commit>/`에 필요한 경로만 받음 (git sparse checkout, git이 없으면 tarball) |
+| 설치 기록 | `~/.agent-skills/state.json` |
+| 원래 있던 파일 | `~/.agent-skills/backups/`로 옮겨 두었다가 제거할 때 되돌림 |
+| Codex subagent 등록 | `~/.codex/config.toml` 끝에 표시된 블록(`# >>> agent-skills managed agents`)으로만 추가·삭제 |
+| Claude hook 등록 | `~/.claude/settings.json`에 추가한 항목만 기록해 두고 제거할 때 그것만 뺌 |
+| 의존성 그래프 | `~/.agent-skills/graph.html` |
+
+- **uninstall은 이 도구가 놓은 것만 지웁니다.** 설치 뒤 사용자가 고친 항목은 `--force` 없이 건드리지 않습니다.
+- **같은 이름 skill이 두 패키지에 있으면** 먼저 설치된 쪽을 유지하고 경고합니다. 예: `pstack`과 `mattpocock-skills`에 둘 다 있는 `tdd`.
+- 외부 skill을 새 버전으로 올리려면 `catalog.json`의 `ref`를 원하는 커밋 SHA로 바꾼 뒤 `install`을 다시 실행합니다.
+
+## 의존성 그래프
+
+`install`과 `uninstall`이 끝날 때마다, 또는 `install.py graph`를 실행하면 `~/.claude`와 `~/.codex`를 실제로 스캔해 그래프를 다시 만듭니다.
+
+- **노드**: skill(보라), subagent(청록), MCP 서버(주황)
+  - 직접 설치한 것, 켜져 있는 plugin 안의 것, `~/.claude.json`과 `~/.codex/config.toml`에 등록된 MCP를 모두 포함합니다.
+- **간선**: skill이나 subagent 본문(SKILL.md, references/)이 다른 subagent, skill, MCP를 언급하면 이어집니다.
+  - 하이픈이 들어간 이름은 그대로 찾습니다.
+  - `pdf`·`debugger`처럼 한 단어 이름은 같은 줄에 skill/agent/MCP 같은 단어가 함께 있을 때만 셉니다.
+  - MCP는 `mcp__<server>__` 도구 이름 형태도 찾습니다.
+- **조작**: 드래그, 휠 확대, 검색, 종류·대상·출처 필터, 노드를 클릭하면 "쓰는 subagent / MCP / skill"과 "이것을 쓰는 쪽" 목록이 나옵니다.
+
+## 패키지 목록
+
+### 내 skill · subagent
+
+| 패키지 | 대상 | 설명 |
+|---|---|---|
+| `ditto-writer` | claude | 내가 직접 쓴 글로 만든 문체·저자 프로필로, 사람이 쓴 것처럼 글을 다시 쓰는 루프(writer 1 + 매 라운드 새 블라인드 리뷰어 Anthropic·OpenAI). 트리거 — 내 말투로 바꿔줘… |
+| `humanize` | claude + codex | AI(ChatGPT·Claude·Gemini)가 쓴 한글·영문 텍스트를 사람이 쓴 것처럼 윤문(한글 Fast/Strict 듀얼 모드, 영문 voice 기반). 내용·사실·수치·인용은 한 글자도 안 … |
+| `iterative-academic-writer` | claude + codex | Use when writing academic documents — 논문 섹션(Introduction, Methods, Results, Discussion), 연구 제안서, SoP, 학업계획서, 기… |
+| `paper-radar` | claude | 개인 관심 트랙 기반 논문 발굴·선별 레이더. 반복 실행(daily/weekly)해 여러 트랙에서 후보를 모으고, 이전 radar state와 기존 Wiki에 대해 중복 제거한 뒤 학습 가치로 랭킹… |
+| `paper-driller` | claude + codex | 논문 1편을 원문 옆에 띄워 놓고 읽기 위한 근거 추적 노트를 만든다. 사용자가 고른 템플릿(기본 general-v1: paper-digest 개요 + 배경 + 지표 + 방법 + 결과 + take-… |
+| `paper-understand` | claude | 선택한 논문 1편을 질문·응답으로 이해시키는 다회차 튜터. 원문 근거에 묶인 채로 개념 지도를 세우고, 예측→피드백→teach-back→전이 질문 루프로 숙달을 올리며, 학습 상태를 비공개로 저장해… |
+| `paper-section-rewrite` | claude + codex | 학술 논문 한 섹션을 4-Level critic loop(내용→문단 간 구성→문단 내 구성→문장)로 분석·개선하는 윤문 스킬. 두괄식·한 문장 한 역할·단문 비율 ≥ 60%·ML 비전공자 가독성 게… |
+| `paper-readability-review` | claude + codex | 논문 PDF에 가독성 피드백을 내용·구조·문장 세 층위로 진단해, 본문 위에 색상 하이라이트 + 마진 카드(진단 + 대안 방향) + 우선순위 로드맵이 있는 리뷰 PDF를 생성한다. critic-lo… |
+| `paper-digest` | claude + codex | Generate shareable paper summaries for Discord/Slack/Twitter. Use when user provides arxiv paper(s) and wants … |
+| `paper-banana` | claude + codex | 논문 텍스트에서 publication-ready 학술 일러스트레이션(methodology diagram, statistical plot, system architecture)을 PaperBanana… |
+| `latex-publication` | claude + codex | LaTeX 학술 문서 출판 워크플로 — 5개 서브커맨드 자동 라우팅. TRIGGERS: 한글 LaTeX 셋업/한글 렌더링 안됨/kotex 설정/Overleaf 한글/tex 한국어 → :setup ·… |
+| `hwpx` | claude + codex | Comprehensive HWPX (Korean Hancom Office) document creation, editing, and analysis. When Claude needs to work … |
+| `aha` | claude | Use when the user asks for an "aha", today's learning, or a short daily blog post based on a current Codex ses… |
+| `autoresearch` | claude | Run an autonomous experiment loop — change one variable, measure, keep or revert, self-debug, repeat — until a… |
+| `book-qa-note` | claude | 서울대 권장도서 100선·일반 책을 "직접 안 읽고 문답으로 배우는" Obsidian 책 노트(Public/Books) 형식으로 조사·작성하고, 문답 기록·읽기 상태를 갱신한다. 트리거 — 책 정리… |
+| `korean-scholarship-search` | claude | Search Korean scholarship announcements across official KOSAF, university, foundation, company, and public-sec… |
+| `gist-library-room-booking` | claude | GIST 중앙도서관 시설(그룹스터디룸·캐럴·강의실, library.gist.ac.kr) 검색·예약. 날짜·시간대를 주면 빈 방을(기본 2–3층) 정원·운영시간과 함께 나열하고, 사용자 확정 시 예약… |
+| `research-proposal` | claude | 연구 아이디어를 기반으로 종합 연구 계획서를 작성합니다. 선행 연구 조사, 아이디어 구체화(가설/RQ 분리), 학술 비평 피드백 루프, 학계 기여도 평가, 상세 실험 설계(변인통제/GPU 리소스/G… |
+| `weekly-report-writer` | codex | Automatically generate academic-style weekly research reports by analyzing Git changes in the current project … |
+| `claude-command-library` | codex | Reuse, inspect, adapt, or run migrated Claude Code slash commands from ~/.codex/commands inside Codex. |
+| `claude-subagent-library` | codex | Reuse, inspect, adapt, or run migrated Claude Code specialist prompts as Codex-compatible custom agents. |
+| `dev-agents` | claude + codex | General engineering subagents: code-reviewer, debugger, code-cleanup-optimizer, modular-code-architect, securi… |
+| `research-agents` | claude + codex | Research workflow subagents: experiment-interpreter, experiment-verifier, academic-planner, academic-writing-a… |
+| `portfolio-agents` | codex | Codex-only stock portfolio analysis roles: chart, fundamentals, news |
+| `juhyeon-hooks` | claude + codex | Links hook scripts and registers PostToolUse/SubagentStop hooks in ~/.claude/settings.json. |
+
+### 외부 skill (원작자 repo에서 고정 커밋으로 받아 옴)
+
+| 패키지 | 원작자 repo | 커밋 | 라이선스 | 포함 skill |
+|---|---|---|---|---|
+| `taste-skill` | [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill) | `84ff339` | MIT | brandkit, design-taste-frontend, full-output-enforcement, image-to-code, industrial-brutalist-ui, minimalist-ui, redesign-existing-projects |
+| `k-dense` | [K-Dense-AI/scientific-agent-skills](https://github.com/K-Dense-AI/scientific-agent-skills) | `a25cf9e` | MIT | autoskill, citation-management, latex-posters, literature-review, markdown-mermaid-writing, peer-review, pptx-posters, research-grants, scientific-schematics, scientific-slides, scientific-writing |
+| `pstack` | [Cloeille/pstack](https://github.com/Cloeille/pstack) | `d9454cc` | MIT | `skills/` 아래 전부 |
+| `cloudflare-skills` | [cloudflare/skills](https://github.com/cloudflare/skills) | `1a33048` | Apache-2.0 | `skills/` 아래 전부 |
+| `document-skills` | [anthropics/skills](https://github.com/anthropics/skills) | `ca45fc4` | Proprietary (see upstream LICENSE.txt) | docx, pdf, pptx, xlsx |
+| `notebooklm` | [teng-lin/notebooklm-py](https://github.com/teng-lin/notebooklm-py) | `7db1000` | MIT | notebooklm |
+| `eli5` | [DreambigOu/ELI5](https://github.com/DreambigOu/ELI5) | `a766623` | MIT | eli5 |
+| `karpathy-guidelines` | [forrestchang/andrej-karpathy-skills](https://github.com/forrestchang/andrej-karpathy-skills) | `2c60614` | unspecified upstream | CLAUDE.md → 전역 지침 |
+| `superpowers` | [obra/superpowers](https://github.com/obra/superpowers) | `2ce8aa1` | MIT | `skills/` 아래 전부 |
+| `mattpocock-skills` | [mattpocock/skills](https://github.com/mattpocock/skills) | `4ae2317` | MIT | `skills/engineering/` 아래 전부 |
+| `diagram-design` | [cathrynlavery/diagram-design](https://github.com/cathrynlavery/diagram-design) | `0cf73c3` | MIT | diagram-design, commands |
+| `claude-official-skills` | [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official) | `a7ba5b9` | Apache-2.0 | frontend-design, skill-creator, claude-md-improver, claude-automation-recommender, commands |
+
+### 외부 plugin (claude/codex CLI로 설치 — MCP·hook·plugin 런타임이 필요한 것만)
+
+| 패키지 | plugin | marketplace |
+|---|---|---|
+| `codex-plugin-cc` | `codex` (claude) | [openai/codex-plugin-cc](https://github.com/openai/codex-plugin-cc) |
+| `understand-anything` | `understand-anything` (claude) | [Lum1104/Understand-Anything](https://github.com/Lum1104/Understand-Anything) |
+| `context7` | `context7` (claude) | [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official) |
+| `playwright` | `playwright` (claude) | [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official) |
+| `code-review` | `code-review` (claude) | [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official) |
+| `ralph-loop` | `ralph-loop` (claude) | [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official) |
+| `remember` | `remember` (claude) | [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official) |
+| `learning-output-style` | `learning-output-style` (claude) | [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official) |
+| `cloudflare-mcp` | `cloudflare` (claude) | [cloudflare/skills](https://github.com/cloudflare/skills) |
+
+## 내 skill 추가하기
+
+1. `sources/skills/<이름>/SKILL.md`를 만듭니다. 한쪽 harness 전용이면 폴더 이름에 `-claude`/`-codex`를 붙입니다.
+2. `catalog.json`의 `packages`에 항목을 추가합니다. 예:
+   ```json
+   {"id": "my-skill", "group": "mine", "title": "my-skill", "description": "…",
+    "items": [{"harness": "claude", "dest": "skills/my-skill", "src": "sources/skills/my-skill"},
+              {"harness": "codex",  "dest": "skills/my-skill", "src": "sources/skills/my-skill"}]}
+   ```
+3. `python3 install.py install my-skill`을 실행합니다. symlink 방식이라 이후 원본을 고치면 바로 반영됩니다.
+
+외부 skill은 `source`(repo, 40자 커밋 SHA, license)와 함께 다음 중 하나로 적습니다.
+- `skills`: 개별 경로
+- `skills_glob`: 폴더 하나 아래 전부
+- `files_glob`: command 같은 파일 묶음
+- `file_map`: 파일 하나를 특정 위치로
+
+## 플랫폼 상태
+
+- **macOS**: 검증 완료. Python 3.9.6과 3.13에서 테스트 9개가 통과했고, 실제 홈 마이그레이션까지 마쳤습니다.
+- **Linux**: 같은 코드 경로(POSIX symlink)를 씁니다. 아직 실제 검증은 하지 않았습니다.
+- **Windows**: copy 모드가 기본입니다. `install.ps1` 포함, 아직 검증하지 않았습니다.
+
+```bash
+python3 -m unittest discover -s tests -v                                   # 로컬 테스트
+AGENT_SKILLS_NETWORK_TESTS=1 python3 -m unittest discover -s tests -v      # + GitHub에서 받아 오기 테스트
+```
+
+## 주의
+
+skill은 에이전트에게 코드 실행, 패키지 설치, 네트워크 요청을 시킬 수 있습니다. 외부 skill은 원작자 repo의 `SKILL.md`와 `scripts/`를 읽어 보고 필요한 것만 설치하세요. 외부 skill과 plugin의 저작권과 라이선스는 각 원작자에게 있습니다. `document-skills`는 Anthropic 자체 라이선스라서 이 저장소에 포함하지 않고, 설치하는 사람의 기기에서 Anthropic repo로부터 직접 받습니다.

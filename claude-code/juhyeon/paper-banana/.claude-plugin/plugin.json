@@ -1,9 +1,0 @@
-{
-  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
-  "name": "paper-banana",
-  "version": "0.1.0",
-  "description": "Generate and evaluate publication-quality paper diagrams and plots through the bundled paperbanana MCP engine.",
-  "author": { "name": "Juhyeon Bag", "email": "jhjh6612@gmail.com" },
-  "keywords": ["diagrams", "plots", "figures", "mcp"],
-  "skills": ["./skills/paper-banana"]
-}

@@ -1,0 +1,1422 @@
+{
+  "schema": 1,
+  "name": "agent-skills",
+  "repo": "irregular6612/agent-skills",
+  "groups": [
+    {
+      "id": "mine",
+      "title": "My skills (irregular6612)"
+    },
+    {
+      "id": "agents",
+      "title": "My subagents"
+    },
+    {
+      "id": "config",
+      "title": "My global config (opt-in)"
+    },
+    {
+      "id": "external",
+      "title": "Third-party skills (fetched from the author's repo)"
+    },
+    {
+      "id": "plugins",
+      "title": "Third-party plugins (installed with the claude/codex CLI)"
+    }
+  ],
+  "presets": {
+    "mine": [
+      "ditto-writer",
+      "humanize",
+      "iterative-academic-writer",
+      "paper-radar",
+      "paper-driller",
+      "paper-understand",
+      "paper-section-rewrite",
+      "paper-readability-review",
+      "paper-digest",
+      "paper-banana",
+      "latex-publication",
+      "hwpx",
+      "aha",
+      "autoresearch",
+      "book-qa-note",
+      "korean-scholarship-search",
+      "gist-library-room-booking",
+      "research-proposal",
+      "weekly-report-writer",
+      "claude-command-library",
+      "claude-subagent-library",
+      "dev-agents",
+      "research-agents",
+      "portfolio-agents"
+    ],
+    "juhyeon-full": [
+      "ditto-writer",
+      "humanize",
+      "iterative-academic-writer",
+      "paper-radar",
+      "paper-driller",
+      "paper-understand",
+      "paper-section-rewrite",
+      "paper-readability-review",
+      "paper-digest",
+      "paper-banana",
+      "latex-publication",
+      "hwpx",
+      "aha",
+      "autoresearch",
+      "book-qa-note",
+      "korean-scholarship-search",
+      "gist-library-room-booking",
+      "research-proposal",
+      "weekly-report-writer",
+      "claude-command-library",
+      "claude-subagent-library",
+      "dev-agents",
+      "research-agents",
+      "portfolio-agents",
+      "juhyeon-hooks",
+      "taste-skill",
+      "k-dense",
+      "pstack",
+      "cloudflare-skills",
+      "document-skills",
+      "notebooklm",
+      "eli5",
+      "karpathy-guidelines",
+      "superpowers",
+      "mattpocock-skills",
+      "diagram-design",
+      "claude-official-skills",
+      "codex-plugin-cc",
+      "understand-anything",
+      "context7",
+      "playwright",
+      "code-review",
+      "ralph-loop",
+      "remember",
+      "learning-output-style",
+      "cloudflare-mcp"
+    ]
+  },
+  "packages": [
+    {
+      "id": "ditto-writer",
+      "group": "mine",
+      "title": "ditto-writer",
+      "description": "내가 직접 쓴 글로 만든 문체·저자 프로필로, 사람이 쓴 것처럼 글을 다시 쓰는 루프(writer 1 + 매 라운드 새 블라인드 리뷰어 Anthropic·OpenAI). 트리거 — 내 말투로 바꿔줘, 사람이 쓴 것처럼, 내 문체 프로필, ditto-writer.",
+      "items": [
+        {
+          "harness": "claude",
+          "dest": "skills/ditto-writer",
+          "src": "sources/skills/ditto-writer-claude"
+        }
+      ]
+    },
+    {
+      "id": "humanize",
+      "group": "mine",
+      "title": "humanize (+7 agents, /humanize-command, /humanize-redo)",
+      "description": "AI(ChatGPT·Claude·Gemini)가 쓴 한글·영문 텍스트를 사람이 쓴 것처럼 윤문(한글 Fast/Strict 듀얼 모드, 영문 voice 기반). 내용·사실·수치·인용은 한 글자도 안 건드림. 트리거 — \"AI 티 없애줘\", \"이거 너무 ChatGPT 같아\", \"humanize this\", \"사람이 쓴 것처럼\", \"translate-ese 제거",
+      "items": [
+        {
+          "harness": "claude",
+          "dest": "skills/humanize",
+          "src": "sources/skills/humanize"
+        },
+        {
+          "harness": "codex",
+          "dest": "skills/humanize",
+          "src": "sources/skills/humanize"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/humanize-fidelity-auditor.md",
+          "src": "sources/agents/humanize-fidelity-auditor-claude.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/humanize-ko-detector.md",
+          "src": "sources/agents/humanize-ko-detector-claude.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/humanize-ko-monolith.md",
+          "src": "sources/agents/humanize-ko-monolith-claude.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/humanize-ko-rewriter.md",
+          "src": "sources/agents/humanize-ko-rewriter-claude.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/humanize-naturalness-reviewer.md",
+          "src": "sources/agents/humanize-naturalness-reviewer-claude.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/humanize-taxonomist.md",
+          "src": "sources/agents/humanize-taxonomist-claude.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/humanize-web-architect.md",
+          "src": "sources/agents/humanize-web-architect-claude.md"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/humanize-fidelity-auditor.toml",
+          "src": "sources/agents/humanize-fidelity-auditor-codex.toml"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/humanize-ko-detector.toml",
+          "src": "sources/agents/humanize-ko-detector-codex.toml"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/humanize-ko-monolith.toml",
+          "src": "sources/agents/humanize-ko-monolith-codex.toml"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/humanize-ko-rewriter.toml",
+          "src": "sources/agents/humanize-ko-rewriter-codex.toml"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/humanize-naturalness-reviewer.toml",
+          "src": "sources/agents/humanize-naturalness-reviewer-codex.toml"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/humanize-taxonomist.toml",
+          "src": "sources/agents/humanize-taxonomist-codex.toml"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/humanize-web-architect.toml",
+          "src": "sources/agents/humanize-web-architect-codex.toml"
+        },
+        {
+          "harness": "claude",
+          "dest": "commands/humanize-redo.md",
+          "src": "sources/commands/command-humanize-redo/command.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "commands/humanize-command.md",
+          "src": "sources/commands/command-humanize-command/command.md"
+        },
+        {
+          "harness": "codex",
+          "dest": "prompts/humanize-redo.md",
+          "src": "sources/commands/command-humanize-redo/command.md"
+        },
+        {
+          "harness": "codex",
+          "dest": "prompts/humanize.md",
+          "src": "sources/commands/command-humanize/command.md"
+        }
+      ]
+    },
+    {
+      "id": "iterative-academic-writer",
+      "group": "mine",
+      "title": "iterative-academic-writer (+academic-reviewer agent)",
+      "description": "Use when writing academic documents — 논문 섹션(Introduction, Methods, Results, Discussion), 연구 제안서, SoP, 학업계획서, 기술 문서 — that require iterative quality improvement with hallucination prevention and 25-pri",
+      "items": [
+        {
+          "harness": "claude",
+          "dest": "skills/iterative-academic-writer",
+          "src": "sources/skills/iterative-academic-writer"
+        },
+        {
+          "harness": "codex",
+          "dest": "skills/iterative-academic-writer",
+          "src": "sources/skills/iterative-academic-writer"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/academic-reviewer.md",
+          "src": "sources/agents/academic-reviewer-claude.md"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/academic-reviewer.toml",
+          "src": "sources/agents/academic-reviewer-codex.toml"
+        }
+      ]
+    },
+    {
+      "id": "paper-radar",
+      "group": "mine",
+      "title": "paper-radar",
+      "description": "개인 관심 트랙 기반 논문 발굴·선별 레이더. 반복 실행(daily/weekly)해 여러 트랙에서 후보를 모으고, 이전 radar state와 기존 Wiki에 대해 중복 제거한 뒤 학습 가치로 랭킹해 비공개 digest를 남긴다. TRIGGERS - 오늘의 논문, 논문 레이더, paper radar, 새 논문 추천해줘, 이번 주 뭐 나왔어, 관심 분야 논문",
+      "items": [
+        {
+          "harness": "claude",
+          "dest": "skills/paper-radar",
+          "src": "sources/skills/paper-radar-claude"
+        }
+      ]
+    },
+    {
+      "id": "paper-driller",
+      "group": "mine",
+      "title": "paper-driller (+7 paper-* agents)",
+      "description": "논문 1편을 원문 옆에 띄워 놓고 읽기 위한 근거 추적 노트를 만든다. 사용자가 고른 템플릿(기본 general-v1: paper-digest 개요 + 배경 + 지표 + 방법 + 결과 + take-home + 본문 도표 전부)로 쓴다. TRIGGERS: 논문 요약, paper drill, arxiv 정리, 논문 노트, 논문 읽기 전 요약, deep pape",
+      "items": [
+        {
+          "harness": "claude",
+          "dest": "skills/paper-driller",
+          "src": "sources/skills/paper-driller"
+        },
+        {
+          "harness": "codex",
+          "dest": "skills/paper-driller",
+          "src": "sources/skills/paper-driller"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/paper-comparison.md",
+          "src": "sources/agents/paper-comparison-claude.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/paper-digest-composer.md",
+          "src": "sources/agents/paper-digest-composer-claude.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/paper-evidence.md",
+          "src": "sources/agents/paper-evidence-claude.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/paper-meta.md",
+          "src": "sources/agents/paper-meta-claude.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/paper-preread-analyst.md",
+          "src": "sources/agents/paper-preread-analyst-claude.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/paper-section-driller.md",
+          "src": "sources/agents/paper-section-driller-claude.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/paper-spine.md",
+          "src": "sources/agents/paper-spine-claude.md"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/paper-comparison.toml",
+          "src": "sources/agents/paper-comparison-codex.toml"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/paper-digest-composer.toml",
+          "src": "sources/agents/paper-digest-composer-codex.toml"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/paper-evidence.toml",
+          "src": "sources/agents/paper-evidence-codex.toml"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/paper-meta.toml",
+          "src": "sources/agents/paper-meta-codex.toml"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/paper-section-driller.toml",
+          "src": "sources/agents/paper-section-driller-codex.toml"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/paper-spine.toml",
+          "src": "sources/agents/paper-spine-codex.toml"
+        }
+      ]
+    },
+    {
+      "id": "paper-understand",
+      "group": "mine",
+      "title": "paper-understand",
+      "description": "선택한 논문 1편을 질문·응답으로 이해시키는 다회차 튜터. 원문 근거에 묶인 채로 개념 지도를 세우고, 예측→피드백→teach-back→전이 질문 루프로 숙달을 올리며, 학습 상태를 비공개로 저장해 다음 세션에 이어간다. TRIGGERS - 이 논문 공부하고 싶어, 논문 이해 안 돼, 설명해주면서 질문해줘, 튜터, 논문 스터디, 이 노트로 공부, 어제 하던",
+      "items": [
+        {
+          "harness": "claude",
+          "dest": "skills/paper-understand",
+          "src": "sources/skills/paper-understand-claude"
+        }
+      ]
+    },
+    {
+      "id": "paper-section-rewrite",
+      "group": "mine",
+      "title": "paper-section-rewrite",
+      "description": "학술 논문 한 섹션을 4-Level critic loop(내용→문단 간 구성→문단 내 구성→문장)로 분석·개선하는 윤문 스킬. 두괄식·한 문장 한 역할·단문 비율 ≥ 60%·ML 비전공자 가독성 게이트·본문+부록 notation 감사 적용. KO/EN 지원. MANDATORY TRIGGERS - 섹션 다시 쓰기, 섹션 윤문, 풀어쓰기, 두괄식, paper ",
+      "items": [
+        {
+          "harness": "claude",
+          "dest": "skills/paper-section-rewrite",
+          "src": "sources/skills/paper-section-rewrite"
+        },
+        {
+          "harness": "codex",
+          "dest": "skills/paper-section-rewrite",
+          "src": "sources/skills/paper-section-rewrite"
+        }
+      ]
+    },
+    {
+      "id": "paper-readability-review",
+      "group": "mine",
+      "title": "paper-readability-review",
+      "description": "논문 PDF에 가독성 피드백을 내용·구조·문장 세 층위로 진단해, 본문 위에 색상 하이라이트 + 마진 카드(진단 + 대안 방향) + 우선순위 로드맵이 있는 리뷰 PDF를 생성한다. critic-loop으로 자체 점검·반복 개선한다. 사용자가 자기 논문이나 학생/동료의 원고를 첨부하고 \"가독성 봐줘\", \"리뷰 PDF 만들어줘\", \"피드백 달아줘\", \"박스 코",
+      "items": [
+        {
+          "harness": "claude",
+          "dest": "skills/paper-readability-review",
+          "src": "sources/skills/paper-readability-review"
+        },
+        {
+          "harness": "codex",
+          "dest": "skills/paper-readability-review",
+          "src": "sources/skills/paper-readability-review"
+        }
+      ]
+    },
+    {
+      "id": "paper-digest",
+      "group": "mine",
+      "title": "paper-digest",
+      "description": "Generate shareable paper summaries for Discord/Slack/Twitter. Use when user provides arxiv paper(s) and wants a digestible summary to share. Triggers on phrases like \"논문 요약\", \"paper summary\", \"share t",
+      "items": [
+        {
+          "harness": "claude",
+          "dest": "skills/paper-digest",
+          "src": "sources/skills/paper-digest"
+        },
+        {
+          "harness": "codex",
+          "dest": "skills/paper-digest",
+          "src": "sources/skills/paper-digest"
+        }
+      ]
+    },
+    {
+      "id": "paper-banana",
+      "group": "mine",
+      "title": "paper-banana",
+      "description": "논문 텍스트에서 publication-ready 학술 일러스트레이션(methodology diagram, statistical plot, system architecture)을 PaperBanana 멀티 에이전트 파이프라인으로 생성·수정·평가. MANDATORY TRIGGERS: paperbanana, paper banana, 논문 figure, 논문 그림",
+      "items": [
+        {
+          "harness": "claude",
+          "dest": "skills/paper-banana",
+          "src": "sources/skills/paper-banana"
+        },
+        {
+          "harness": "codex",
+          "dest": "skills/paper-banana",
+          "src": "sources/skills/paper-banana"
+        }
+      ]
+    },
+    {
+      "id": "latex-publication",
+      "group": "mine",
+      "title": "latex-publication (+3 tex agents)",
+      "description": "LaTeX 학술 문서 출판 워크플로 — 5개 서브커맨드 자동 라우팅. TRIGGERS: 한글 LaTeX 셋업/한글 렌더링 안됨/kotex 설정/Overleaf 한글/tex 한국어 → :setup · MD를 LaTeX에 주입/마크다운 논문 변환/md 템플릿 주입/md-to-tex → :inject · LaTeX survey/academic PDF/서베이 PD",
+      "items": [
+        {
+          "harness": "claude",
+          "dest": "skills/latex-publication",
+          "src": "sources/skills/latex-publication"
+        },
+        {
+          "harness": "codex",
+          "dest": "skills/latex-publication",
+          "src": "sources/skills/latex-publication"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/md-fragment-converter-coordinator.toml",
+          "src": "sources/agents/md-fragment-converter-coordinator-codex.toml"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/md-tex-injection-planner.toml",
+          "src": "sources/agents/md-tex-injection-planner-codex.toml"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/tex-fragment-format-auditor.toml",
+          "src": "sources/agents/tex-fragment-format-auditor-codex.toml"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/md-tex-injection-planner.md",
+          "src": "sources/agents/md-tex-injection-planner-claude.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/md-fragment-converter-coordinator.md",
+          "src": "sources/agents/md-fragment-converter-coordinator-claude.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/tex-fragment-format-auditor.md",
+          "src": "sources/agents/tex-fragment-format-auditor-claude.md"
+        }
+      ]
+    },
+    {
+      "id": "hwpx",
+      "group": "mine",
+      "title": "hwpx",
+      "description": "Comprehensive HWPX (Korean Hancom Office) document creation, editing, and analysis. When Claude needs to work with Korean word processor documents (.hwpx files) for: (1) Reading and extracting content",
+      "items": [
+        {
+          "harness": "claude",
+          "dest": "skills/hwpx",
+          "src": "sources/skills/hwpx"
+        },
+        {
+          "harness": "codex",
+          "dest": "skills/hwpx",
+          "src": "sources/skills/hwpx"
+        }
+      ]
+    },
+    {
+      "id": "aha",
+      "group": "mine",
+      "title": "aha",
+      "description": "Use when the user asks for an \"aha\", today's learning, or a short daily blog post based on a current Codex session or that day's Claude Code and Codex sessions.",
+      "items": [
+        {
+          "harness": "claude",
+          "dest": "skills/aha",
+          "src": "sources/skills/aha-claude"
+        }
+      ]
+    },
+    {
+      "id": "autoresearch",
+      "group": "mine",
+      "title": "autoresearch",
+      "description": "Run an autonomous experiment loop — change one variable, measure, keep or revert, self-debug, repeat — until a target is hit or the budget runs out. Use this whenever something needs to be tuned, opti",
+      "items": [
+        {
+          "harness": "claude",
+          "dest": "skills/autoresearch",
+          "src": "sources/skills/autoresearch-claude"
+        }
+      ]
+    },
+    {
+      "id": "book-qa-note",
+      "group": "mine",
+      "title": "book-qa-note",
+      "description": "서울대 권장도서 100선·일반 책을 \"직접 안 읽고 문답으로 배우는\" Obsidian 책 노트(Public/Books) 형식으로 조사·작성하고, 문답 기록·읽기 상태를 갱신한다. 트리거 — 책 정리해줘, 책 노트 만들어줘, 서울대 권장도서, 문답으로 책 공부, 이 책 요약, 오늘 문답 기록해줘, book note, book summary.",
+      "items": [
+        {
+          "harness": "claude",
+          "dest": "skills/book-qa-note",
+          "src": "sources/skills/book-qa-note-claude"
+        }
+      ]
+    },
+    {
+      "id": "korean-scholarship-search",
+      "group": "mine",
+      "title": "korean-scholarship-search",
+      "description": "Search Korean scholarship announcements across official KOSAF, university, foundation, company, and public-sector sources, extract amount and eligibility, and filter results by school, income band, st",
+      "items": [
+        {
+          "harness": "claude",
+          "dest": "skills/korean-scholarship-search",
+          "src": "sources/skills/korean-scholarship-search-claude"
+        }
+      ]
+    },
+    {
+      "id": "gist-library-room-booking",
+      "group": "mine",
+      "title": "gist-library-room-booking",
+      "description": "GIST 중앙도서관 시설(그룹스터디룸·캐럴·강의실, library.gist.ac.kr) 검색·예약. 날짜·시간대를 주면 빈 방을(기본 2–3층) 정원·운영시간과 함께 나열하고, 사용자 확정 시 예약. 트리거: 빈 스터디룸/회의실/세미나실/강의실 찾기, what rooms are free, 도서관 시설예약, 미팅룸 예약, 스터디룸 예약, GIST librar",
+      "items": [
+        {
+          "harness": "claude",
+          "dest": "skills/gist-library-room-booking",
+          "src": "sources/skills/gist-library-room-booking-claude"
+        }
+      ]
+    },
+    {
+      "id": "research-proposal",
+      "group": "mine",
+      "title": "research-proposal",
+      "description": "연구 아이디어를 기반으로 종합 연구 계획서를 작성합니다. 선행 연구 조사, 아이디어 구체화(가설/RQ 분리), 학술 비평 피드백 루프, 학계 기여도 평가, 상세 실험 설계(변인통제/GPU 리소스/Gantt 일정/대비책)를 포함합니다. Use when: '연구 계획서 작성', 'research proposal', '실험 계획 세워줘', '연구 제안서', '/",
+      "items": [
+        {
+          "harness": "claude",
+          "dest": "skills/research-proposal",
+          "src": "sources/skills/research-proposal-claude"
+        }
+      ]
+    },
+    {
+      "id": "weekly-report-writer",
+      "group": "mine",
+      "title": "weekly-report-writer",
+      "description": "Automatically generate academic-style weekly research reports by analyzing Git changes in the current project directory with iterative quality improvement",
+      "items": [
+        {
+          "harness": "codex",
+          "dest": "skills/weekly-report-writer",
+          "src": "sources/skills/weekly-report-writer-codex"
+        }
+      ]
+    },
+    {
+      "id": "claude-command-library",
+      "group": "mine",
+      "title": "claude-command-library",
+      "description": "Reuse, inspect, adapt, or run migrated Claude Code slash commands from ~/.codex/commands inside Codex.",
+      "items": [
+        {
+          "harness": "codex",
+          "dest": "skills/claude-command-library",
+          "src": "sources/skills/claude-command-library-codex"
+        }
+      ]
+    },
+    {
+      "id": "claude-subagent-library",
+      "group": "mine",
+      "title": "claude-subagent-library",
+      "description": "Reuse, inspect, adapt, or run migrated Claude Code specialist prompts as Codex-compatible custom agents.",
+      "items": [
+        {
+          "harness": "codex",
+          "dest": "skills/claude-subagent-library",
+          "src": "sources/skills/claude-subagent-library-codex"
+        }
+      ]
+    },
+    {
+      "id": "dev-agents",
+      "group": "agents",
+      "title": "Dev subagents (code-reviewer, debugger, test-writer, ...)",
+      "description": "General engineering subagents: code-reviewer, debugger, code-cleanup-optimizer, modular-code-architect, security-reviewer, task-planner-analyzer, test-writer, execution-logger, spec-bridge",
+      "items": [
+        {
+          "harness": "claude",
+          "dest": "agents/code-cleanup-optimizer.md",
+          "src": "sources/agents/code-cleanup-optimizer-claude.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/code-reviewer.md",
+          "src": "sources/agents/code-reviewer-claude.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/debugger.md",
+          "src": "sources/agents/debugger-claude.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/execution-logger.md",
+          "src": "sources/agents/execution-logger-claude.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/modular-code-architect.md",
+          "src": "sources/agents/modular-code-architect-claude.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/security-reviewer.md",
+          "src": "sources/agents/security-reviewer-claude.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/spec-bridge.md",
+          "src": "sources/agents/spec-bridge-claude.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/task-planner-analyzer.md",
+          "src": "sources/agents/task-planner-analyzer-claude.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/test-writer.md",
+          "src": "sources/agents/test-writer-claude.md"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/code-cleanup-optimizer.toml",
+          "src": "sources/agents/code-cleanup-optimizer-codex.toml"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/code-reviewer.toml",
+          "src": "sources/agents/code-reviewer-codex.toml"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/debugger.toml",
+          "src": "sources/agents/debugger-codex.toml"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/execution-logger.toml",
+          "src": "sources/agents/execution-logger-codex.toml"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/modular-code-architect.toml",
+          "src": "sources/agents/modular-code-architect-codex.toml"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/security-reviewer.toml",
+          "src": "sources/agents/security-reviewer-codex.toml"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/task-planner-analyzer.toml",
+          "src": "sources/agents/task-planner-analyzer-codex.toml"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/test-writer.toml",
+          "src": "sources/agents/test-writer-codex.toml"
+        }
+      ]
+    },
+    {
+      "id": "research-agents",
+      "group": "agents",
+      "title": "Research subagents (experiment/report/academic)",
+      "description": "Research workflow subagents: experiment-interpreter, experiment-verifier, academic-planner, academic-writing-assistant, report-planner, report-reviewer, dslab-academic-reviewer",
+      "items": [
+        {
+          "harness": "claude",
+          "dest": "agents/academic-planner.md",
+          "src": "sources/agents/academic-planner-claude.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/academic-writing-assistant.md",
+          "src": "sources/agents/academic-writing-assistant-claude.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/claude-for-dslab/academic-reviewer.md",
+          "src": "sources/agents/claude-for-dslab-academic-reviewer-claude.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/experiment-interpreter.md",
+          "src": "sources/agents/experiment-interpreter-claude.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/experiment-verifier.md",
+          "src": "sources/agents/experiment-verifier-claude.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/report-planner.md",
+          "src": "sources/agents/report-planner-claude.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/report-reviewer.md",
+          "src": "sources/agents/report-reviewer-claude.md"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/academic-planner.toml",
+          "src": "sources/agents/academic-planner-codex.toml"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/academic-writing-assistant.toml",
+          "src": "sources/agents/academic-writing-assistant-codex.toml"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/experiment-interpreter.toml",
+          "src": "sources/agents/experiment-interpreter-codex.toml"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/experiment-verifier.toml",
+          "src": "sources/agents/experiment-verifier-codex.toml"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/report-planner.toml",
+          "src": "sources/agents/report-planner-codex.toml"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/report-reviewer.toml",
+          "src": "sources/agents/report-reviewer-codex.toml"
+        }
+      ]
+    },
+    {
+      "id": "portfolio-agents",
+      "group": "agents",
+      "title": "Portfolio subagents (Codex)",
+      "description": "Codex-only stock portfolio analysis roles: chart, fundamentals, news",
+      "items": [
+        {
+          "harness": "codex",
+          "dest": "agents/portfolio-chart.toml",
+          "src": "sources/agents/portfolio-chart-codex.toml"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/portfolio-fundamentals.toml",
+          "src": "sources/agents/portfolio-fundamentals-codex.toml"
+        },
+        {
+          "harness": "codex",
+          "dest": "agents/portfolio-news.toml",
+          "src": "sources/agents/portfolio-news-codex.toml"
+        }
+      ]
+    },
+    {
+      "id": "juhyeon-hooks",
+      "group": "config",
+      "title": "My Claude hooks (paper format validator, driller log)",
+      "description": "Links hook scripts and registers PostToolUse/SubagentStop hooks in ~/.claude/settings.json.",
+      "items": [
+        {
+          "harness": "claude",
+          "dest": "hooks/ssot",
+          "src": "sources/hooks/claude"
+        },
+        {
+          "harness": "codex",
+          "dest": "hooks/ssot",
+          "src": "sources/hooks/codex"
+        }
+      ],
+      "claude_hooks": {
+        "PostToolUse": [
+          {
+            "matcher": "Write|Edit|MultiEdit",
+            "hooks": [
+              {
+                "type": "command",
+                "command": "bash \"${CLAUDE_HOME}/hooks/ssot/paper-format-validator.sh\"",
+                "timeout": 20
+              }
+            ]
+          }
+        ],
+        "SubagentStop": [
+          {
+            "hooks": [
+              {
+                "type": "command",
+                "command": "bash \"${CLAUDE_HOME}/hooks/ssot/paper-driller-subagent-log.sh\"",
+                "timeout": 5
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "taste-skill",
+      "group": "external",
+      "title": "taste-skill (Leonxlnx) — frontend design taste",
+      "description": "7 design skills: brandkit, design-taste-frontend, image-to-code, minimalist-ui, ...",
+      "source": {
+        "repo": "Leonxlnx/taste-skill",
+        "ref": "84ff339312d29955ce2040c02fd6e5bedb934608",
+        "license": "MIT"
+      },
+      "skills": [
+        {
+          "name": "brandkit",
+          "path": "skills/brandkit",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        },
+        {
+          "name": "design-taste-frontend",
+          "path": "skills/taste-skill",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        },
+        {
+          "name": "full-output-enforcement",
+          "path": "skills/output-skill",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        },
+        {
+          "name": "image-to-code",
+          "path": "skills/image-to-code-skill",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        },
+        {
+          "name": "industrial-brutalist-ui",
+          "path": "skills/brutalist-skill",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        },
+        {
+          "name": "minimalist-ui",
+          "path": "skills/minimalist-skill",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        },
+        {
+          "name": "redesign-existing-projects",
+          "path": "skills/redesign-skill",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "k-dense",
+      "group": "external",
+      "title": "Scientific Agent Skills (K-Dense) — writing/research subset",
+      "description": "11 research-writing skills from K-Dense-AI/scientific-agent-skills (the repo has 177; pick any).",
+      "source": {
+        "repo": "K-Dense-AI/scientific-agent-skills",
+        "ref": "a25cf9ec00e2745d03f8704acf6f6919694ccd9a",
+        "license": "MIT"
+      },
+      "skills": [
+        {
+          "name": "autoskill",
+          "path": "skills/autoskill",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        },
+        {
+          "name": "citation-management",
+          "path": "skills/citation-management",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        },
+        {
+          "name": "latex-posters",
+          "path": "skills/latex-posters",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        },
+        {
+          "name": "literature-review",
+          "path": "skills/literature-review",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        },
+        {
+          "name": "markdown-mermaid-writing",
+          "path": "skills/markdown-mermaid-writing",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        },
+        {
+          "name": "peer-review",
+          "path": "skills/peer-review",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        },
+        {
+          "name": "pptx-posters",
+          "path": "skills/pptx-posters",
+          "harness": [
+            "codex"
+          ]
+        },
+        {
+          "name": "research-grants",
+          "path": "skills/research-grants",
+          "harness": [
+            "claude"
+          ]
+        },
+        {
+          "name": "scientific-schematics",
+          "path": "skills/scientific-schematics",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        },
+        {
+          "name": "scientific-slides",
+          "path": "skills/scientific-slides",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        },
+        {
+          "name": "scientific-writing",
+          "path": "skills/scientific-writing",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pstack",
+      "group": "external",
+      "title": "pstack (Cloeille) — engineering rigor stack",
+      "description": "poteto-mode orchestrator + how/architect/interrogate/swarm/unslop and principle-* skills.",
+      "source": {
+        "repo": "Cloeille/pstack",
+        "ref": "d9454cc1ecba5f28b136deacdfe2df959cf7cdec",
+        "license": "MIT"
+      },
+      "skills_glob": {
+        "path": "skills",
+        "harness": [
+          "claude",
+          "codex"
+        ]
+      }
+    },
+    {
+      "id": "cloudflare-skills",
+      "group": "external",
+      "title": "Cloudflare skills (cloudflare/skills)",
+      "description": "Workers, Durable Objects, wrangler, agents-sdk, sandbox, web-perf ... (MCP servers not included).",
+      "source": {
+        "repo": "cloudflare/skills",
+        "ref": "1a33048817d06df12882cb881dfc754e7039954a",
+        "license": "Apache-2.0"
+      },
+      "skills_glob": {
+        "path": "skills",
+        "harness": [
+          "claude",
+          "codex"
+        ]
+      }
+    },
+    {
+      "id": "document-skills",
+      "group": "external",
+      "title": "Anthropic document skills (anthropics/skills)",
+      "description": "docx / pdf / pptx / xlsx. Fetched from Anthropic's repo under Anthropic's own license; never redistributed here.",
+      "source": {
+        "repo": "anthropics/skills",
+        "ref": "ca45fc496a3436251f191354091d557da31c15b5",
+        "license": "Proprietary (see upstream LICENSE.txt)"
+      },
+      "skills": [
+        {
+          "name": "docx",
+          "path": "skills/docx",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        },
+        {
+          "name": "pdf",
+          "path": "skills/pdf",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        },
+        {
+          "name": "pptx",
+          "path": "skills/pptx",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        },
+        {
+          "name": "xlsx",
+          "path": "skills/xlsx",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "notebooklm",
+      "group": "external",
+      "title": "notebooklm (teng-lin/notebooklm-py)",
+      "description": "Operate Google NotebookLM through the notebooklm-py CLI / Python API.",
+      "source": {
+        "repo": "teng-lin/notebooklm-py",
+        "ref": "7db1000b516c3f3a7d3afe7c4c572924ee7a5264",
+        "license": "MIT"
+      },
+      "skills": [
+        {
+          "name": "notebooklm",
+          "path": ".",
+          "files": [
+            "SKILL.md"
+          ],
+          "harness": [
+            "claude"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "eli5",
+      "group": "external",
+      "title": "eli5 (DreambigOu/ELI5)",
+      "description": "Explain anything at a chosen audience's level.",
+      "source": {
+        "repo": "DreambigOu/ELI5",
+        "ref": "a766623b062331fdde53467001379b4ddf3acc2f",
+        "license": "MIT"
+      },
+      "skills": [
+        {
+          "name": "eli5",
+          "path": "skills/eli5",
+          "harness": [
+            "claude"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "karpathy-guidelines",
+      "group": "external",
+      "title": "Karpathy coding guidelines as global CLAUDE.md / AGENTS.md",
+      "description": "forrestchang/andrej-karpathy-skills CLAUDE.md, installed as ~/.claude/CLAUDE.md and ~/.codex/AGENTS.md (existing files are backed up).",
+      "source": {
+        "repo": "forrestchang/andrej-karpathy-skills",
+        "ref": "2c606141936f1eeef17fa3043a72095b4765b9c2",
+        "license": "unspecified upstream"
+      },
+      "file_map": [
+        {
+          "path": "CLAUDE.md",
+          "dest": "CLAUDE.md",
+          "harness": [
+            "claude"
+          ]
+        },
+        {
+          "path": "CLAUDE.md",
+          "dest": "AGENTS.md",
+          "harness": [
+            "codex"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "superpowers",
+      "group": "external",
+      "title": "superpowers (obra) — per skill",
+      "description": "Brainstorming, TDD, systematic debugging, plans, code review. Installed skill-by-skill (the plugin's SessionStart hook is not installed).",
+      "source": {
+        "repo": "obra/superpowers",
+        "ref": "2ce8aa15d05bd57213e6f746f953aafb7ded7a8b",
+        "license": "MIT"
+      },
+      "skills_glob": {
+        "path": "skills",
+        "harness": [
+          "claude",
+          "codex"
+        ]
+      }
+    },
+    {
+      "id": "mattpocock-skills",
+      "group": "external",
+      "title": "Matt Pocock skills — engineering (per skill)",
+      "description": "Grilling, spec/ticket flows, TDD, code review, domain modelling, prototype, wizard ...",
+      "source": {
+        "repo": "mattpocock/skills",
+        "ref": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+        "license": "MIT"
+      },
+      "skills_glob": {
+        "path": "skills/engineering",
+        "harness": [
+          "claude",
+          "codex"
+        ]
+      }
+    },
+    {
+      "id": "diagram-design",
+      "group": "external",
+      "title": "diagram-design (cathrynlavery) — skill + commands",
+      "description": "Editorial architecture/flow/chart diagrams as HTML/SVG; /export-diagram, /import-mermaid ...",
+      "source": {
+        "repo": "cathrynlavery/diagram-design",
+        "ref": "0cf73c3fcc56667ad91a9a04c439ac6ccfabc9d1",
+        "license": "MIT"
+      },
+      "skills": [
+        {
+          "name": "diagram-design",
+          "path": "skills/diagram-design",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        }
+      ],
+      "files_glob": [
+        {
+          "path": "commands",
+          "dest": "commands",
+          "harness": [
+            "claude"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "claude-official-skills",
+      "group": "external",
+      "title": "Anthropic official plugin skills (per skill)",
+      "description": "frontend-design, skill-creator, claude-md-improver (+/revise-claude-md), claude-automation-recommender.",
+      "source": {
+        "repo": "anthropics/claude-plugins-official",
+        "ref": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a",
+        "license": "Apache-2.0"
+      },
+      "skills": [
+        {
+          "name": "frontend-design",
+          "path": "plugins/frontend-design/skills/frontend-design",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        },
+        {
+          "name": "skill-creator",
+          "path": "plugins/skill-creator/skills/skill-creator",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        },
+        {
+          "name": "claude-md-improver",
+          "path": "plugins/claude-md-management/skills/claude-md-improver",
+          "harness": [
+            "claude"
+          ]
+        },
+        {
+          "name": "claude-automation-recommender",
+          "path": "plugins/claude-code-setup/skills/claude-automation-recommender",
+          "harness": [
+            "claude"
+          ]
+        }
+      ],
+      "files_glob": [
+        {
+          "path": "plugins/claude-md-management/commands",
+          "dest": "commands",
+          "harness": [
+            "claude"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "codex-plugin-cc",
+      "group": "plugins",
+      "title": "Codex plugin for Claude Code (openai)",
+      "description": "Delegate to / review with Codex; needs its plugin runtime, so installed as a plugin.",
+      "plugins": {
+        "claude": {
+          "name": "codex",
+          "marketplace": {
+            "name": "openai-codex",
+            "source": "openai/codex-plugin-cc"
+          }
+        }
+      }
+    },
+    {
+      "id": "understand-anything",
+      "group": "plugins",
+      "title": "Understand-Anything (Claude)",
+      "description": "Codebase knowledge graph + dashboard; skills call plugin scripts, so installed as a plugin.",
+      "plugins": {
+        "claude": {
+          "name": "understand-anything",
+          "marketplace": {
+            "name": "understand-anything",
+            "source": "Lum1104/Understand-Anything"
+          }
+        }
+      }
+    },
+    {
+      "id": "context7",
+      "group": "plugins",
+      "title": "context7 (Claude official plugin)",
+      "description": "MCP: up-to-date library docs",
+      "plugins": {
+        "claude": {
+          "name": "context7",
+          "marketplace": {
+            "name": "claude-plugins-official",
+            "source": "anthropics/claude-plugins-official"
+          }
+        }
+      }
+    },
+    {
+      "id": "playwright",
+      "group": "plugins",
+      "title": "playwright (Claude official plugin)",
+      "description": "MCP: browser automation",
+      "plugins": {
+        "claude": {
+          "name": "playwright",
+          "marketplace": {
+            "name": "claude-plugins-official",
+            "source": "anthropics/claude-plugins-official"
+          }
+        }
+      }
+    },
+    {
+      "id": "code-review",
+      "group": "plugins",
+      "title": "code-review (Claude official plugin)",
+      "description": "/code-review command for PRs",
+      "plugins": {
+        "claude": {
+          "name": "code-review",
+          "marketplace": {
+            "name": "claude-plugins-official",
+            "source": "anthropics/claude-plugins-official"
+          }
+        }
+      }
+    },
+    {
+      "id": "ralph-loop",
+      "group": "plugins",
+      "title": "ralph-loop (Claude official plugin)",
+      "description": "Ralph loop commands + Stop hook",
+      "plugins": {
+        "claude": {
+          "name": "ralph-loop",
+          "marketplace": {
+            "name": "claude-plugins-official",
+            "source": "anthropics/claude-plugins-official"
+          }
+        }
+      }
+    },
+    {
+      "id": "remember",
+      "group": "plugins",
+      "title": "remember (Claude official plugin)",
+      "description": "Session memory hooks",
+      "plugins": {
+        "claude": {
+          "name": "remember",
+          "marketplace": {
+            "name": "claude-plugins-official",
+            "source": "anthropics/claude-plugins-official"
+          }
+        }
+      }
+    },
+    {
+      "id": "learning-output-style",
+      "group": "plugins",
+      "title": "learning-output-style (Claude official plugin)",
+      "description": "Learning output style (SessionStart hook)",
+      "plugins": {
+        "claude": {
+          "name": "learning-output-style",
+          "marketplace": {
+            "name": "claude-plugins-official",
+            "source": "anthropics/claude-plugins-official"
+          }
+        }
+      }
+    },
+    {
+      "id": "cloudflare-mcp",
+      "group": "plugins",
+      "title": "Cloudflare MCP servers (Claude plugin)",
+      "description": "cloudflare-api / docs / bindings / builds / observability MCP servers. The plugin also bundles skills that overlap cloudflare-skills.",
+      "plugins": {
+        "claude": {
+          "name": "cloudflare",
+          "marketplace": {
+            "name": "cloudflare",
+            "source": "cloudflare/skills"
+          }
+        }
+      }
+    }
+  ]
+}
