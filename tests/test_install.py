@@ -106,6 +106,13 @@ class OwnPackages(Sandbox):
         self.run_cli("uninstall", "ditto-writer", "-y", "--force")
         self.assertFalse(skill.exists())
 
+    def test_config_created_for_agents_is_removed_again(self):
+        self.config.unlink()
+        self.run_cli("install", "dev-agents", "-y", "--harness", "codex")
+        self.assertIn("[agents.debugger]", self.config.read_text())
+        self.run_cli("uninstall", "--all", "-y")
+        self.assertFalse(self.config.exists())
+
     def test_dry_run_changes_nothing(self):
         before = self.leftovers()
         self.run_cli("install", "--preset", "mine", "--dry-run", "--harness", "claude,codex")

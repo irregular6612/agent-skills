@@ -573,6 +573,9 @@ def sync_codex_config(env, state):
     say("  config {} ({} managed agent entries)".format(cfg, len(entries)))
     if env.dry:
         return
+    if not new.strip():
+        cfg.unlink()  # only our block was ever in it
+        return
     cfg.parent.mkdir(parents=True, exist_ok=True)
     tmp = cfg.with_name(cfg.name + ".agent-skills-tmp")
     tmp.write_text(new, encoding="utf-8")
