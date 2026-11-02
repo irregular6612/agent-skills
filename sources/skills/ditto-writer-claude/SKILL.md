@@ -57,6 +57,11 @@ description: 내가 직접 쓴 글로 만든 문체·저자 프로필로, 사람
 
 시작 줄: `ditto-writer / 프로필: <이름> / writer: <모델> / 리뷰어: <A 모델> + <O 모델> / 작업 폴더: <경로>`
 
+**작성 원칙 먼저 읽기.** [references/principles.md](references/principles.md)를 읽고 문서 장르에 맞는 원칙을 적용한다.
+논문에서는 질문 회수, 결과를 앞세운 도입, 해석을 뒷받침하는 숫자, 연결된 문단, 중복·불필요한 방어 문장 삭제를 기준으로 삼는다.
+사용자의 현재 요청과 고정 범위를 우선하며, CogSci 전용 항목은 해당 원고에만 적용한다.
+원칙 파일의 절대경로와 적용 범위를 BRIEF에 기록하고 writer에게 매 라운드 전달한다. 블라인드 리뷰어에게는 전달하지 않는다.
+
 1. **프로필 확인 (가장 먼저).** `ls ~/.claude/skills/ditto-writer/profiles/*/meta.yaml` 을 읽는다.
    - 인자로 이름을 받았거나, `owner: self` 이면서 언어·장르가 맞는 프로필이 있으면: "기존 프로필 <이름> (샘플 <N>단어,
      <장르>, 신뢰도 <..>) 을 쓸까요, 새 샘플로 만들까요?" → 쓰면 **Phase 1 을 건너뛴다.**
@@ -109,7 +114,7 @@ description: 내가 직접 쓴 글로 만든 문체·저자 프로필로, 사람
 라운드 N = 1, 2, … 최대 `rounds`:
 
 ### 2.1 writer (prompts.md §1 / §2)
-- 입력: BRIEF.md, `profile.md`(anchors 포함), `sample.md`, v0, 직전 버전, 직전 라운드 블라인드 보고서 2건.
+- 입력: BRIEF.md, `references/principles.md`, `profile.md`(anchors 포함), `sample.md`, v0, 직전 버전, 직전 라운드 블라인드 보고서 2건.
 - 산출: `vN.json`(또는 `vN.md`) + `writer_rN.md` (블라인드 지적 판정표 → 변경 기록 → L2 흔적 목록 → ledger 위치표 → 점검 출력).
 - BRIEF.md (≤ 900단어) 는 Phase 0–1 이 끝나면 formats.md 템플릿으로 오케스트레이터가 쓴다 (content ledger 포함, 사용자 확인).
   규칙이 바뀌면 **덮어써서** 갱신한다 (절을 덧붙이지 않는다). 옛 판이 필요하면 `BRIEF_vN.md` 로 복사.
@@ -182,9 +187,10 @@ python3 $S/blind_score.py --targets "$WD/vN.json" "$WD/blind_rN_anthropic.md" "$
 - `references/stage1_low_level.md`, `references/stage2_author_model.md` — Phase 1 서브에이전트 지시문과 절차.
 - `references/profile_schema.md` — 프로필 폴더·`meta.yaml`·`profile.md`·`evidence.md` 스키마(섹션별 단어 예산), writer 에게 주는 방식.
 - `references/prompts.md` — writer r1 / rN, 블라인드 리뷰어 템플릿.
+- [references/principles.md](references/principles.md) — 사용자 작성 원칙. 시작 시 읽고 writer가 매 라운드 적용한다.
 - `references/formats.md` — **길이 상한 표**, 작업 폴더, BRIEF 템플릿, writer_rN 구성, 블라인드 보고서, CHANGELOG 점수표.
 - `profiles/<name>/` — 저장된 프로필 (meta.yaml · profile.md · evidence.md · sample.md · counts.json).
   현재: `juhyeon-en-academic` (영어 학술 과제, 135단어, 신뢰도 low) ·
-  `juhyeon-ko-academic` (한국어 연구 요약문, 551어절 + holdout 119어절, 신뢰도 medium).
+  `juhyeon-ko-academic` (한국어 연구 요약·철학 에세이·법 리포트 3편, 1,331어절 + holdout 367어절, 신뢰도 high, 2026-10-14 재분석; 이전 판 `_prev/`).
 
 필요: `python-docx`, `lxml`, Codex CLI, LibreOffice (docx 렌더).

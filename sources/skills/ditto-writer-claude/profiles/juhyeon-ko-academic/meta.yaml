@@ -2,17 +2,17 @@ profile_name: juhyeon-ko-academic
 owner: self                 # 스킬 사용자 본인
 default: true               # 한국어 학술 글이면 먼저 제안
 created: 2026-10-07
-updated: 2026-10-07
+updated: 2026-10-14         # 3편 합본으로 재분석 (이전 판은 _prev/2026-10-07/)
 sample:
-  source: "Workspace-ArXiv/LLM-Squid-Game-UC/short-description/short-ver.pdf (pdftotext; 표 제거, 수식 기호 HR_threat 등 토큰 치환)"
-  genre: Korean academic short description (연구 1쪽 요약 — 동기·설계·통제·측정·결과·논의)
+  source: "D1 Workspace-ArXiv/LLM-Squid-Game-UC/short-description/short-ver.pdf · D2 Public/4-2/Introduction-to-Ancient-Philosophy/Midterm_Essay_final.docx · D3 iCloud Drive gist/2-1/인공지능 로봇의 법/.../Report2. <학번> 박주현.docx"
+  genre: "Korean academic: 연구 1쪽 요약(D1) + 철학 에세이(D2) + 법 과목 리포트(D3)"
   language: ko
   writer_l1: ko
-  words: 551                # A 분할(앞 5문단), 어절 기준. 전체 670
-  sentences: 35
-  paragraphs: 5
-  edited_or_ai_assisted: no # 사용자 진술 "내가 쓴 글"; 교정 여부는 미확인
-  holdout: "sample_holdout.md 119어절 (논의·결론 2문단). 대조 결과 또한·시사한다 Never 철회, H-06·persona 4 수정"
-analysis: "stage1 fable·gpt-6-astra·opus → 병합 fable / stage2 fable·gpt-6-astra → 조립 fable + holdout 수정 1회"
-reliability: medium         # 551어절 단일 문서
-notes: "H-11(로마자 뒤 조사 띄움)·H-02(제목어 접합)는 PDF 추출 흔적일 수 있음. 논의 문단 문장이 더 길다(평균 23.8). docx 원본이 있으면 재분석 권장."
+  words: 1331               # A 분할 어절. sample.md 문단 1–5 D1 / 6–10 D2 / 11–21 D3
+  sentences: 107
+  paragraphs: 21
+  edited_or_ai_assisted: "partial: D2 지갑·안경 3문장은 교정받음 → 샘플에서 제외. D2 도입 문단은 단독 작성"
+  holdout: "sample_holdout.md 367어절 (D1 논의 119 / D2 결론 42 / D3 마지막 3문단 206). Never 위반 0, 자체 점검 범위 D1·D2 소폭 조정"
+analysis: "stage1 fable·gpt-6-astra·opus → 병합 fable / stage2 opus·gpt-6-astra → 조립 fable"
+reliability: high           # 합본 기준. 편당은 265–551어절
+notes: "사용자 지시: D3는 구조·논증 근거로만, D3 표면 군더더기는 재현 안 함. 목표는 흉내보다 더 좋은 글 → 비표준 흔적 기본 off, 강점 규칙 최우선."

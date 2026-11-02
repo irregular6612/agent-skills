@@ -19,6 +19,7 @@ Phase 1(문체·저자 분석) 지시문은 `stage1_low_level.md`, `stage2_autho
 
 읽을 것
 - BRIEF.md (고정 범위, content ledger, 길이, 수식 규칙, 멈춤 규칙)
+- {S}/../references/principles.md (사용자 작성 원칙. BRIEF의 적용 범위에 따라 쓰며, 현재 요청·고정 범위를 우선한다)
 - {PROFILE}/profile.md (문체·저자 프로필, ≤ 700단어. §5 anchors 는 이 사람이 실제로 쓴 문장이다)
 - {PROFILE}/sample.md (샘플 원문 전체)
 - v0_context.md, v0.{EXT}
@@ -62,6 +63,7 @@ md 면 "`$...$` LaTeX 인라인 수식이나 말로", 수식이 없으면 항목
 
 읽을 것: BRIEF.md, {PROFILE}/profile.md, {PROFILE}/sample.md, v0_context.md, v0.{EXT}, v{P}.{EXT}, writer_r{P}.md,
 blind_r{P}_anthropic.md, blind_r{P}_openai.md (v{P} 에 대한 블라인드 판독 2건), CHANGELOG.md 의 점수표.
+{S}/../references/principles.md도 다시 읽고 BRIEF의 적용 범위에 따라 수정한다. 현재 요청·고정 범위를 우선한다.
 쓸 것: v{N}.{EXT}, writer_r{N}.md 두 개만.
 
 1. 블라인드 지적 판정: 두 보고서의 의심 구간·문단 점수·고칠 제안·"한 사람이 쓴 글인가" 판단을 항목마다
