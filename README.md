@@ -21,7 +21,7 @@ Windows (PowerShell, 아직 검증 전):
 irm https://raw.githubusercontent.com/irregular6612/agent-skills/master/install.ps1 | iex
 ```
 
-저장소를 `~/.agent-skills/repo`에 받은 뒤 선택 화면을 엽니다. 번호(`1 3 5-8`), 패키지 id, 패키지 안의 skill 하나(`k-dense:literature-review`), 프리셋 이름(`mine`, `juhyeon-full`) 중 무엇이든 입력하면 됩니다.
+저장소를 `~/.agent-skills/repo`에 받은 뒤 선택 화면을 엽니다. 번호(`1 3 5-8`), 패키지 id, 패키지 안의 skill 하나(`k-dense:literature-review`), 프리셋 이름(`mine`, `day`, `night`) 중 무엇이든 입력하면 됩니다.
 
 필요한 것: Python 3.9+ (표준 라이브러리만 씁니다), git. plugin 항목을 고를 때만 `claude` / `codex` CLI가 필요합니다.
 
@@ -32,32 +32,70 @@ python3 install.py                                  # 대화형 선택
 python3 install.py list                             # 카탈로그와 설치 상태 ([x])
 python3 install.py install ditto-writer humanize    # 골라서 설치
 python3 install.py install superpowers:brainstorming k-dense:literature-review   # 패키지 안의 skill 하나만
-python3 install.py install --preset juhyeon-full    # 제 전체 세팅
+python3 install.py install --preset day             # 제 낮 세팅 (mattpocock + pstack 일부 + 내 skill)
+python3 install.py install --preset night           # 제 밤 세팅 (pstack 전체 + 내 skill)
+python3 install.py install pstack --mode night      # 특정 mode에 설치
+python3 install.py home night claude                # night 세션용 폴더 경로 (alias가 사용)
 python3 install.py uninstall humanize               # 골라서 제거 (인자 없으면 대화형)
 python3 install.py uninstall --all                  # 이 도구가 설치한 것 전부 제거
-python3 install.py graph --open                     # 의존성 그래프 열기
+python3 install.py graph --open [--mode night]      # 의존성 그래프 열기
 ```
 
 자주 쓰는 옵션은 아래와 같습니다.
 - `--harness claude,codex`: 대상을 고릅니다. 기본값은 이 기기에 있는 쪽입니다.
-- `--mode link|copy`: 기본값은 mac/linux가 link, windows가 copy입니다.
+- `--mode day|night`: 어느 skill 조합에 설치·제거할지 고릅니다. 기본값은 day입니다(`--preset night`이면 night).
+- `--method link|copy`: 기본값은 mac/linux가 link, windows가 copy입니다.
 - `--dry-run`: 실제로 바꾸지 않고 무엇이 바뀔지만 보여 줍니다.
 - `-y`: 확인 질문 없이 진행합니다.
 - `--force`: 설치 후 직접 수정한 항목도 교체하거나 제거합니다.
 
 한 줄 설치에 인자를 넘길 수도 있습니다: `curl -fsSL …/install.sh | bash -s -- install ditto-writer -y`
 
+## 낮 / 밤 mode
+
+skill·subagent·명령만 mode별로 따로 조합하고, 대화 기록·설정·로그인·plugin·MCP는 `~/.claude`, `~/.codex` 한 곳을 같이 씁니다.
+
+```text
+원본     sources/ (내 skill)  +  ~/.agent-skills/vendor/ (원작자 repo)
+  ↓ symlink
+조합     ~/.agent-skills/modes/{day,night}/{claude,codex}/{skills,agents,commands|prompts}
+  ↓ symlink
+실행     day   : ~/.claude/skills 등이 modes/day를 가리킴 → 그냥 `claude`, `codex`
+         night : ~/.agent-skills/homes/night/<claude|codex[-계정]>
+                 skill 폴더만 modes/night, 나머지는 전부 ~/.claude·~/.codex로 symlink
+```
+
+세션을 시작할 때 mode를 고릅니다. 예시 셸 함수(제 `~/.zshrc`):
+
+```zsh
+_agent_launch() {   # _agent_launch <claude|codex> <계정> [day|night] [args...]
+  local tool=$1 account=$2; shift 2; local mode=day
+  if [[ $1 == day || $1 == night ]]; then mode=$1; shift; fi
+  local home; home=$(python3 ~/Workspace/agent-skills/install.py home $mode $tool --account $account) || return 1
+  if [[ $tool == claude ]]; then
+    local token; token=$(security find-generic-password -s "claude-token-$account" -w) || return 1
+    if [[ $mode == day ]]; then CLAUDE_CODE_OAUTH_TOKEN=$token claude "$@"
+    else CLAUDE_CONFIG_DIR=$home CLAUDE_CODE_OAUTH_TOKEN=$token claude "$@"; fi
+  elif [[ $home == $HOME/.codex ]]; then CODEX_HOME=$home codex "$@"
+  else CODEX_HOME=$home CODEX_SQLITE_HOME=$HOME/.codex codex "$@"; fi
+}
+claude-juhyeon() { _agent_launch claude juhyeon "$@"; }   # claude-juhyeon night
+codex-jhjh6612() { _agent_launch codex jhjh6612 "$@"; }   # codex-jhjh6612 night
+```
+
+Codex night 폴더의 `config.toml`은 평소 설정에서 subagent 등록만 night 것으로 바꿔 자동 생성합니다. Codex는 `~/.agents/skills`를 mode와 상관없이 읽으므로 이 폴더는 비워 둡니다.
+
 ## 동작 방식
 
 | 무엇 | 어디에 |
 |---|---|
-| 내 skill·agent·command·hook 원본 | `sources/` → `~/.claude/…`, `~/.codex/…`에 symlink |
+| 내 skill·agent·command·hook 원본 | `sources/` → `~/.agent-skills/modes/<mode>/…`에 symlink (hook·전역 지침은 `~/.claude`, `~/.codex`에 직접) |
 | 외부 skill | `~/.agent-skills/vendor/<owner>__<repo>/<commit>/`에 필요한 경로만 받음 (git sparse checkout, git이 없으면 tarball) |
 | 설치 기록 | `~/.agent-skills/state.json` |
 | 원래 있던 파일 | `~/.agent-skills/backups/`로 옮겨 두었다가 제거할 때 되돌림 |
 | Codex subagent 등록 | `~/.codex/config.toml` 끝에 표시된 블록(`# >>> agent-skills managed agents`)으로만 추가·삭제 |
 | Claude hook 등록 | `~/.claude/settings.json`에 추가한 항목만 기록해 두고 제거할 때 그것만 뺌 |
-| 의존성 그래프 | `~/.agent-skills/graph.html` |
+| 의존성 그래프 | `~/.agent-skills/graph.html` (day), `graph-night.html` (night) |
 
 - **uninstall은 이 도구가 놓은 것만 지웁니다.** 설치 뒤 사용자가 고친 항목은 `--force` 없이 건드리지 않습니다.
 - **같은 이름 skill이 두 패키지에 있으면** 먼저 설치된 쪽을 유지하고 경고합니다. 예: `pstack`과 `mattpocock-skills`에 둘 다 있는 `tdd`.
@@ -112,8 +150,8 @@ python3 install.py graph --open                     # 의존성 그래프 열기
 | 패키지 | 원작자 repo | 커밋 | 라이선스 | 포함 skill |
 |---|---|---|---|---|
 | `taste-skill` | [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill) | `84ff339` | MIT | brandkit, design-taste-frontend, full-output-enforcement, image-to-code, industrial-brutalist-ui, minimalist-ui, redesign-existing-projects |
-| `k-dense` | [K-Dense-AI/scientific-agent-skills](https://github.com/K-Dense-AI/scientific-agent-skills) | `a25cf9e` | MIT | autoskill, citation-management, latex-posters, literature-review, markdown-mermaid-writing, peer-review, pptx-posters, research-grants, scientific-schematics, scientific-slides, scientific-writing |
-| `pstack` | [cursor/plugins](https://github.com/cursor/plugins/tree/main/pstack) | `ae5650f` | MIT | `pstack/skills/` 아래 전부 (원칙 skill, benchmark-checklist, blast-radius, /poteto-mode의 hillclimb 플레이북 등). juhyeon-full에는 겹치지 않는 26개만 |
+| `k-dense` | [K-Dense-AI/scientific-agent-skills](https://github.com/K-Dense-AI/scientific-agent-skills) | `a25cf9e` | MIT | autoskill, citation-management, latex-posters, literature-review, markdown-mermaid-writing, peer-review, pptx-posters, research-grants, scientific-schematics, scientific-slides |
+| `pstack` | [cursor/plugins](https://github.com/cursor/plugins/tree/main/pstack) | `ae5650f` | MIT | `pstack/skills/` 아래 전부 (원칙 skill, benchmark-checklist, blast-radius, /poteto-mode의 hillclimb 플레이북 등). day에는 겹치지 않는 26개, night에는 전부 |
 | `cloudflare-skills` | [cloudflare/skills](https://github.com/cloudflare/skills) | `1a33048` | Apache-2.0 | `skills/` 아래 전부 |
 | `document-skills` | [anthropics/skills](https://github.com/anthropics/skills) | `ca45fc4` | Proprietary (see upstream LICENSE.txt) | docx, pdf, pptx, xlsx |
 | `notebooklm` | [teng-lin/notebooklm-py](https://github.com/teng-lin/notebooklm-py) | `7db1000` | MIT | notebooklm |

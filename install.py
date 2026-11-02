@@ -4,7 +4,7 @@
     python3 install.py                      # interactive picker
     python3 install.py list                 # show catalog + what is installed
     python3 install.py install ditto-writer humanize k-dense:literature-review
-    python3 install.py install --preset juhyeon-full
+    python3 install.py install --preset day      # or: --preset night, --mode night
     python3 install.py uninstall humanize   # or: uninstall --all
 
 My own skills are linked (or copied) from sources/ in this repository, so one
@@ -35,7 +35,9 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent
 CATALOG = REPO / "catalog.json"
 IS_WINDOWS = platform.system() == "Windows"
-STATE_VERSION = 1
+STATE_VERSION = 2
+MODES = ("day", "night")
+MODE_DIRS = {"claude": ("skills", "agents", "commands"), "codex": ("skills", "agents", "prompts")}
 BLOCK_BEGIN = "# >>> agent-skills managed agents (edit with install.py) >>>"
 BLOCK_END = "# <<< agent-skills managed agents <<<"
 SKIP_NAMES = {".DS_Store", "__pycache__", ".git"}
@@ -66,15 +68,17 @@ class Env:
     def __init__(self, args):
         home = Path.home()
         self.state_dir = Path(os.environ.get("AGENT_SKILLS_STATE") or home / ".agent-skills")
+        # Base homes are fixed: CLAUDE_CONFIG_DIR / CODEX_HOME point at a mode or account
+        # home inside such sessions, which must not become the install target.
         self.homes = {
-            "claude": Path(os.environ.get("CLAUDE_CONFIG_DIR") or home / ".claude"),
-            "codex": Path(os.environ.get("CODEX_HOME") or home / ".codex"),
+            "claude": Path(os.environ.get("AGENT_SKILLS_CLAUDE_HOME") or home / ".claude"),
+            "codex": Path(os.environ.get("AGENT_SKILLS_CODEX_HOME") or home / ".codex"),
         }
         self.legacy_state = home / ".agent-skills-setup" / "state.json"
         self.dry = getattr(args, "dry_run", False)
         self.force = getattr(args, "force", False)
-        mode = getattr(args, "mode", None)
-        self.mode = mode or ("copy" if IS_WINDOWS else "link")
+        self.method = getattr(args, "method", None) or ("copy" if IS_WINDOWS else "link")
+        self.target_mode = getattr(args, "mode", None)
         wanted = getattr(args, "harness", None)
         if wanted:
             self.harnesses = [h.strip() for h in wanted.split(",") if h.strip()]
@@ -99,7 +103,7 @@ class State:
         self.path = env.state_dir / "state.json"
         if self.path.exists():
             self.data = json.loads(self.path.read_text(encoding="utf-8"))
-            if self.data.get("version") != STATE_VERSION:
+            if self.data.get("version") not in (1, STATE_VERSION):
                 raise Abort("unsupported state version in " + str(self.path))
         else:
             self.data = {"version": STATE_VERSION, "repo": str(REPO), "items": {}, "plugins": {},
@@ -107,6 +111,7 @@ class State:
         for key in ("items", "plugins", "mcp", "codex_agents", "claude_hooks"):
             self.data.setdefault(key, {})
         self.data["repo"] = str(REPO)
+        self.migrate_v1()
 
     def save(self):
         if self.env.dry:
@@ -116,12 +121,36 @@ class State:
         tmp.write_text(json.dumps(self.data, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         os.replace(tmp, self.path)
 
-    def packages(self):
+    def packages(self, mode=None):
+        """Installed package ids; with `mode`, only those present in that mode (home-level items count everywhere)."""
         pk = set()
         for section in ("items", "plugins", "mcp"):
             for rec in self.data[section].values():
-                pk.add(rec["package"])
+                if mode is None or rec.get("mode") in (None, mode):
+                    pk.add(rec["package"])
         return pk
+
+    def migrate_v1(self):
+        """v1 kept skills/agents/commands directly in the harness homes; v2 files them under mode 'day'."""
+        for rec in self.data["items"].values():  # v1 stored link/copy under "mode"
+            if "method" not in rec:
+                old = rec.get("mode")
+                rec["method"] = old if old in ("link", "copy") else ("link" if "target" in rec else "copy")
+                if old in ("link", "copy"):
+                    rec["mode"] = None
+        if self.data.get("version", STATE_VERSION) == STATE_VERSION:
+            self.data["version"] = STATE_VERSION
+            return
+        items = {}
+        for key, rec in self.data["items"].items():
+            if mode_scoped(rec["dest"]):
+                rec["mode"] = "day"
+                key = "day:" + key
+            items[key] = rec
+        self.data["items"] = items
+        self.data["codex_agents"] = {"day:" + name: {"package": info["package"], "mode": "day", "name": name}
+                                     for name, info in self.data["codex_agents"].items()}
+        self.data["version"] = STATE_VERSION
 
     def next_backup(self):
         root = self.env.state_dir / "backups"
@@ -284,12 +313,13 @@ class Unit:
         self.harness = harness
         self.files = None
         self.origin = "own"
+        self.mode = None
         self.__dict__.update(kw)
 
     @property
     def key(self):
         if self.kind == "path":
-            return self.harness + ":" + self.dest
+            return item_key(self.harness, self.dest, self.mode)
         return self.harness + ":" + self.name
 
 
@@ -387,6 +417,9 @@ def expand(env, cat, selection):
                 if h in env.harnesses:
                     units.append(Unit(pid, "mcp", h, name=spec["name"], command=spec["command"],
                                       args=spec.get("args", []), requires=spec.get("requires")))
+    for u in units:
+        if u.kind == "path" and mode_scoped(u.dest):
+            u.mode = env.target_mode
     return units
 
 
@@ -460,7 +493,7 @@ def place(src, dest, mode, files=None):
 
 
 def matches(rec, path):
-    if rec["mode"] == "link":
+    if rec.get("method", rec.get("mode")) == "link":
         return path.is_symlink() and os.readlink(str(path)) == rec["target"]
     return lexists(path) and not path.is_symlink() and tree_digest(path) == rec["digest"]
 
@@ -476,11 +509,183 @@ def points_into_repo(path):
         return False
 
 
+
+# ---------------------------------------------------------------- modes (day / night)
+#
+#   sources (repo) + vendor (upstream)          the originals
+#     -> ~/.agent-skills/modes/<mode>/<harness>/{skills,agents,...}   one link per item
+#       -> day:   ~/.claude/skills etc. are links to modes/day/...
+#          night: ~/.agent-skills/homes/night/<harness>[-<account>] mirrors the real home with
+#                 links, except skills/agents/... (modes/night) and Codex's config.toml.
+# History, settings, login, plugins and MCP stay in the one real home.
+
+def mode_scoped(dest):
+    return dest.split("/", 1)[0] in ("skills", "agents", "commands", "prompts")
+
+
+def item_key(harness, dest, mode):
+    return (mode + ":" if mode_scoped(dest) and mode else "") + harness + ":" + dest
+
+
+def mode_dir(env, mode, harness):
+    return env.state_dir / "modes" / mode / harness
+
+
+def item_path(env, harness, dest, mode):
+    if mode_scoped(dest):
+        return mode_dir(env, mode or "day", harness) / dest
+    return env.homes[harness] / dest
+
+
+def ensure_wiring(env, state):
+    """Point the real homes' skill/agent/command folders at modes/day (once; idempotent)."""
+    state.migrate_v1()
+    if env.dry:
+        return
+    for harness, home in env.homes.items():
+        if not home.is_dir():
+            continue
+        for cat in MODE_DIRS[harness]:
+            target = mode_dir(env, "day", harness) / cat
+            target.mkdir(parents=True, exist_ok=True)
+            link = home / cat
+            if link.is_symlink():
+                if os.readlink(str(link)) != str(target):
+                    warn("{} links somewhere else ({}); leaving it".format(link, os.readlink(str(link))))
+                continue
+            if link.is_dir():
+                for child in sorted(link.iterdir()):
+                    dest = target / child.name
+                    if lexists(dest):
+                        same = child.is_symlink() and dest.is_symlink() and os.readlink(str(child)) == os.readlink(str(dest))
+                        if not same:
+                            spare = state.next_backup()
+                            spare.mkdir(parents=True)
+                            shutil.move(str(child), str(spare / child.name))
+                            warn("{} clashed with {}; moved to {}".format(child, dest, spare))
+                        else:
+                            child.unlink()
+                        continue
+                    shutil.move(str(child), str(dest))
+                link.rmdir()
+            elif lexists(link):
+                warn("{} is not a folder; leaving it".format(link))
+                continue
+            link.symlink_to(target, target_is_directory=True)
+            say("  wire   {} -> {}".format(link, target))
+    state.save()
+
+
+def unwire(env):
+    """Undo ensure_wiring: real folders again, with whatever is left in modes/day moved back."""
+    if env.dry:
+        return
+    for harness, home in env.homes.items():
+        for cat in MODE_DIRS[harness]:
+            link, target = home / cat, mode_dir(env, "day", harness) / cat
+            if not (link.is_symlink() and os.readlink(str(link)) == str(target)):
+                continue
+            link.unlink()
+            children = sorted(target.iterdir()) if target.is_dir() else []
+            if children:
+                link.mkdir()
+                for child in children:
+                    shutil.move(str(child), str(link / child.name))
+            say("  unwire {}".format(link))
+
+
+def strip_tables(text, table):
+    """Remove every [table.*] TOML table (header through the line before the next header)."""
+    out, skipping = [], False
+    head = re.compile(r"^\s*\[\s*{}\s*\.".format(re.escape(table)))
+    for line in text.splitlines(keepends=True):
+        if HEADER_LINE.match(line):
+            skipping = bool(head.match(line))
+        if not skipping:
+            out.append(line)
+    return re.sub(r"\n{3,}", "\n\n", "".join(out))
+
+
+HEADER_LINE = re.compile(r"^\s*\[")
+
+
+def agent_block(state, mode, agents_dir):
+    entries = []
+    for info in sorted(state.data["codex_agents"].values(), key=lambda i: i["name"]):
+        if info["mode"] != mode:
+            continue
+        name = info["name"]
+        label = name if re.fullmatch(r"[A-Za-z0-9_-]+", name) else json.dumps(name)
+        entries.append("[agents.{}]\nconfig_file = {}\n".format(label, json.dumps(str(agents_dir / (name + ".toml")))))
+    return (BLOCK_BEGIN + "\n" + "\n".join(entries) + BLOCK_END + "\n") if entries else ""
+
+
+def link_entry(link, target, notes):
+    if link.is_symlink():
+        if os.readlink(str(link)) != str(target):
+            link.unlink()
+            link.symlink_to(target)
+    elif lexists(link):
+        notes.append("{} is a real file, not a link to {} (it is not shared)".format(link, target))
+    else:
+        link.symlink_to(target)
+
+
+def ensure_home(env, state, mode, harness, account=None):
+    """Return the home a session of (mode, harness, account) should use, creating/refreshing it."""
+    base = env.homes[harness]
+    alt_account = harness == "codex" and account not in (None, "", "main")
+    if mode == "day" and not alt_account:
+        return base
+    notes = []
+    if mode == "day":  # a second Codex login sharing everything else
+        home = Path.home() / (".codex-" + account)
+        home.mkdir(exist_ok=True)
+        for entry in base.iterdir():
+            if not entry.name.startswith("auth."):
+                link_entry(home / entry.name, entry, notes)
+    else:
+        home = env.state_dir / "homes" / mode / (harness + ("-" + account if alt_account else ""))
+        home.mkdir(parents=True, exist_ok=True)
+        auth_home = (Path.home() / (".codex-" + account)) if alt_account else base
+        for cat in MODE_DIRS[harness]:
+            (mode_dir(env, mode, harness) / cat).mkdir(parents=True, exist_ok=True)
+        for entry in base.iterdir():
+            name = entry.name
+            if name in MODE_DIRS[harness]:
+                link_entry(home / name, mode_dir(env, mode, harness) / name, notes)
+            elif harness == "codex" and name == "config.toml":
+                continue
+            elif harness == "codex" and name.startswith("auth."):
+                if (auth_home / name).exists():
+                    link_entry(home / name, auth_home / name, notes)
+            else:
+                link_entry(home / name, entry, notes)
+        for cat in MODE_DIRS[harness]:  # also when the real home has no such folder yet
+            link_entry(home / cat, mode_dir(env, mode, harness) / cat, notes)
+        if harness == "claude":  # with CLAUDE_CONFIG_DIR set, Claude reads <dir>/.claude.json
+            link_entry(home / ".claude.json", Path.home() / ".claude.json", notes)
+        else:
+            text = (base / "config.toml").read_text(encoding="utf-8") if (base / "config.toml").exists() else ""
+            text = re.sub(r"\n*" + re.escape(BLOCK_BEGIN) + r".*?" + re.escape(BLOCK_END) + r"\n?", "\n", text, flags=re.S)
+            text = strip_tables(text, "agents")
+            block = agent_block(state, mode, home / "agents")
+            config = (text.rstrip("\n") + "\n\n" if text.strip() else "") + block
+            cfg = home / "config.toml"
+            if not cfg.exists() or cfg.read_text(encoding="utf-8") != config:
+                tmp = home / ".config.toml.agent-skills-tmp"
+                tmp.write_text(config, encoding="utf-8")
+                os.chmod(tmp, 0o600)
+                os.replace(tmp, cfg)
+    for n in notes:
+        warn(n)
+    return home
+
+
 # ---------------------------------------------------------------- install / uninstall of path units
 
 def install_path(env, state, unit, legacy):
-    home = env.homes[unit.harness]
-    dest = home / unit.dest
+    dest = item_path(env, unit.harness, unit.dest, unit.mode)
     key = unit.key
     rec = state.data["items"].get(key)
     if rec and rec["package"] != unit.package:
@@ -493,11 +698,11 @@ def install_path(env, state, unit, legacy):
             if not env.force:
                 warn("{} was changed after install; leaving it (use --force to replace)".format(dest))
                 return False
-        elif rec["mode"] == "link" and rec["target"] == str(unit.src) and env.mode == "link":
+        elif rec["method"] == "link" and rec["target"] == str(unit.src) and env.method == "link":
             return False  # already up to date
-        elif rec["mode"] == "copy" and not unit.files and tree_digest(unit.src) == rec["digest"] and env.mode == "copy":
+        elif rec["method"] == "copy" and not unit.files and tree_digest(unit.src) == rec["digest"] and env.method == "copy":
             return False
-    say("  {:7}{} -> {}".format("update" if rec else env.mode if not unit.files else "copy", dest, unit.src))
+    say("  {:7}{} -> {}".format("update" if rec else env.method if not unit.files else "copy", dest, unit.src))
     if env.dry:
         return True
     backup = rec.get("backup") if rec else None
@@ -514,9 +719,9 @@ def install_path(env, state, unit, legacy):
             backup = str(target / dest.name)
             shutil.move(str(dest), backup)
             say("         backed up existing {} -> {}".format(dest, backup))
-    used = place(unit.src, dest, env.mode, unit.files)
-    new = {"package": unit.package, "harness": unit.harness, "dest": unit.dest, "mode": used,
-           "origin": unit.origin, "backup": backup}
+    used = place(unit.src, dest, env.method, unit.files)
+    new = {"package": unit.package, "harness": unit.harness, "dest": unit.dest, "method": used,
+           "mode": unit.mode if mode_scoped(unit.dest) else None, "origin": unit.origin, "backup": backup}
     if used == "link":
         new["target"] = str(unit.src)
     else:
@@ -524,14 +729,15 @@ def install_path(env, state, unit, legacy):
     state.data["items"][key] = new
     state.save()
     if unit.harness == "codex" and unit.dest.startswith("agents/") and unit.dest.endswith(".toml"):
-        state.data["codex_agents"][Path(unit.dest).stem] = {"package": unit.package, "file": str(dest)}
+        name = Path(unit.dest).stem
+        state.data["codex_agents"][unit.mode + ":" + name] = {"package": unit.package, "mode": unit.mode, "name": name}
         state.save()
     return True
 
 
 def uninstall_path(env, state, key):
     rec = state.data["items"][key]
-    dest = env.homes[rec["harness"]] / rec["dest"]
+    dest = item_path(env, rec["harness"], rec["dest"], rec.get("mode"))
     if lexists(dest) and not matches(rec, dest) and not env.force:
         warn("{} was changed after install; not removing (use --force)".format(dest))
         return False
@@ -547,13 +753,15 @@ def uninstall_path(env, state, key):
         say("         older copy kept at {} (not restored)".format(backup))
         backup = None
     if not (backup and lexists(Path(backup))):
-        prune_empty(dest.parent, env.homes[rec["harness"]])
+        stop = (mode_dir(env, rec["mode"], rec["harness"]) / rec["dest"].split("/", 1)[0]) if rec.get("mode") \
+            else env.homes[rec["harness"]]
+        prune_empty(dest.parent, stop)
     if backup and lexists(Path(backup)):
         shutil.move(backup, str(dest))
         say("         restored {}".format(dest))
     del state.data["items"][key]
     if rec["harness"] == "codex" and rec["dest"].startswith("agents/"):
-        state.data["codex_agents"].pop(Path(rec["dest"]).stem, None)
+        state.data["codex_agents"].pop("{}:{}".format(rec.get("mode"), Path(rec["dest"]).stem), None)
     state.save()
     return True
 
@@ -568,12 +776,15 @@ def sync_codex_config(env, state):
     pattern = re.compile(r"\n*" + re.escape(BLOCK_BEGIN) + r".*?" + re.escape(BLOCK_END) + r"\n?", re.S)
     outside = pattern.sub("\n", text) if pattern.search(text) else text
     entries = []
-    for name, info in sorted(state.data["codex_agents"].items()):
+    for info in sorted(state.data["codex_agents"].values(), key=lambda i: i["name"]):
+        if info["mode"] != "day":
+            continue  # other modes get their own config.toml in their home
+        name = info["name"]
         header = re.compile(r"^\s*\[\s*agents\s*\.\s*(\"?){}\1\s*\]".format(re.escape(name)), re.M)
         if header.search(outside):
             continue  # already declared by the user (or the previous setup); leave it alone
         entries.append("[agents.{}]\nconfig_file = {}\n".format(json.dumps(name) if not re.fullmatch(r"[A-Za-z0-9_-]+", name) else name,
-                                                               json.dumps(info["file"])))
+                                                               json.dumps(str(env.homes["codex"] / "agents" / (name + ".toml")))))
     block = ""
     if entries:
         block = BLOCK_BEGIN + "\n" + "\n".join(entries) + BLOCK_END + "\n"
@@ -859,8 +1070,8 @@ def numbered(cat):
     return rows
 
 
-def print_catalog(cat, state, only_installed=False):
-    installed = state.packages()
+def print_catalog(cat, state, only_installed=False, mode="day"):
+    installed = state.packages(mode)
     n = 0
     for g in cat["groups"]:
         pkgs = [p for p in cat["packages"] if p["group"] == g["id"]]
@@ -885,9 +1096,9 @@ def print_catalog(cat, state, only_installed=False):
 
 def interactive_pick(cat, state, env):
     rows = numbered(cat)
-    say("agent-skills — choose what to install into: " +
+    say("agent-skills — choose what to install into mode '{}' for: ".format(env.target_mode) +
         ", ".join("{} ({})".format(h, env.homes[h]) for h in env.harnesses))
-    print_catalog(cat, state)
+    print_catalog(cat, state, mode=env.target_mode)
     say("\nPresets: " + ", ".join("{} ({} packages)".format(k, len(v)) for k, v in cat["presets"].items()))
     say("Type numbers or ids (e.g. `1 3 5-8 k-dense:literature-review`), a preset name, or `q` to quit.")
     tty = open_tty()
@@ -998,9 +1209,11 @@ def toml_tables(text, table):
 
 
 class Inventory:
-    def __init__(self, env, state):
+    def __init__(self, env, state, homes=None, mode="day"):
         self.env = env
         self.state = state
+        self.homes = homes or env.homes
+        self.mode = mode
         self.nodes = {}
 
     def add(self, kind, name, harness, source, path, desc, text, plugin=None):
@@ -1017,7 +1230,7 @@ class Inventory:
         return node
 
     def origin_of(self, harness, dest):
-        rec = self.state.data["items"].get(harness + ":" + dest)
+        rec = self.state.data["items"].get(item_key(harness, dest, self.mode))
         if not rec:
             return "unmanaged"
         return "mine" if rec.get("origin") == "own" else "third-party: " + rec.get("origin", "")
@@ -1121,19 +1334,19 @@ class Inventory:
             data = {}
         for name, spec in (data.get("mcpServers") or {}).items():
             self.add("mcp", name, "claude", "user config (~/.claude.json)", claude_json, mcp_summary(spec), "")
-        cfg_path = self.env.homes["codex"] / "config.toml"
+        cfg_path = self.homes["codex"] / "config.toml"
         cfg = read_text(cfg_path)
         for name in toml_tables(cfg, "mcp_servers"):
             self.add("mcp", name, "codex", "user config (config.toml)", cfg_path, "", "")
 
     def scan(self):
-        for harness, home in self.env.homes.items():
+        for harness, home in self.homes.items():
             if home.is_dir():
                 self.scan_home(harness, home)
-        if self.env.homes["claude"].is_dir():
-            self.scan_claude_plugins(self.env.homes["claude"])
-        if self.env.homes["codex"].is_dir():
-            self.scan_codex_plugins(self.env.homes["codex"])
+        if self.homes["claude"].is_dir():
+            self.scan_claude_plugins(self.homes["claude"])
+        if self.homes["codex"].is_dir():
+            self.scan_codex_plugins(self.homes["codex"])
         self.scan_mcp()
         return self
 
@@ -1201,9 +1414,16 @@ def build_graph(inv):
             "homes": {h: str(p) for h, p in inv.env.homes.items()}}
 
 
-def write_graph(env, state, out=None, quiet=False):
-    graph = build_graph(Inventory(env, state).scan())
-    out = Path(out) if out else env.state_dir / "graph.html"
+def mode_homes(env, state, mode):
+    if mode == "day" or env.dry:
+        return dict(env.homes)
+    return {h: ensure_home(env, state, mode, h) if env.homes[h].is_dir() else env.homes[h] for h in env.homes}
+
+
+def write_graph(env, state, out=None, quiet=False, mode="day"):
+    graph = build_graph(Inventory(env, state, mode_homes(env, state, mode), mode).scan())
+    graph["mode"] = mode
+    out = Path(out) if out else env.state_dir / ("graph.html" if mode == "day" else "graph-{}.html".format(mode))
     html = GRAPH_HTML.replace("/*__DATA__*/null", json.dumps(graph, ensure_ascii=False).replace("</", "<\\/"))
     if env.dry:
         return out, graph
@@ -1334,16 +1554,31 @@ for(let i=0;i<350;i++)tick();fit();loop();
 
 # ---------------------------------------------------------------- commands
 
+def refresh_homes(env, state, mode):
+    """Re-sync existing session homes of `mode` (new links, regenerated Codex config)."""
+    if env.dry or mode == "day":
+        return
+    root = env.state_dir / "homes" / mode
+    for home in sorted(root.iterdir()) if root.is_dir() else []:
+        harness, _, account = home.name.partition("-")
+        if harness in env.homes:
+            ensure_home(env, state, mode, harness, account or None)
+
+
 def cmd_install(env, cat, state, tokens, preset):
     if preset:
         if preset not in cat["presets"]:
             raise Abort("unknown preset: " + preset)
         tokens = list(cat["presets"][preset]) + list(tokens)
+        if not env.target_mode and preset in MODES:
+            env.target_mode = preset
+    env.target_mode = env.target_mode or "day"
+    ensure_wiring(env, state)
     if not tokens:
         tokens = interactive_pick(cat, state, env)
     selection = parse_selection(cat, tokens)
-    say("\nInstalling {} package(s) for {} ({} mode){}".format(
-        len(selection), "+".join(env.harnesses), env.mode, " — dry run" if env.dry else ""))
+    say("\nInstalling {} package(s) into mode '{}' for {} ({}){}".format(
+        len(selection), env.target_mode, "+".join(env.harnesses), env.method, " — dry run" if env.dry else ""))
     if not confirm(env, "Continue?"):
         raise Abort("cancelled")
     legacy = load_legacy_backups(env)
@@ -1371,14 +1606,17 @@ def cmd_install(env, cat, state, tokens, preset):
             except Abort as exc:
                 warn(str(exc))
     sync_codex_config(env, state)
+    refresh_homes(env, state, env.target_mode)
     finish_legacy(env, state)
     say("\nDone: {} change(s). State: {}".format(changed, state.path))
-    write_graph(env, state)
+    write_graph(env, state, mode=env.target_mode)
     say("Undo with: python3 {} uninstall <package>   (or: uninstall --all)".format(REPO / "install.py"))
 
 
 def cmd_uninstall(env, cat, state, tokens, everything):
-    installed = sorted(state.packages())
+    mode = env.target_mode = env.target_mode or "day"
+    ensure_wiring(env, state)
+    installed = sorted(state.packages(mode))
     if everything:
         tokens = installed
     if not tokens:
@@ -1409,7 +1647,12 @@ def cmd_uninstall(env, cat, state, tokens, everything):
         raise Abort("cancelled")
     for pid, sub in targets:
         for key, rec in sorted(state.data["items"].items()):
-            if rec["package"] == pid and (not sub or rec["dest"] == "skills/" + sub):
+            if rec["package"] == pid and rec.get("mode") == mode and (not sub or rec["dest"] == "skills/" + sub):
+                uninstall_path(env, state, key)
+        if sub or any(r["package"] == pid and r.get("mode") not in (None, mode) for r in state.data["items"].values()):
+            continue  # still in another mode: keep its shared (home-level) parts
+        for key, rec in sorted(state.data["items"].items()):
+            if rec["package"] == pid and rec.get("mode") is None:
                 uninstall_path(env, state, key)
         if not sub:
             for key, rec in sorted(state.data["plugins"].items()):
@@ -1420,8 +1663,11 @@ def cmd_uninstall(env, cat, state, tokens, everything):
                     uninstall_mcp(env, state, key)
             uninstall_hooks(env, state, pid)
     sync_codex_config(env, state)
+    refresh_homes(env, state, mode)
+    if everything and not state.data["items"]:
+        unwire(env)
     say("Done.")
-    write_graph(env, state)
+    write_graph(env, state, mode=mode)
 
 
 def finish_legacy(env, state):
@@ -1462,16 +1708,24 @@ def main(argv=None):
     p_list.add_argument("--installed", action="store_true")
     p_list.add_argument("--json", action="store_true")
     p_list.add_argument("--harness")
+    p_list.add_argument("--mode", choices=MODES, default="day")
     p_in = sub.add_parser("install", help="install packages (interactive if none given)")
     p_in.add_argument("packages", nargs="*")
     p_in.add_argument("--preset")
-    p_in.add_argument("--mode", choices=["link", "copy"], help="link (default; copy on Windows) or copy")
+    p_in.add_argument("--mode", choices=MODES, help="which skill set to install into (default: day, or the preset's name)")
+    p_in.add_argument("--method", choices=["link", "copy"], help="link (default; copy on Windows) or copy")
     common(p_in)
     p_un = sub.add_parser("uninstall", help="remove installed packages (interactive if none given)")
     p_un.add_argument("packages", nargs="*")
-    p_un.add_argument("--all", action="store_true")
+    p_un.add_argument("--all", action="store_true", help="everything in this mode")
+    p_un.add_argument("--mode", choices=MODES, default="day")
     common(p_un)
+    p_home = sub.add_parser("home", help="print (and prepare) the home a session of MODE should use")
+    p_home.add_argument("session_mode", choices=MODES)
+    p_home.add_argument("tool", choices=["claude", "codex"])
+    p_home.add_argument("--account", help="Codex account home suffix (~/.codex-<account>); omit or 'main' for ~/.codex")
     p_gr = sub.add_parser("graph", help="write an Obsidian-style dependency graph of what is installed")
+    p_gr.add_argument("--mode", choices=MODES, default="day")
     p_gr.add_argument("--out", help="output HTML path (default: ~/.agent-skills/graph.html)")
     p_gr.add_argument("--open", action="store_true", help="open it in the browser")
     p_gr.add_argument("--json", action="store_true", help="print the graph data as JSON instead")
@@ -1490,16 +1744,26 @@ def main(argv=None):
                                   "packages": [{k: p[k] for k in ("id", "group", "title", "description")}
                                                for p in cat["packages"]]}, ensure_ascii=False, indent=2))
             else:
-                print_catalog(cat, state, args.installed)
+                print_catalog(cat, state, args.installed, args.mode)
         elif args.cmd == "install":
             cmd_install(env, cat, state, args.packages, args.preset)
         elif args.cmd == "uninstall":
             cmd_uninstall(env, cat, state, args.packages, args.all)
+        elif args.cmd == "home":
+            out, sys.stdout = sys.stdout, sys.stderr  # only the path goes to stdout (shell captures it)
+            try:
+                ensure_wiring(env, state)
+                home = ensure_home(env, state, args.session_mode, args.tool, args.account)
+            finally:
+                sys.stdout = out
+            print(home)
         elif args.cmd == "graph":
+            ensure_wiring(env, state)
             if args.json:
-                print(json.dumps(build_graph(Inventory(env, state).scan()), ensure_ascii=False, indent=2))
+                print(json.dumps(build_graph(Inventory(env, state, mode_homes(env, state, args.mode), args.mode).scan()),
+                                 ensure_ascii=False, indent=2))
             else:
-                out, _ = write_graph(env, state, args.out)
+                out, _ = write_graph(env, state, args.out, mode=args.mode)
                 if args.open:
                     import webbrowser
                     webbrowser.open(out.resolve().as_uri())

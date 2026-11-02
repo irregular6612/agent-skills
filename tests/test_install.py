@@ -104,7 +104,7 @@ class OwnPackages(Sandbox):
         self.assertEqual((mine / "SKILL.md").read_text(), "my own humanize")
 
     def test_copy_mode_protects_local_edits(self):
-        self.run_cli("install", "ditto-writer", "-y", "--harness", "claude", "--mode", "copy")
+        self.run_cli("install", "ditto-writer", "-y", "--harness", "claude", "--method", "copy")
         skill = self.home / ".claude" / "skills" / "ditto-writer"
         self.assertFalse(skill.is_symlink())
         (skill / "SKILL.md").write_text("edited locally")
@@ -127,6 +127,37 @@ class OwnPackages(Sandbox):
         self.assertEqual(self.leftovers(), before)
         self.assertFalse((self.home / ".agent-skills" / "state.json").exists())
 
+    def test_day_folders_are_links_into_modes_day(self):
+        self.run_cli("install", "ditto-writer", "-y", "--harness", "claude")
+        skills = self.home / ".claude" / "skills"
+        self.assertTrue(skills.is_symlink())
+        self.assertEqual(Path(os.readlink(skills)), self.home / ".agent-skills" / "modes" / "day" / "claude" / "skills")
+
+    def test_night_mode_is_separate_but_shares_history(self):
+        (self.home / ".claude" / "projects").mkdir()
+        (self.home / ".claude.json").write_text("{}")
+        self.run_cli("install", "ditto-writer", "-y", "--harness", "claude", "--mode", "night")
+        self.run_cli("install", "aha", "-y", "--harness", "claude")
+        night = Path(self.run_cli("home", "night", "claude").stdout.strip())
+        self.assertTrue((night / "skills" / "ditto-writer" / "SKILL.md").is_file())
+        self.assertFalse((night / "skills" / "aha").exists())
+        self.assertFalse((self.home / ".claude" / "skills" / "ditto-writer").exists())
+        self.assertTrue((self.home / ".claude" / "skills" / "aha").exists())
+        self.assertEqual(Path(os.readlink(night / "projects")), self.home / ".claude" / "projects")
+        self.assertEqual(Path(os.readlink(night / ".claude.json")), self.home / ".claude.json")
+        self.assertEqual(Path(self.run_cli("home", "day", "claude").stdout.strip()), self.home / ".claude")
+
+    def test_night_codex_config_registers_only_night_agents(self):
+        self.run_cli("install", "dev-agents", "-y", "--harness", "codex", "--mode", "night")
+        night = Path(self.run_cli("home", "night", "codex").stdout.strip())
+        night_cfg = (night / "config.toml").read_text()
+        self.assertIn(str(night / "agents" / "code-reviewer.toml"), night_cfg)
+        self.assertNotIn("[agents.debugger]\nconfig_file = \"/elsewhere\"", night_cfg)
+        self.assertNotIn("code-reviewer", self.config.read_text())  # main (day) config untouched
+        self.assertIn('model = "x"', night_cfg)
+        self.run_cli("uninstall", "dev-agents", "-y", "--mode", "night")
+        self.assertNotIn("code-reviewer", (night / "config.toml").read_text())
+
     def test_graph_links_skills_to_their_subagents(self):
         self.run_cli("install", "humanize", "paper-driller", "-y", "--harness", "claude")
         data = json.loads(self.run_cli("graph", "--json").stdout)
@@ -142,7 +173,7 @@ class ThirdParty(Sandbox):
         skill = self.home / ".claude" / "skills" / "literature-review"
         self.assertTrue((skill / "SKILL.md").is_file())
         self.assertFalse((self.home / ".claude" / "skills" / "scientific-writing").exists())
-        rec = self.state()["items"]["claude:skills/literature-review"]
+        rec = self.state()["items"]["day:claude:skills/literature-review"]
         self.assertTrue(rec["origin"].startswith("K-Dense-AI/scientific-agent-skills@"))
         self.run_cli("uninstall", "--all", "-y")
         self.assertFalse(skill.exists())

@@ -51,7 +51,7 @@
       "research-agents",
       "portfolio-agents"
     ],
-    "juhyeon-full": [
+    "day": [
       "ditto-writer",
       "iterative-academic-writer",
       "paper-radar",
@@ -120,6 +120,33 @@
       "pstack:poteto-mode",
       "pstack:how",
       "pstack:why"
+    ],
+    "night": [
+      "ditto-writer",
+      "humanize",
+      "iterative-academic-writer",
+      "paper-radar",
+      "paper-driller",
+      "paper-understand",
+      "paper-section-rewrite",
+      "paper-readability-review",
+      "paper-digest",
+      "paper-banana",
+      "latex-publication",
+      "hwpx",
+      "aha",
+      "autoresearch",
+      "book-qa-note",
+      "korean-scholarship-search",
+      "gist-library-room-booking",
+      "research-proposal",
+      "weekly-report-writer",
+      "claude-command-library",
+      "claude-subagent-library",
+      "dev-agents",
+      "research-agents",
+      "portfolio-agents",
+      "pstack"
     ]
   },
   "packages": [
@@ -941,7 +968,7 @@
       "id": "k-dense",
       "group": "external",
       "title": "Scientific Agent Skills (K-Dense) — writing/research subset",
-      "description": "11 research-writing skills from K-Dense-AI/scientific-agent-skills (the repo has 177; pick any).",
+      "description": "10 research-writing skills from K-Dense-AI/scientific-agent-skills (the repo has 177; pick any).",
       "source": {
         "repo": "K-Dense-AI/scientific-agent-skills",
         "ref": "a25cf9ec00e2745d03f8704acf6f6919694ccd9a",
@@ -1021,14 +1048,6 @@
         {
           "name": "scientific-slides",
           "path": "skills/scientific-slides",
-          "harness": [
-            "claude",
-            "codex"
-          ]
-        },
-        {
-          "name": "scientific-writing",
-          "path": "skills/scientific-writing",
           "harness": [
             "claude",
             "codex"
