@@ -1,6 +1,6 @@
 # paper-readability-review
 
-논문 PDF에 가독성 피드백을 **내용 / 구조 / 문장** 세 층위로 진단해, 본문 위에 색상 하이라이트와 마진 카드(진단 + 대안 방향)를 붙인 리뷰 PDF를 만든다.
+논문 PDF에 가독성·근거 피드백을 **내용 / 구조 / 문장 / 근거** 네 층위로 진단해, 본문 위에 색상 하이라이트와 마진 카드(진단 + 대안 방향)를 붙인 리뷰 PDF를 만든다.
 
 ## What it does
 
@@ -8,7 +8,7 @@
 [원고 PDF]
     ↓
 [Phase 1] 전체 읽기 + 섹션 구조 파악
-[Phase 2] 3 층위 진단 (각 항목별 본문 phrase 추출)
+[Phase 2] 4 층위 진단 (각 항목별 본문 phrase 추출)
 [Phase 3] 우선순위 부여 (★ 최우선 / ▲ 중요 / 일반)
 [Phase 4] annotations.json → build_review_pdf.py
 [Phase 5] critic-loop: 페이지 PNG 렌더링 → 자체 검토 → 재생성
@@ -53,6 +53,7 @@ for i in range(len(doc)):
 | 내용 (content)   | 통찰·기여·stake가 substantively 빠진 경우 |
 | 구조 (structure) | 순서·배치 — architecture-first, 갑툭튀, 분산 |
 | 문장 (sentence)  | verbosity·문체 — 수식 침투, 삽입구, 수동태 |
+| 근거 (rigor)     | 주장이 근거를 넘어섬 — 과장, 인과 비약, 불확실성 누락 |
 
 | 우선순위 | 사용 시점 |
 |---------|----------|

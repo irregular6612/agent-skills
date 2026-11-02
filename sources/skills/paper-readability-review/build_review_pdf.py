@@ -43,6 +43,7 @@ COLORS: dict[str, dict[str, Any]] = {
     "content":   {"hl": (1.00, 0.65, 0.65), "fill": (1.00, 0.93, 0.93), "label": "내용"},
     "structure": {"hl": (0.55, 0.80, 1.00), "fill": (0.90, 0.95, 1.00), "label": "구조"},
     "sentence":  {"hl": (1.00, 0.88, 0.40), "fill": (1.00, 0.97, 0.82), "label": "문장"},
+    "rigor":     {"hl": (0.55, 0.85, 0.55), "fill": (0.92, 0.98, 0.92), "label": "근거"},
 }
 
 PRIORITY_LABEL = {"highest": "★ 최우선", "high": "▲ 중요", "normal": None}
@@ -163,13 +164,14 @@ def add_cover_page(doc, title: str, subtitle: str,
 
     legend_y = 325
     cover.insert_textbox(fitz.Rect(60, legend_y, 552, legend_y + 22),
-                         "색상 범례 (3 층위)",
+                         "색상 범례 (4 층위)",
                          fontsize=12, color=(0, 0, 0),
                          fontname=font, fontfile=fontfile)
     items = [
         ("내용 (content)",   "통찰·기여·stake가 substantively 빠진 경우",  COLORS["content"]),
         ("구조 (structure)", "순서·배치 — architecture-first, 갑툭튀, 분산", COLORS["structure"]),
         ("문장 (sentence)",  "verbosity·문체 — 수식 침투, 삽입구, 수동태",     COLORS["sentence"]),
+        ("근거 (rigor)",     "주장이 근거를 넘어섬 — 과장, 인과 비약, 불확실성 누락", COLORS["rigor"]),
     ]
     y = legend_y + 28
     for name, desc, col in items:
@@ -185,7 +187,7 @@ def add_cover_page(doc, title: str, subtitle: str,
                              fontname=font, fontfile=fontfile)
         y += 25
 
-    pri_y = 430
+    pri_y = 455
     cover.insert_textbox(fitz.Rect(60, pri_y, 552, pri_y + 22),
                          "우선순위 뱃지",
                          fontsize=12, color=(0, 0, 0),
@@ -294,7 +296,7 @@ def build(input_pdf: str, annotations_json: str, output_pdf: str) -> None:
 
     title = spec.get("title", Path(input_pdf).stem.replace("_", " "))
     subtitle = spec.get("subtitle",
-                        "by Claude · 가독성 / 구조 / 문장 층위 피드백")
+                        "by Claude · 내용 / 구조 / 문장 / 근거 층위 피드백")
     one_line_diag = spec.get("one_line_diagnosis")
 
     doc = fitz.open(input_pdf)
