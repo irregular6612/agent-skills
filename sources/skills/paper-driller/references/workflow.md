@@ -15,7 +15,7 @@
 ## 1. 호출과 템플릿 선택
 
 ```text
-/paper-driller <arXiv-ID | DOI | URL | 제목> [--template <id>|auto] [--mode preread|deep] [--profile ...] [--humanize]
+/paper-driller <arXiv-ID | DOI | URL | 제목> [--template <id>|auto] [--mode preread|deep] [--profile ...] [--ditto]
 ```
 
 | 상황 | 동작 |
@@ -115,7 +115,7 @@ Claude의 `mcpsemanticscholar`·`paper-search-mcp-openai-v2`는 실제 도구가
 
 문체: 이 분야를 처음 보는 고등학생이 읽는다고 생각한다. 용어는 지우지 말고 첫 등장에 괄호 설명을 붙인다. 비유는 이해를 돕는 용도로만 쓰고, 비유 뒤에는 정확한 용어로 돌아온다. 15어절 제한, 비유 개수 제한, 수치 반복 금지, 전체 길이 상한은 새 노트에 적용하지 않는다. 그 규칙들(`readability-spec.md`, `preread-v2-spec.md`)은 v2 노트 전용이다.
 
-`general-v1`의 `## 개요`는 `paper-digest/SKILL.md`의 규칙으로 실제 작성한 결과를 그대로 넣는다. 다른 템플릿은 절 제목이 달라도 되며, 그 템플릿이 개요 자리로 정한 절에 같은 규칙을 적용한다. `--humanize`를 켰어도 개요·표·frontmatter·BibTeX·도표 절의 수치는 다듬기에 넘기지 않는다. 다듬은 뒤 숫자·괄호 안 용어·`[위치 미확인]`·`[[링크]]`가 바뀌었으면 그 블록은 원본으로 되돌린다.
+`general-v1`의 `## 개요`는 `paper-digest/SKILL.md`의 규칙으로 실제 작성한 결과를 그대로 넣는다. 다른 템플릿은 절 제목이 달라도 되며, 그 템플릿이 개요 자리로 정한 절에 같은 규칙을 적용한다. `--ditto`를 켰어도 개요·표·frontmatter·BibTeX·도표 절의 수치는 ditto-writer에 FIXED 블록으로만 넘긴다. 다듬은 뒤 숫자·괄호 안 용어·`[위치 미확인]`·`[[링크]]`가 바뀌었으면 그 블록은 원본으로 되돌린다.
 
 ## 6. 새 전문 템플릿 제안·등록
 

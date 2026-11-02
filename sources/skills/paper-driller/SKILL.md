@@ -36,13 +36,13 @@ Role names in this document describe workflows. Claude uses its registered Markd
 ## 호출
 
 ```text
-/paper-driller <arXiv-ID | DOI | URL | 제목> [--template <id>|auto] [--mode preread|deep] [--profile ...] [--humanize]
+/paper-driller <arXiv-ID | DOI | URL | 제목> [--template <id>|auto] [--mode preread|deep] [--profile ...] [--ditto]
 ```
 
 - `--template <id>`: 그 템플릿을 쓴다. 다시 묻지 않는다.
 - `--template auto` (또는 `--auto`, "auto로 해줘"): **반드시 `general-v1`**. 전문 템플릿을 대신 골라 주는 옵션이 아니다.
 - `--mode preread|deep` (기본값: preread): `deep`은 고른 템플릿을 다 채운 뒤 `## 상세 독해 노트`를 더 붙인다(비어 있으면 검증 실패). 템플릿 질문이나 도표 설명을 건너뛰는 뜻이 아니다. `--mode preread`만 있는 호출(radar `드릴` 포함)도 템플릿은 묻는다.
-- `--humanize`: 저장 직전 서술 문단만 `humanize` 스킬로 다듬는다. 개요·표·수치·frontmatter는 넘기지 않는다.
+- `--ditto`: 저장 직전 서술 문단만 `ditto-writer` 스킬(`profile=juhyeon-ko-academic rounds=3`)로 내 문체에 맞게 다듬는다. 개요·표·수치·frontmatter는 고정(FIXED) 블록으로 넘기고 바꾸지 않는다. ditto-writer가 없는 환경에서는 건너뛰고 한 줄로 알린다.
 
 ## 순서
 

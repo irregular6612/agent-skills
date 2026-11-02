@@ -184,7 +184,7 @@ preread는 `paper-preread-analyst` 단일 호출로 분석과 편집을 끝낸�
 - 기본 subagent: 1회
 - 핵심 수치 충돌, low-confidence 핵심 claim, `--verify|--repro`: 같은 analyst 1회 추가 가능
 - retry 포함 최대: 2회
-- `--humanize`: validator 통과 후 `humanize` 스킬(KO Fast, `humanize-ko-monolith` 1회)을 서술 블록에만 적용한다. 이 호출은 위 2회 예산에 세지 않는다. 표 블록·frontmatter·BibTeX는 넘기지 않는다.
+- `--ditto`: validator 통과 후 `ditto-writer` 스킬(`profile=juhyeon-ko-academic rounds=3`)을 서술 블록에만 적용한다(서술 블록 = TARGET, 나머지 = FIXED). 이 호출은 위 2회 예산에 세지 않는다. 표 블록·frontmatter·BibTeX는 바꾸지 않는다.
 
 ## Completion Criteria
 

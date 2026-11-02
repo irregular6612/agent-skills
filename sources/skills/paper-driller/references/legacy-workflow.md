@@ -18,7 +18,7 @@
 - `--mode preread|deep`
 - **기본값: preread**
 - `deep`은 사용자가 심층 독해 노트나 섹션별 분석을 명시적으로 요청한 경우에만 사용한다.
-- `--humanize`: 저장 직전 서술 블록을 `humanize` 스킬(KO Fast)로 한 번 더 다듬는다. 기본 꺼짐.
+- `--ditto`: 저장 직전 서술 블록을 `ditto-writer` 스킬(`profile=juhyeon-ko-academic rounds=3`)로 한 번 더 다듬는다. 기본 꺼짐.
 - 난이도 옵션은 없다. 모든 preread 노트는 **intro 독자**(이 분야를 처음 보는 고등학생·타분야 대학생)에게 쓴다. 규칙은 `references/readability-spec.md`.
 
 기계 판독 스키마의 단일 진실 원천은 `references/paper-schema.json`이다. Category·profile·source coverage·preread 필수 섹션 enum을 다른 문서에 별도로 복제하지 않는다. 출력 의도와 편집 원칙은 `references/preread-v2-spec.md`, 정확성 보존형 쉬운 설명 규칙은 `references/readability-spec.md`, deep 모드의 장문 digest 규칙은 `references/insight-digest-spec.md`를 따른다.
@@ -51,7 +51,7 @@
 - `structure`: `imrad` | `free`
 - `scholarly`: `yes` | `no`
 
-사용자는 `--mode`, `--profile`, `--structure`, `--scholarly`, `--humanize`를 지정할 수 있다.
+사용자는 `--mode`, `--profile`, `--structure`, `--scholarly`, `--ditto`를 지정할 수 있다.
 
 ## Agent 구성
 
@@ -65,7 +65,7 @@
 | `paper-section-driller` | 생략 | 필요 | deep 섹션별 상세 독해 |
 | `paper-comparison` | 생략 | 선택 | deep 관련 연구 비교 매트릭스 |
 
-**기본 subagent 호출 예산: 1회**다. 핵심 수치 충돌, low-confidence 핵심 claim, 사용자 `--verify|--repro` 요청에만 같은 analyst를 제한된 payload로 한 번 더 호출한다. preread는 최대 2회이며 section fan-out·별도 meta/evidence/composer 호출을 금지한다. `--humanize`의 `humanize-ko-monolith` 1회는 이 예산 밖이다. metadata와 BibTeX는 수집 결과를 orchestrator가 결정론적으로 매핑한다.
+**기본 subagent 호출 예산: 1회**다. 핵심 수치 충돌, low-confidence 핵심 claim, 사용자 `--verify|--repro` 요청에만 같은 analyst를 제한된 payload로 한 번 더 호출한다. preread는 최대 2회이며 section fan-out·별도 meta/evidence/composer 호출을 금지한다. `--ditto`의 ditto-writer 실행은 이 예산 밖이다. metadata와 BibTeX는 수집 결과를 orchestrator가 결정론적으로 매핑한다.
 
 ## Workflow
 
@@ -82,7 +82,7 @@ C. 결정론적 frontmatter/BibTeX 매핑 + 템플릿 조립
   ↓
 D. paper-format-validator
   ↓
-D'. (--humanize일 때만) 서술 블록 humanize → validator 재통과
+D'. (--ditto일 때만) 서술 블록 ditto-writer → validator 재통과
   ↓
 E. Wiki Integration
 ```
@@ -278,17 +278,17 @@ preread 블록을 맨 앞에 유지한 뒤 `## 상세 독해 노트` 아래에 �
 
 동일 DOI/arXiv-ID/정규화 URL이 있으면 새 파일을 만들지 않고 `update-existing`으로 전환한다. 재실행 시 사용자 필드와 개인 메모를 보존한다.
 
-# Phase D' — Humanize (선택, `--humanize`)
+# Phase D' — ditto-writer 문체 다듬기 (선택, `--ditto`)
 
 Phase E validator를 한 번 통과한 뒤에만 실행한다. 순서:
 
 1. 조립된 노트에서 **서술 블록만** 뽑는다: READING_DECISION 이유 문단, ONE_MINUTE bullet, CORE_IDEA, WHAT_THEY_DID, LIMITS bullet, TERMS. KEY_EVIDENCE·READING_MAP 표, frontmatter, BibTeX, Wiki 링크는 넘기지 않는다.
-2. `humanize` 스킬을 KO Fast로 호출한다. 인자: `장르: 리포트`, `강도: 보수`, `--fast --ko`. 내부적으로 `humanize-ko-monolith` 1회다.
+2. 노트를 md로 넘겨 `ditto-writer` 스킬(`profile=juhyeon-ko-academic rounds=3`)을 호출한다. 1에서 뽑은 서술 블록은 TARGET, 나머지 블록(표·frontmatter·BibTeX·Wiki 링크)은 FIXED로 표시한다. 블라인드 리뷰 보고서는 작업 폴더에 남고 노트에는 넣지 않는다.
 3. 반환된 윤문본을 같은 블록 자리에 되돌려 놓는다. 표 블록은 원본 그대로.
 4. 되돌린 뒤 diff로 확인한다. 숫자, 괄호 안 영문 용어, `[위치 미확인]`, `C1`류 행 참조, `[[링크]]`가 하나라도 바뀌면 그 블록은 원본으로 롤백한다.
 5. Phase E validator를 다시 통과시킨다.
 
-이 호출은 preread 예산(최대 2회)에 세지 않는다. humanize가 등급 B 이하를 반환해도 Strict로 자동 승급하지 않는다. 사용자에게 한 줄로 알리고 끝낸다.
+이 호출은 preread 예산(최대 2회)에 세지 않는다. 3라운드 안에 멈춤 조건을 못 채워도 라운드를 늘리지 않고 마지막 통과본을 쓴 뒤 사용자에게 한 줄로 알린다.
 
 # Phase E — Format 검증
 
@@ -351,7 +351,7 @@ bash skills/paper-driller/scripts/validate-driller.sh
 - [ ] Findings/Results/실험표가 중복되지 않음
 - [ ] Discussion/이론적 의의/Discussion Points가 중복되지 않음
 - [ ] 원문을 읽을 목적과 위치가 구체적
-- [ ] 기본 subagent 1회, 조건부 재검증 포함 최대 2회 (`--humanize`는 별도)
+- [ ] 기본 subagent 1회, 조건부 재검증 포함 최대 2회 (`--ditto`는 별도)
 - [ ] 서술 블록 문장이 15어절 이하, 첫 등장 용어에 괄호 설명
 - [ ] CORE_IDEA가 "무엇 → 비유 1개 → 원리 → 쓸모" 순서
 - [ ] ONE_MINUTE에 locator·숫자 없음, 같은 수치가 두 블록에 없음

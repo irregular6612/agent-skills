@@ -533,6 +533,11 @@ def uninstall_path(env, state, key):
     if lexists(dest):
         remove_path(dest)
     backup = rec.get("backup")
+    if backup and env.legacy_state.parent in Path(backup).parents:
+        # A copy from before the previous ./setup took over; it is usually an
+        # older version of this same package, so leave it where it is.
+        say("         older copy kept at {} (not restored)".format(backup))
+        backup = None
     if not (backup and lexists(Path(backup))):
         prune_empty(dest.parent, env.homes[rec["harness"]])
     if backup and lexists(Path(backup)):
