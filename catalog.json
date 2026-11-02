@@ -1399,6 +1399,41 @@
           }
         }
       }
+    },
+    {
+      "id": "rea",
+      "group": "external",
+      "title": "REA reverse engineering (morluto/rea) — skill + MCP",
+      "description": "Reverse engineer native, Electron/JS, managed, firmware and browser targets. The MCP server needs the rea CLI: npm install --global rea-agents.",
+      "source": {
+        "repo": "morluto/rea",
+        "ref": "144843ccc26bd372d61b8c6a27b37a01a5b0fb61",
+        "license": "MIT"
+      },
+      "skills": [
+        {
+          "name": "reverse-engineer-anything",
+          "path": ".agents/skills/reverse-engineer-anything",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        }
+      ],
+      "mcp": [
+        {
+          "name": "rea",
+          "command": "rea",
+          "args": [
+            "mcp"
+          ],
+          "harness": [
+            "claude",
+            "codex"
+          ],
+          "requires": "npm install --global rea-agents"
+        }
+      ]
     }
   ]
 }

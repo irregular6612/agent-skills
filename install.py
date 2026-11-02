@@ -103,8 +103,8 @@ class State:
                 raise Abort("unsupported state version in " + str(self.path))
         else:
             self.data = {"version": STATE_VERSION, "repo": str(REPO), "items": {}, "plugins": {},
-                         "codex_agents": {}, "claude_hooks": {}}
-        for key in ("items", "plugins", "codex_agents", "claude_hooks"):
+                         "mcp": {}, "codex_agents": {}, "claude_hooks": {}}
+        for key in ("items", "plugins", "mcp", "codex_agents", "claude_hooks"):
             self.data.setdefault(key, {})
         self.data["repo"] = str(REPO)
 
@@ -118,7 +118,7 @@ class State:
 
     def packages(self):
         pk = set()
-        for section in ("items", "plugins"):
+        for section in ("items", "plugins", "mcp"):
             for rec in self.data[section].values():
                 pk.add(rec["package"])
         return pk
@@ -379,6 +379,11 @@ def expand(env, cat, selection):
         for h, spec in pkg.get("plugins", {}).items():
             if h in env.harnesses and not sub:
                 units.append(Unit(pid, "plugin", h, name=spec["name"], marketplace=spec["marketplace"]))
+        for spec in ([] if sub else pkg.get("mcp", [])):
+            for h in spec["harness"]:
+                if h in env.harnesses:
+                    units.append(Unit(pid, "mcp", h, name=spec["name"], command=spec["command"],
+                                      args=spec.get("args", []), requires=spec.get("requires")))
     return units
 
 
@@ -754,6 +759,61 @@ def uninstall_plugin(env, state, key):
     return True
 
 
+# ---------------------------------------------------------------- MCP servers (claude mcp / codex mcp)
+
+def mcp_registered(env, harness, name):
+    if harness == "claude":
+        try:
+            data = json.loads((Path.home() / ".claude.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return False
+        return name in (data.get("mcpServers") or {})
+    cfg = env.homes["codex"] / "config.toml"
+    return cfg.exists() and name in toml_tables(cfg.read_text(encoding="utf-8"), "mcp_servers")
+
+
+def install_mcp(env, state, unit):
+    key = unit.harness + ":" + unit.name
+    if key in state.data["mcp"]:
+        return False
+    if not shutil.which(unit.harness):
+        warn("{} CLI not found; skipping MCP server {}".format(unit.harness, unit.name))
+        return False
+    if not shutil.which(unit.command):
+        warn("`{}` not found; MCP server {} skipped{}".format(
+            unit.command, unit.name, " (install it with: {})".format(unit.requires) if unit.requires else ""))
+        return False
+    if mcp_registered(env, unit.harness, unit.name):
+        say("  skip   {} MCP {} (already registered)".format(unit.harness, unit.name))
+        return False
+    say("  mcp    {} {} -> {} {}".format(unit.harness, unit.name, unit.command, " ".join(unit.args)))
+    if env.dry:
+        return True
+    if unit.harness == "claude":
+        run(["claude", "mcp", "add", "-s", "user", unit.name, "--", unit.command] + unit.args)
+    else:
+        run(["codex", "mcp", "add", unit.name, "--", unit.command] + unit.args)
+    state.data["mcp"][key] = {"package": unit.package, "harness": unit.harness, "name": unit.name}
+    state.save()
+    return True
+
+
+def uninstall_mcp(env, state, key):
+    rec = state.data["mcp"][key]
+    h = rec["harness"]
+    say("  mcp remove {} {}".format(h, rec["name"]))
+    if env.dry:
+        return True
+    if shutil.which(h):
+        if h == "claude":
+            run(["claude", "mcp", "remove", "-s", "user", rec["name"]], check=False)
+        else:
+            run(["codex", "mcp", "remove", rec["name"]], check=False)
+    del state.data["mcp"][key]
+    state.save()
+    return True
+
+
 # ---------------------------------------------------------------- selection
 
 def parse_selection(cat, tokens):
@@ -782,6 +842,8 @@ def harness_tags(pkg):
     if pkg.get("skills_glob"):
         hs.update(pkg["skills_glob"]["harness"])
     hs.update(pkg.get("plugins", {}).keys())
+    for m in pkg.get("mcp", []):
+        hs.update(m["harness"])
     return "+".join(h for h in ("claude", "codex") if h in hs)
 
 
@@ -1295,6 +1357,11 @@ def cmd_install(env, cat, state, tokens, preset):
             changed += install_path(env, state, u, legacy)
         elif u.kind == "hooks":
             changed += install_hooks(env, state, u)
+        elif u.kind == "mcp":
+            try:
+                changed += install_mcp(env, state, u)
+            except Abort as exc:
+                warn(str(exc))
         else:
             try:
                 changed += install_plugin(env, state, u, cache)
@@ -1345,6 +1412,9 @@ def cmd_uninstall(env, cat, state, tokens, everything):
             for key, rec in sorted(state.data["plugins"].items()):
                 if rec["package"] == pid:
                     uninstall_plugin(env, state, key)
+            for key, rec in sorted(state.data["mcp"].items()):
+                if rec["package"] == pid:
+                    uninstall_mcp(env, state, key)
             uninstall_hooks(env, state, pid)
     sync_codex_config(env, state)
     say("Done.")
