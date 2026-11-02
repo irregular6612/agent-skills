@@ -1232,7 +1232,7 @@
       "id": "claude-official-skills",
       "group": "external",
       "title": "Anthropic official plugin skills (per skill)",
-      "description": "frontend-design, skill-creator, claude-md-improver (+/revise-claude-md), claude-automation-recommender.",
+      "description": "frontend-design, skill-creator, claude-automation-recommender.",
       "source": {
         "repo": "anthropics/claude-plugins-official",
         "ref": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a",
@@ -1256,24 +1256,8 @@
           ]
         },
         {
-          "name": "claude-md-improver",
-          "path": "plugins/claude-md-management/skills/claude-md-improver",
-          "harness": [
-            "claude"
-          ]
-        },
-        {
           "name": "claude-automation-recommender",
           "path": "plugins/claude-code-setup/skills/claude-automation-recommender",
-          "harness": [
-            "claude"
-          ]
-        }
-      ],
-      "files_glob": [
-        {
-          "path": "plugins/claude-md-management/commands",
-          "dest": "commands",
           "harness": [
             "claude"
           ]

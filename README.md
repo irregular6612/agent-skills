@@ -122,7 +122,7 @@ python3 install.py graph --open                     # 의존성 그래프 열기
 | `superpowers` | [obra/superpowers](https://github.com/obra/superpowers) | `2ce8aa1` | MIT | `skills/` 아래 전부 |
 | `mattpocock-skills` | [mattpocock/skills](https://github.com/mattpocock/skills) | `4ae2317` | MIT | `skills/engineering/` 아래 전부 |
 | `diagram-design` | [cathrynlavery/diagram-design](https://github.com/cathrynlavery/diagram-design) | `0cf73c3` | MIT | diagram-design, commands |
-| `claude-official-skills` | [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official) | `a7ba5b9` | Apache-2.0 | frontend-design, skill-creator, claude-md-improver, claude-automation-recommender, commands |
+| `claude-official-skills` | [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official) | `a7ba5b9` | Apache-2.0 | frontend-design, skill-creator, claude-automation-recommender |
 | `rea` | [morluto/rea](https://github.com/morluto/rea) | `144843c` | MIT | reverse-engineer-anything + `rea` MCP 서버 (`npm install --global rea-agents` 필요) |
 
 ### 외부 plugin (claude/codex CLI로 설치 — MCP·hook·plugin 런타임이 필요한 것만)
