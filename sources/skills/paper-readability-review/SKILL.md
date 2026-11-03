@@ -81,6 +81,14 @@ python3 <SKILL_DIR>/build_review_pdf.py \
 
 여러 학회·저널 기준으로 보고 싶다면(예: ICML로 돌린 뒤 Scientific Data로 한 번 더), VENUE마다 에이전트 B를 따로 띄워 `quality_<venue>.json`을 만든다. 기존 JSON은 지우지 않는다. 그다음 `--quality`에 JSON을 모두 넘기면 한 PDF 안에 B-1, B-2, …로 들어간다. 가독성 결과는 다시 만들지 않는다.
 
+**집중 분석 (선택, C절):** 사용자가 특정 분석 하나를 깊이 봐 달라고 하면 그 주제만 보는 에이전트를 따로 띄운다(예: "identity consistency 계산에 문제 없는지"). 이 에이전트도 fresh agent이고, 앞선 리뷰의 결론을 프롬프트에 넣지 않는다. 대신 원고, 관련 코드·결과 폴더 경로, 아래 스키마를 준다. 결과는 `--extra extra_<topic>.json ...`으로 넘기고, PDF 끝에 C(여러 개면 C-1, C-2, …)로 들어간다.
+
+```json
+{"schema": "paper-review-extra-v1", "title": "...", "scope": "본 범위·파일", "summary": "두괄식 결론",
+ "findings": [{"rank": 1, "severity": "fatal|major|minor", "issue": "...", "where": "...",
+               "detail": "...", "check": "확인 방법", "fix": "처방"}]}
+```
+
 스크립트는 다음을 검증한다: 점수 id 1–10이 모두 있는지, 점수가 0–100인지, 카드의 `criterion`이 유효한지, claim이 3개인지. 총점(10개 기준 평균)은 스크립트가 계산한다.
 
 ### 4. phrase 불일치 처리

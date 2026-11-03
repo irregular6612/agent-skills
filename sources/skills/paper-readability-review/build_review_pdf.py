@@ -6,6 +6,7 @@ Usage:
         --input paper.pdf \
         --readability readability.json \
         --quality quality.json [quality_venue2.json ...] \
+        [--extra extra_topic.json ...] \
         --output paper_review.pdf
 
 Schemas: agents/readability.md, agents/quality.md.
@@ -227,12 +228,18 @@ def venue_of(qd: dict) -> str:
     return qd.get("venue") or "ICML"
 
 
+def c_labels(xds) -> list[str]:
+    """'C' for a single focused deep-dive, 'C-1', 'C-2', ... for several."""
+    return ["C"] if len(xds) == 1 else [f"C-{i}" for i in range(1, len(xds) + 1)]
+
+
 def b_labels(qds: list[dict]) -> list[str]:
     """'B' for a single venue review, 'B-1', 'B-2', ... for several."""
     return ["B"] if len(qds) == 1 else [f"B-{i}" for i in range(1, len(qds) + 1)]
 
 
-def front_matter_html(title: str, rd: dict, qds: list[dict], n_cards: int) -> str:
+def front_matter_html(title: str, rd: dict, qds: list[dict], n_cards: int,
+                      xds: list[dict] = ()) -> str:
     total = overall_score(rd["scores"])
     labels = b_labels(qds)
     b_names = " · ".join(f"{lab}. {e(venue_of(qd))} 리뷰" for lab, qd in zip(labels, qds))
@@ -255,12 +262,19 @@ def front_matter_html(title: str, rd: dict, qds: list[dict], n_cards: int) -> st
             h.append(f'<li><span class="{sev}">[{sev}]</span> {e(x.get("weakness"))}</li>')
         h.append("</ul></div>")
 
+    for lab, xd in zip(c_labels(xds), xds):
+        sev = [f.get("severity") for f in xd.get("findings", [])]
+        h.append(f'<div class="box"><h3>{lab}. {e(xd.get("title"))}</h3>'
+                 f'<p>{e(xd.get("summary"))}</p>'
+                 f'<p class="muted">fatal {sev.count("fatal")} · major {sev.count("major")} · minor {sev.count("minor")}</p></div>')
+
     h.append("<h2>목차</h2><ul>"
              "<li>A-1. 가독성 점수표와 질문 회수표</li>"
              f"<li>A-2. 원문 위 부분 피드백 카드 ({n_cards}건, 우측 마진)</li>"
              "<li>A-3. 수정 로드맵 (우선순위순)</li>"
              + "".join(f"<li>{lab}. {e(venue_of(qd))} 리뷰: 구성 평가 · 핵심 claim ↔ evidence · 반례 질문 · 결정권자 우선순위 · 표현 vs 구조</li>"
                        for lab, qd in zip(labels, qds))
+             + "".join(f"<li>{lab}. {e(xd.get('title'))} (집중 분석)</li>" for lab, xd in zip(c_labels(xds), xds))
              + "</ul>")
 
     h.append("<h2>카드 범례</h2><table><tr><th>색</th><th>기준</th></tr>")
@@ -415,6 +429,22 @@ def add_roadmap_page(doc, annotations: list[dict],
         y += h + 4
 
 
+def extra_html(xd: dict, label: str = "C") -> str:
+    """Focused deep-dive on one analysis, by its own isolated agent."""
+    h = [f'<h1>{label}. {e(xd.get("title"))}</h1>',
+         '<p class="sub">다른 평가와 맥락을 공유하지 않는 독립 에이전트의 집중 분석</p>',
+         f'<p class="muted">검토 범위: {e(xd.get("scope"))}</p>',
+         f'<div class="box"><p><b>{e(xd.get("summary"))}</b></p></div>']
+    for f in sorted(xd.get("findings", []), key=lambda x: x.get("rank", 99)):
+        sev = e(f.get("severity", ""))
+        h.append(f'<h3>{e(f.get("rank"))}. <span class="{sev}">[{sev}]</span> {e(f.get("issue"))}</h3>'
+                 f'<p class="muted">{e(f.get("where"))}</p>'
+                 f'<p>{e(f.get("detail"))}</p>'
+                 f'<p><b>확인 방법</b> — {e(f.get("check"))}</p>'
+                 f'<p><b>처방</b> — {e(f.get("fix"))}</p>')
+    return "".join(h)
+
+
 def validate(rd: dict, qds: list[dict]) -> None:
     ids = sorted(x["id"] for x in rd["scores"])
     if ids != list(range(1, 11)):
@@ -431,10 +461,12 @@ def validate(rd: dict, qds: list[dict]) -> None:
 
 
 def build(input_pdf: str, readability_json: str, quality_jsons: list[str],
-          output_pdf: str, fontfile: str = DEFAULT_FONTFILE) -> None:
+          output_pdf: str, fontfile: str = DEFAULT_FONTFILE,
+          extra_jsons: list[str] = ()) -> None:
     rd = json.loads(Path(readability_json).read_text(encoding="utf-8"))
     qds = [json.loads(Path(q).read_text(encoding="utf-8")) for q in quality_jsons]
     validate(rd, qds)
+    xds = [json.loads(Path(x).read_text(encoding="utf-8")) for x in extra_jsons]
     annotations = rd["annotations"]
     fontfile = ensure_font(fontfile)
 
@@ -513,7 +545,9 @@ def build(input_pdf: str, readability_json: str, quality_jsons: list[str],
     add_roadmap_page(doc, annotations, FONT_ALIAS, fontfile)
     for lab, qd in zip(b_labels(qds), qds):
         doc.insert_pdf(html_to_doc(quality_html(qd, lab), fontfile))
-    doc.insert_pdf(html_to_doc(front_matter_html(title, rd, qds, len(annotations)), fontfile),
+    for lab, xd in zip(c_labels(xds), xds):
+        doc.insert_pdf(html_to_doc(extra_html(xd, lab), fontfile))
+    doc.insert_pdf(html_to_doc(front_matter_html(title, rd, qds, len(annotations), xds), fontfile),
                    start_at=0)
 
     doc.save(output_pdf, garbage=4, deflate=True)
@@ -532,10 +566,12 @@ def main() -> None:
                     help="Readability agent JSON (agents/readability.md)")
     ap.add_argument("--quality", "-q", required=True, nargs="+",
                     help="Quality agent JSON(s), one per venue (agents/quality.md)")
+    ap.add_argument("--extra", "-x", nargs="*", default=[],
+                    help="Focused deep-dive JSON(s), schema paper-review-extra-v1 (see SKILL.md)")
     ap.add_argument("--output", "-o", required=True, help="Output review PDF")
     ap.add_argument("--fontfile", default=DEFAULT_FONTFILE, help="CJK TTF path")
     args = ap.parse_args()
-    build(args.input, args.readability, args.quality, args.output, args.fontfile)
+    build(args.input, args.readability, args.quality, args.output, args.fontfile, args.extra)
 
 
 if __name__ == "__main__":
