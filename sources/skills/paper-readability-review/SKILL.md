@@ -79,6 +79,8 @@ python3 <SKILL_DIR>/build_review_pdf.py \
   --output WORK/PAPER_review.pdf
 ```
 
+여러 학회·저널 기준으로 보고 싶다면(예: ICML로 돌린 뒤 Scientific Data로 한 번 더), VENUE마다 에이전트 B를 따로 띄워 `quality_<venue>.json`을 만든다. 기존 JSON은 지우지 않는다. 그다음 `--quality`에 JSON을 모두 넘기면 한 PDF 안에 B-1, B-2, …로 들어간다. 가독성 결과는 다시 만들지 않는다.
+
 스크립트는 다음을 검증한다: 점수 id 1–10이 모두 있는지, 점수가 0–100인지, 카드의 `criterion`이 유효한지, claim이 3개인지. 총점(10개 기준 평균)은 스크립트가 계산한다.
 
 ### 4. phrase 불일치 처리

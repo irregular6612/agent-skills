@@ -5,7 +5,7 @@ Usage:
     python3 build_review_pdf.py \
         --input paper.pdf \
         --readability readability.json \
-        --quality quality.json \
+        --quality quality.json [quality_venue2.json ...] \
         --output paper_review.pdf
 
 Schemas: agents/readability.md, agents/quality.md.
@@ -227,32 +227,41 @@ def venue_of(qd: dict) -> str:
     return qd.get("venue") or "ICML"
 
 
-def front_matter_html(title: str, rd: dict, qd: dict, n_cards: int) -> str:
+def b_labels(qds: list[dict]) -> list[str]:
+    """'B' for a single venue review, 'B-1', 'B-2', ... for several."""
+    return ["B"] if len(qds) == 1 else [f"B-{i}" for i in range(1, len(qds) + 1)]
+
+
+def front_matter_html(title: str, rd: dict, qds: list[dict], n_cards: int) -> str:
     total = overall_score(rd["scores"])
-    venue = e(venue_of(qd))
-    fatal = [x for x in qd.get("ac_priorities", []) if x.get("severity") == "fatal"]
-    top3 = sorted(qd.get("ac_priorities", []), key=lambda x: x.get("rank", 99))[:3]
+    labels = b_labels(qds)
+    b_names = " · ".join(f"{lab}. {e(venue_of(qd))} 리뷰" for lab, qd in zip(labels, qds))
 
     h = [f"<h1>{e(title)}</h1>",
-         f'<p class="sub">Paper Review · A. 가독성 (10개 기준) · B. {venue} 리뷰 — 두 평가는 서로 맥락을 공유하지 않는 독립 에이전트가 작성</p>']
+         f'<p class="sub">Paper Review · A. 가독성 (10개 기준) · {b_names} — 각 평가는 서로 맥락을 공유하지 않는 독립 에이전트가 작성</p>']
 
     h.append('<div class="box"><h3>A. 가독성</h3>'
              f'<p><span class="big {score_class(total)}">{total:.0f}</span> / 100 (10개 기준 평균)</p>'
              f'<p>{e(rd.get("one_line_diagnosis"))}</p></div>')
 
-    h.append(f'<div class="box"><h3>B. {venue} 리뷰</h3>'
-             f'<p><b>{e(qd.get("verdict_one_line"))}</b></p>'
-             f'<p class="muted">fatal {len(fatal)}건 · 우선순위 상위 3:</p><ul>')
-    for x in top3:
-        sev = e(x.get("severity", ""))
-        h.append(f'<li><span class="{sev}">[{sev}]</span> {e(x.get("weakness"))}</li>')
-    h.append("</ul></div>")
+    for lab, qd in zip(labels, qds):
+        fatal = [x for x in qd.get("ac_priorities", []) if x.get("severity") == "fatal"]
+        top3 = sorted(qd.get("ac_priorities", []), key=lambda x: x.get("rank", 99))[:3]
+        h.append(f'<div class="box"><h3>{lab}. {e(venue_of(qd))} 리뷰</h3>'
+                 f'<p><b>{e(qd.get("verdict_one_line"))}</b></p>'
+                 f'<p class="muted">fatal {len(fatal)}건 · 우선순위 상위 3:</p><ul>')
+        for x in top3:
+            sev = e(x.get("severity", ""))
+            h.append(f'<li><span class="{sev}">[{sev}]</span> {e(x.get("weakness"))}</li>')
+        h.append("</ul></div>")
 
     h.append("<h2>목차</h2><ul>"
              "<li>A-1. 가독성 점수표와 질문 회수표</li>"
              f"<li>A-2. 원문 위 부분 피드백 카드 ({n_cards}건, 우측 마진)</li>"
              "<li>A-3. 수정 로드맵 (우선순위순)</li>"
-             f"<li>B. {venue} 리뷰: 구성 평가 · 핵심 claim ↔ evidence · 반례 질문 · 결정권자 우선순위 · 표현 vs 구조</li></ul>")
+             + "".join(f"<li>{lab}. {e(venue_of(qd))} 리뷰: 구성 평가 · 핵심 claim ↔ evidence · 반례 질문 · 결정권자 우선순위 · 표현 vs 구조</li>"
+                       for lab, qd in zip(labels, qds))
+             + "</ul>")
 
     h.append("<h2>카드 범례</h2><table><tr><th>색</th><th>기준</th></tr>")
     for g, col in COLORS.items():
@@ -288,8 +297,8 @@ def front_matter_html(title: str, rd: dict, qd: dict, n_cards: int) -> str:
     return "".join(h)
 
 
-def quality_html(qd: dict) -> str:
-    h = [f'<h1>B. {e(venue_of(qd))} 리뷰</h1>',
+def quality_html(qd: dict, label: str = "B") -> str:
+    h = [f'<h1>{label}. {e(venue_of(qd))} 리뷰</h1>',
          '<p class="sub">가독성 평가와 맥락을 공유하지 않는 독립 리뷰어 작성</p>',
          f'<p class="muted">심사 기준: {e(qd.get("venue_basis") or "내장 프로필")}</p>',
          f'<div class="box"><p><b>{e(qd.get("verdict_one_line"))}</b></p>'
@@ -406,7 +415,7 @@ def add_roadmap_page(doc, annotations: list[dict],
         y += h + 4
 
 
-def validate(rd: dict, qd: dict) -> None:
+def validate(rd: dict, qds: list[dict]) -> None:
     ids = sorted(x["id"] for x in rd["scores"])
     if ids != list(range(1, 11)):
         sys.exit(f"ERROR: readability scores must cover ids 1-10, got {ids}")
@@ -416,19 +425,20 @@ def validate(rd: dict, qd: dict) -> None:
     for a in rd["annotations"]:
         if a.get("criterion") not in CRITERIA:
             sys.exit(f"ERROR: unknown criterion {a.get('criterion')!r} in card '{a.get('phrase', '')[:40]}'")
-    if len(qd.get("claims", [])) != 3:
-        print(f"  [WARN] quality: expected 3 claims, got {len(qd.get('claims', []))}")
+    for qd in qds:
+        if len(qd.get("claims", [])) != 3:
+            print(f"  [WARN] {venue_of(qd)}: expected 3 claims, got {len(qd.get('claims', []))}")
 
 
-def build(input_pdf: str, readability_json: str, quality_json: str,
+def build(input_pdf: str, readability_json: str, quality_jsons: list[str],
           output_pdf: str, fontfile: str = DEFAULT_FONTFILE) -> None:
     rd = json.loads(Path(readability_json).read_text(encoding="utf-8"))
-    qd = json.loads(Path(quality_json).read_text(encoding="utf-8"))
-    validate(rd, qd)
+    qds = [json.loads(Path(q).read_text(encoding="utf-8")) for q in quality_jsons]
+    validate(rd, qds)
     annotations = rd["annotations"]
     fontfile = ensure_font(fontfile)
 
-    title = (rd.get("paper_title") or qd.get("paper_title")
+    title = (rd.get("paper_title") or qds[0].get("paper_title")
              or Path(input_pdf).stem.replace("_", " "))
 
     doc = fitz.open(input_pdf)
@@ -501,8 +511,9 @@ def build(input_pdf: str, readability_json: str, quality_json: str,
                   f"h={ch:.0f}/slot={slot_h:.0f}] {phrase[:40]}")
 
     add_roadmap_page(doc, annotations, FONT_ALIAS, fontfile)
-    doc.insert_pdf(html_to_doc(quality_html(qd), fontfile))
-    doc.insert_pdf(html_to_doc(front_matter_html(title, rd, qd, len(annotations)), fontfile),
+    for lab, qd in zip(b_labels(qds), qds):
+        doc.insert_pdf(html_to_doc(quality_html(qd, lab), fontfile))
+    doc.insert_pdf(html_to_doc(front_matter_html(title, rd, qds, len(annotations)), fontfile),
                    start_at=0)
 
     doc.save(output_pdf, garbage=4, deflate=True)
@@ -519,8 +530,8 @@ def main() -> None:
     ap.add_argument("--input", "-i", required=True, help="Input paper PDF")
     ap.add_argument("--readability", "-r", required=True,
                     help="Readability agent JSON (agents/readability.md)")
-    ap.add_argument("--quality", "-q", required=True,
-                    help="Quality agent JSON (agents/quality.md)")
+    ap.add_argument("--quality", "-q", required=True, nargs="+",
+                    help="Quality agent JSON(s), one per venue (agents/quality.md)")
     ap.add_argument("--output", "-o", required=True, help="Output review PDF")
     ap.add_argument("--fontfile", default=DEFAULT_FONTFILE, help="CJK TTF path")
     args = ap.parse_args()
