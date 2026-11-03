@@ -152,7 +152,7 @@ Codex night 폴더의 `config.toml`은 평소 설정에서 subagent 등록만 ni
 |---|---|---|---|---|
 | `taste-skill` | [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill) | `84ff339` | MIT | brandkit, design-taste-frontend, full-output-enforcement, image-to-code, industrial-brutalist-ui, minimalist-ui, redesign-existing-projects |
 | `k-dense` | [K-Dense-AI/scientific-agent-skills](https://github.com/K-Dense-AI/scientific-agent-skills) | `a25cf9e` | MIT | autoskill, citation-management, latex-posters, literature-review, markdown-mermaid-writing, pptx-posters, research-grants, scientific-schematics, scientific-slides |
-| `pstack` | [cursor/plugins](https://github.com/cursor/plugins/tree/main/pstack) | `ae5650f` | MIT | `pstack/skills/` 아래 전부 (원칙 skill, benchmark-checklist, blast-radius, /poteto-mode의 hillclimb 플레이북 등). day에는 겹치지 않는 26개, night에는 전부 |
+| `pstack` | [cursor/plugins](https://github.com/cursor/plugins/tree/main/pstack) | `ae5650f` | MIT | `pstack/skills/` 아래 전부 (원칙 skill, benchmark-checklist, blast-radius, /poteto-mode의 hillclimb 플레이북 등). day에는 겹치지 않는 23개(원칙·점검 skill만), night에는 전부(/poteto-mode·hillclimb은 night 전용) |
 | `cloudflare-skills` | [cloudflare/skills](https://github.com/cloudflare/skills) | `1a33048` | Apache-2.0 | `skills/` 아래 전부 |
 | `document-skills` | [anthropics/skills](https://github.com/anthropics/skills) | `ca45fc4` | Proprietary (see upstream LICENSE.txt) | docx, pdf, pptx, xlsx |
 | `notebooklm` | [teng-lin/notebooklm-py](https://github.com/teng-lin/notebooklm-py) | `7db1000` | MIT | notebooklm |
