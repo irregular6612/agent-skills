@@ -126,7 +126,7 @@ Codex night 폴더의 `config.toml`은 평소 설정에서 subagent 등록만 ni
 | `paper-driller` | claude + codex | 논문 1편을 원문 옆에 띄워 놓고 읽기 위한 근거 추적 노트를 만든다. 사용자가 고른 템플릿(기본 general-v1: paper-digest 개요 + 배경 + 지표 + 방법 + 결과 + take-… |
 | `paper-understand` | claude | 선택한 논문 1편을 질문·응답으로 이해시키는 다회차 튜터. 원문 근거에 묶인 채로 개념 지도를 세우고, 예측→피드백→teach-back→전이 질문 루프로 숙달을 올리며, 학습 상태를 비공개로 저장해… |
 | `paper-section-rewrite` | claude + codex | 학술 논문 한 섹션을 4-Level critic loop(내용→문단 간 구성→문단 내 구성→문장)로 분석·개선하는 윤문 스킬. 두괄식·한 문장 한 역할·단문 비율 ≥ 60%·ML 비전공자 가독성 게… |
-| `paper-readability-review` | claude + codex | 논문 PDF에 가독성·근거 피드백을 내용·구조·문장·근거 네 층위로 진단해, 본문 위에 색상 하이라이트 + 마진 카드(진단 + 대안 방향) + 우선순위 로드맵이 있는 리뷰 PDF를 생성한다. cri… |
+| `paper-readability-review` | claude + codex | 논문 PDF를 맥락을 공유하지 않는 두 에이전트가 따로 평가해 리뷰 PDF 하나로 묶는다. (A) 가독성 10개 기준 기준별 100점 + 수정 샘플 마진 카드, (B) 지정 학회·저널(기본 ICML) 리뷰어 관점 claim–evidence·반례 질문·결정권자 우선순위… |
 | `paper-digest` | claude + codex | Generate shareable paper summaries for Discord/Slack/Twitter. Use when user provides arxiv paper(s) and wants … |
 | `paper-banana` | claude + codex | 논문 텍스트에서 publication-ready 학술 일러스트레이션(methodology diagram, statistical plot, system architecture)을 PaperBanana… |
 | `latex-publication` | claude + codex | LaTeX 학술 문서 출판 워크플로 — 5개 서브커맨드 자동 라우팅. TRIGGERS: 한글 LaTeX 셋업/한글 렌더링 안됨/kotex 설정/Overleaf 한글/tex 한국어 → :setup ·… |
