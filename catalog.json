@@ -671,7 +671,7 @@
       "id": "aside-browser",
       "group": "mine",
       "title": "aside-browser",
-      "description": "Logged-in personal web tasks (mail, calendar, messengers, personal context) through the Aside CLI; everything else goes to agent-browser. Needs the aside CLI.",
+      "description": "Aside's official entry skill (runs `aside guide`); `aside --update` rewrites this file. For logged-in sites (mail, Slack, cloud consoles) and personal context. Needs the aside CLI.",
       "items": [
         {
           "harness": "claude",

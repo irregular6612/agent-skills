@@ -1,33 +1,15 @@
 ---
 name: aside-browser
-description: 로그인된 개인 계정이 필요한 브라우저 작업은 Aside CLI로 처리한다 — 메일(Gmail 등)·캘린더 일정·메신저(Slack, 카카오톡 웹 등)·개인 클라우드 콘솔, 그리고 방문 기록·저장된 맥락 같은 사용자 개인 정보를 참고해야 할 때. 트리거 — 메일 확인/답장, 일정 확인/등록, 안 읽은 메시지, 내 계정에서, 로그인해서. 로그인이 필요 없는 일반 웹 작업(공개 페이지 읽기, 테스트, 스크린샷, 폼 자동화)은 이 스킬이 아니라 agent-browser를 쓴다. Playwright MCP는 쓰지 않는다.
+version: 3
+description: Read when you need a browser, or have to work across user's logged-in websites (e.g. Gmail, Slack, cloud consoles, etc.), or have to refer personal contexts like memory and browsing history.
 ---
 
-# aside-browser
+# Aside
 
-Aside는 사용자가 실제로 쓰는 로그인 상태(쿠키, 계정, 방문 기록)를 그대로 쓰는 AI 브라우저다.
-이 스킬은 **개인 계정·개인 맥락이 필요한 작업**에만 Aside를 쓰게 하는 입구다.
+This file is only an entry point. You MUST run `aside guide` to read this skill’s actual instructions before using Aside, then follow them.
 
-## 언제 무엇을 쓰나
+- If `aside` is not installed, ask the user for permission to install Aside CLI. After the user approves, run the macOS/Linux installer `curl -fsSL https://releases.aside.com/install.sh | bash`, then run `aside guide`.
+- If `aside guide` is reported as an unknown command, your CLI is outdated. Run `aside --update`, then run `aside guide` again.
+- If a newer CLI version is available, the guide may be outdated. Always run `aside --update`, then run `aside guide` again before continuing.
 
-| 작업 | 도구 |
-|---|---|
-| 메일·캘린더·메신저·개인 클라우드 콘솔, 개인 기록 참고 | **Aside** (이 스킬) |
-| 공개 페이지 읽기, 웹앱 테스트, 스크린샷, 폼 자동화 등 나머지 | **agent-browser** 스킬 (`agent-browser skills get core`) |
-
-판단이 애매하면 사용자에게 어느 쪽인지 한 번 묻는다. Playwright MCP는 쓰지 않는다.
-
-## 순서
-
-1. `aside --version`으로 CLI가 있는지 본다.
-   - 없으면 설치하지 말고 멈춘다. 사용자에게 설치 명령(`curl -fsSL https://releases.aside.com/install.sh | bash`)을 알리고 허락을 받은 뒤에만 실행한다.
-2. `aside --update`로 최신판인지 확인한다. 갱신됐으면 3을 다시 읽는다.
-3. `aside guide`를 실행해 현재 버전의 사용법을 읽는다. 명령과 옵션은 이 출력만 따르고, 기억으로 추측하지 않는다.
-4. 대부분의 작업은 `aside "<할 일>"`(Aside 에이전트에게 위임)로 한다. 화면이나 DOM을 직접 봐야 할 때만 `aside repl`을 쓴다.
-5. 진행 중이면 약 1분마다 사용자에게 상태를 한 줄로 알린다.
-
-## 지킬 것
-
-- **보내기·등록·삭제·결제·설정 변경은 실행 전에 내용을 보여 주고 확인을 받는다.** 메일 발송, 일정 등록, 메시지 전송이 모두 해당한다. 조회만 하는 작업은 바로 해도 된다.
-- 메일·메시지 본문, 개인 정보는 작업에 필요한 만큼만 대화에 옮긴다.
-- CLI 설치·갱신·실행이 실패하면 사용법을 짐작해 우회하지 말고, 오류 메시지 원문 한 줄과 함께 보고한다.
+If installation or an update fails, report the error instead of guessing the CLI usage.
