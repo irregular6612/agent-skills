@@ -77,6 +77,23 @@ class Overlay(Sandbox):
         self.assertEqual(src.joinpath("agents", "openai.yaml").read_text().count("true"), 1)  # upstream untouched
 
 
+class HermesHome(Sandbox):
+    def test_skill_links_into_real_home_in_every_mode(self):
+        skills = self.home / ".hermes" / "skills"
+        skills.mkdir(parents=True)
+        (skills / ".usage.json").write_text("{}")  # Hermes' own bookkeeping must survive
+        for mode in ("day", "night"):
+            self.run_cli("install", "vault-wiki", "--harness", "hermes", "--mode", mode, "-y")
+            link = skills / "vault-wiki"
+            self.assertTrue(link.is_symlink(), mode)
+            self.assertEqual(Path(os.readlink(str(link))), REPO / "sources" / "skills" / "vault-wiki")
+            self.assertFalse(skills.is_symlink(), "hermes skills folder must not be wired to a mode")
+            self.assertIn("hermes:skills/vault-wiki", self.state()["items"])
+            self.run_cli("uninstall", "vault-wiki", "--harness", "hermes", "--mode", mode, "-y")
+            self.assertFalse(link.exists() or link.is_symlink(), mode)
+        self.assertEqual((skills / ".usage.json").read_text(), "{}")
+
+
 class OwnPackages(Sandbox):
     def test_catalog_lists_every_package(self):
         out = self.run_cli("list", "--harness", "claude,codex").stdout

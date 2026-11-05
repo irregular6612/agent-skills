@@ -37,7 +37,9 @@ CATALOG = REPO / "catalog.json"
 IS_WINDOWS = platform.system() == "Windows"
 STATE_VERSION = 2
 MODES = ("day", "night")
-MODE_DIRS = {"claude": ("skills", "agents", "commands"), "codex": ("skills", "agents", "prompts")}
+# Hermes has no day/night split: its skills folder also holds Hermes' own curator state,
+# so it is never wired to a mode and items go straight into the real home.
+MODE_DIRS = {"claude": ("skills", "agents", "commands"), "codex": ("skills", "agents", "prompts"), "hermes": ()}
 BLOCK_BEGIN = "# >>> agent-skills managed agents (edit with install.py) >>>"
 BLOCK_END = "# <<< agent-skills managed agents <<<"
 SKIP_NAMES = {".DS_Store", "__pycache__", ".git"}
@@ -73,6 +75,7 @@ class Env:
         self.homes = {
             "claude": Path(os.environ.get("AGENT_SKILLS_CLAUDE_HOME") or home / ".claude"),
             "codex": Path(os.environ.get("AGENT_SKILLS_CODEX_HOME") or home / ".codex"),
+            "hermes": Path(os.environ.get("AGENT_SKILLS_HERMES_HOME") or home / ".hermes"),
         }
         self.legacy_state = home / ".agent-skills-setup" / "state.json"
         self.dry = getattr(args, "dry_run", False)
@@ -143,7 +146,7 @@ class State:
             return
         items = {}
         for key, rec in self.data["items"].items():
-            if mode_scoped(rec["dest"]):
+            if mode_scoped(rec["harness"], rec["dest"]):
                 rec["mode"] = "day"
                 key = "day:" + key
             items[key] = rec
@@ -456,7 +459,7 @@ def expand(env, cat, selection):
                     units.append(Unit(pid, "mcp", h, name=spec["name"], command=spec["command"],
                                       args=spec.get("args", []), requires=spec.get("requires")))
     for u in units:
-        if u.kind == "path" and mode_scoped(u.dest):
+        if u.kind == "path" and mode_scoped(u.harness, u.dest):
             u.mode = env.target_mode
         if (u.kind == "path" and u.harness == "codex" and u.dest.startswith("skills/")
                 and cat["by_id"][u.package].get("codex_explicit_only") and u.origin != "own"):
@@ -560,12 +563,12 @@ def points_into_repo(path):
 #                 links, except skills/agents/... (modes/night) and Codex's config.toml.
 # History, settings, login, plugins and MCP stay in the one real home.
 
-def mode_scoped(dest):
-    return dest.split("/", 1)[0] in ("skills", "agents", "commands", "prompts")
+def mode_scoped(harness, dest):
+    return bool(MODE_DIRS[harness]) and dest.split("/", 1)[0] in ("skills", "agents", "commands", "prompts")
 
 
 def item_key(harness, dest, mode):
-    return (mode + ":" if mode_scoped(dest) and mode else "") + harness + ":" + dest
+    return (mode + ":" if mode_scoped(harness, dest) and mode else "") + harness + ":" + dest
 
 
 def mode_dir(env, mode, harness):
@@ -573,7 +576,7 @@ def mode_dir(env, mode, harness):
 
 
 def item_path(env, harness, dest, mode):
-    if mode_scoped(dest):
+    if mode_scoped(harness, dest):
         return mode_dir(env, mode or "day", harness) / dest
     return env.homes[harness] / dest
 
@@ -765,7 +768,7 @@ def install_path(env, state, unit, legacy):
             say("         backed up existing {} -> {}".format(dest, backup))
     used = place(unit.src, dest, env.method, unit.files)
     new = {"package": unit.package, "harness": unit.harness, "dest": unit.dest, "method": used,
-           "mode": unit.mode if mode_scoped(unit.dest) else None, "origin": unit.origin, "backup": backup}
+           "mode": unit.mode if mode_scoped(unit.harness, unit.dest) else None, "origin": unit.origin, "backup": backup}
     if used == "link":
         new["target"] = str(unit.src)
     else:
@@ -1461,7 +1464,8 @@ def build_graph(inv):
 def mode_homes(env, state, mode):
     if mode == "day" or env.dry:
         return dict(env.homes)
-    return {h: ensure_home(env, state, mode, h) if env.homes[h].is_dir() else env.homes[h] for h in env.homes}
+    return {h: ensure_home(env, state, mode, h) if env.homes[h].is_dir() and MODE_DIRS[h] else env.homes[h]
+            for h in env.homes}
 
 
 def write_graph(env, state, out=None, quiet=False, mode="day"):

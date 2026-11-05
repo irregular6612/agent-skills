@@ -41,6 +41,7 @@
       "aha",
       "autoresearch",
       "book-qa-note",
+      "vault-wiki",
       "korean-scholarship-search",
       "gist-library-room-booking",
       "research-proposal",
@@ -67,6 +68,7 @@
       "aha",
       "autoresearch",
       "book-qa-note",
+      "vault-wiki",
       "korean-scholarship-search",
       "gist-library-room-booking",
       "research-proposal",
@@ -134,6 +136,7 @@
       "aha",
       "autoresearch",
       "book-qa-note",
+      "vault-wiki",
       "korean-scholarship-search",
       "gist-library-room-booking",
       "research-proposal",
@@ -586,6 +589,29 @@
           "harness": "claude",
           "dest": "skills/book-qa-note",
           "src": "sources/skills/book-qa-note-claude"
+        }
+      ]
+    },
+    {
+      "id": "vault-wiki",
+      "group": "mine",
+      "title": "vault-wiki",
+      "description": "내 Obsidian vault(obsidian-notes)를 LLM Wiki로 운영하는 진입점. 세션 시작 점검, 새 노트 배선(catalog·lint·quality queue·공개 통계·log), 위키 근거 질의와 synthesis 환류, Tier1/Tier2 lint를 vault의 SCHEMA 규칙대로 수행한다. 트리거 — 위키에서 찾아줘, 내 노트에서 찾아줘, vault에서 찾아줘, 위키에 반영해줘, 이 노트 배선해줘, 카탈로그 갱신, 위키 점검, 위키 lint, Tier2 lint, 위키 상태, synthesis로 남겨줘, llm-wiki. 논문 노트 생성은 paper-driller, 책 노트는 book-qa-note가 하고 이 스킬은 그 뒤 배선을 맡는다.\n",
+      "items": [
+        {
+          "harness": "claude",
+          "dest": "skills/vault-wiki",
+          "src": "sources/skills/vault-wiki"
+        },
+        {
+          "harness": "codex",
+          "dest": "skills/vault-wiki",
+          "src": "sources/skills/vault-wiki"
+        },
+        {
+          "harness": "hermes",
+          "dest": "skills/vault-wiki",
+          "src": "sources/skills/vault-wiki"
         }
       ]
     },

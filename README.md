@@ -42,7 +42,7 @@ python3 install.py graph --open [--mode night]      # 의존성 그래프 열기
 ```
 
 자주 쓰는 옵션은 아래와 같습니다.
-- `--harness claude,codex`: 대상을 고릅니다. 기본값은 이 기기에 있는 쪽입니다.
+- `--harness claude,codex,hermes`: 대상을 고릅니다. 기본값은 이 기기에 있는 쪽입니다. Hermes는 낮/밤 구분 없이 `~/.hermes/skills`에 바로 링크합니다(catalog에 `"harness": "hermes"` 항목이 있는 패키지만).
 - `--mode day|night`: 어느 skill 조합에 설치·제거할지 고릅니다. 기본값은 day입니다(`--preset night`이면 night).
 - `--method link|copy`: 기본값은 mac/linux가 link, windows가 copy입니다.
 - `--dry-run`: 실제로 바꾸지 않고 무엇이 바뀔지만 보여 줍니다.
