@@ -22,6 +22,7 @@ import io
 import json
 import os
 import platform
+import posixpath
 import re
 import shutil
 import subprocess
@@ -354,6 +355,8 @@ def wanted(env, pkg, sub):
     patterns += [fg["path"] for fg in files]
     if not sub:
         patterns += [fm["path"] for fm in pkg.get("file_map", []) if set(fm["harness"]) & set(env.harnesses)]
+    if patterns:
+        patterns += pkg.get("support_paths", [])  # files the skills link to (docs, README), never installed
     return declared, glob, patterns, files
 
 
@@ -362,7 +365,8 @@ def explicit_overlay(env, src):
     should only run when called by name, build a twin of the upstream folder (links to every
     upstream file) plus an agents/openai.yaml with allow_implicit_invocation: false."""
     vendor = env.state_dir / "vendor"
-    overlay = env.state_dir / "overlays" / "codex-explicit" / src.relative_to(vendor)
+    base = vendor if vendor in src.parents else env.state_dir / "overlays"  # src may be a rebased twin
+    overlay = env.state_dir / "overlays" / "codex-explicit" / src.relative_to(base)
     if env.dry or not src.is_dir():
         return overlay
     overlay.mkdir(parents=True, exist_ok=True)
@@ -393,6 +397,74 @@ def explicit_overlay(env, src):
     if not target.is_file() or target.read_text(encoding="utf-8") != text:
         target.write_text(text, encoding="utf-8")
     return overlay
+
+
+# A relative path in a skill's Markdown, such as ../../docs/guide.md or ../tdd/SKILL.md.
+RELATIVE_LINK = re.compile(r"(?<![\w./-])((?:\.\./)+[\w.-][\w./-]*)")
+
+
+def climbs_out(name, rel_file, target):
+    """True when `target`, written in skills/<name>/<rel_file>, points above the skills folder."""
+    base = posixpath.dirname(posixpath.join(name, rel_file))
+    return posixpath.normpath(posixpath.join(base, target)).startswith("../")
+
+
+def rebase_links(env, src):
+    """Upstream skills may link past their own folder (../../docs/guide.md). Installed as
+    skills/<name>, agents resolve such a path from there and miss it: build a twin whose
+    Markdown names the fetched file by absolute path instead, everything else linked."""
+    vendor = env.state_dir / "vendor"
+    if not src.is_dir() or vendor not in src.parents:
+        return src
+    real = src.resolve()
+
+    def absolute(rel_file, m):
+        target = Path(os.path.normpath(str(real / posixpath.dirname(rel_file) / m.group(1))))
+        return str(target) if climbs_out(src.name, rel_file, m.group(1)) and target.exists() else m.group(1)
+
+    rewrites = {}
+    for rel, text in skill_files(src):
+        new = RELATIVE_LINK.sub(lambda m: absolute(rel, m), text)
+        if new != text:
+            rewrites[rel] = new
+    if not rewrites:
+        return src
+    overlay = env.state_dir / "overlays" / "rebased" / src.relative_to(vendor)
+    if env.dry:
+        return overlay
+    if lexists(overlay):
+        remove_path(overlay)
+
+    def mirror(directory, out, prefix):
+        out.mkdir(parents=True, exist_ok=True)
+        for entry in directory.iterdir():
+            rel = prefix + entry.name
+            if rel in rewrites:
+                (out / entry.name).write_text(rewrites[rel], encoding="utf-8")
+            elif any(k.startswith(rel + "/") for k in rewrites):
+                mirror(entry, out / entry.name, rel + "/")
+            else:
+                (out / entry.name).symlink_to(entry)
+    mirror(src, overlay, "")
+    return overlay
+
+
+def codex_agent(env, md):
+    """Codex custom agents are TOML files: build one from an upstream Markdown agent."""
+    vendor = env.state_dir / "vendor"
+    out = (env.state_dir / "overlays" / "codex-agents" / md.relative_to(vendor)).with_suffix(".toml")
+    if env.dry or not md.is_file():
+        return out
+    text = md.read_text(encoding="utf-8")
+    fm = frontmatter(text)
+    body = text.split("---", 2)[2] if text.startswith("---") and text.count("---") >= 2 else text
+    fields = (("name", fm.get("name") or md.stem), ("description", fm.get("description", "")),
+              ("developer_instructions", body.strip() + "\n"))
+    toml = "".join("{} = {}\n".format(k, json.dumps(v)) for k, v in fields)  # JSON strings are TOML strings
+    if not out.is_file() or out.read_text(encoding="utf-8") != toml:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(toml, encoding="utf-8")
+    return out
 
 
 def expand(env, cat, selection):
@@ -447,7 +519,10 @@ def expand(env, cat, selection):
                         if base.is_dir() else []
                     for n in names:
                         for h in fg["harness"]:
-                            if h in env.harnesses:
+                            if h == "codex" and fg["dest"].split("/")[0] == "agents" and h in env.harnesses:
+                                units.append(Unit(pid, "path", h, dest=fg["dest"] + "/" + Path(n).stem + ".toml",
+                                                  src=codex_agent(env, base / n), origin=origin))
+                            elif h in env.harnesses:
                                 units.append(Unit(pid, "path", h, dest=fg["dest"] + "/" + n, src=base / n,
                                                   origin=origin))
         for h, spec in pkg.get("plugins", {}).items():
@@ -461,6 +536,8 @@ def expand(env, cat, selection):
     for u in units:
         if u.kind == "path" and mode_scoped(u.harness, u.dest):
             u.mode = env.target_mode
+        if u.kind == "path" and u.origin != "own" and u.dest.startswith("skills/"):
+            u.src = rebase_links(env, u.src)
         if (u.kind == "path" and u.harness == "codex" and u.dest.startswith("skills/")
                 and cat["by_id"][u.package].get("codex_explicit_only") and u.origin != "own"):
             u.src = explicit_overlay(env, u.src)
@@ -678,6 +755,11 @@ def link_entry(link, target, notes):
         link.symlink_to(target)
 
 
+# Codex app-server daemon/IPC state: a daemon runs with its home's auth and config, so each home
+# keeps its own (Codex also refuses a symlink here: "socket directory path exists and is not a directory").
+CODEX_RUNTIME_DIRS = ("app-server-daemon", "app-server-control", "ipc")
+
+
 def ensure_home(env, state, mode, harness, account=None):
     """Return the home a session of (mode, harness, account) should use, creating/refreshing it."""
     base = env.homes[harness]
@@ -689,7 +771,10 @@ def ensure_home(env, state, mode, harness, account=None):
         home = Path.home() / (".codex-" + account)
         home.mkdir(exist_ok=True)
         for entry in base.iterdir():
-            if not entry.name.startswith("auth."):
+            if entry.name in CODEX_RUNTIME_DIRS:
+                if (home / entry.name).is_symlink():
+                    (home / entry.name).unlink()  # link made before this rule: Codex recreates a real one
+            elif not entry.name.startswith("auth."):
                 link_entry(home / entry.name, entry, notes)
     else:
         home = env.state_dir / "homes" / mode / (harness + ("-" + account if alt_account else ""))
@@ -701,6 +786,9 @@ def ensure_home(env, state, mode, harness, account=None):
             name = entry.name
             if name in MODE_DIRS[harness]:
                 link_entry(home / name, mode_dir(env, mode, harness) / name, notes)
+            elif harness == "codex" and name in CODEX_RUNTIME_DIRS:
+                if (home / name).is_symlink():
+                    (home / name).unlink()
             elif harness == "codex" and name == "config.toml":
                 continue
             elif harness == "codex" and name.startswith("auth."):
@@ -1468,15 +1556,25 @@ def mode_homes(env, state, mode):
             for h in env.homes}
 
 
-def write_graph(env, state, out=None, quiet=False, mode="day"):
-    graph = build_graph(Inventory(env, state, mode_homes(env, state, mode), mode).scan())
+def write_graph(env, state, out=None, quiet=False, mode="day", classic=False):
+    inv = Inventory(env, state, mode_homes(env, state, mode), mode).scan()
+    graph = build_graph(inv)
     graph["mode"] = mode
-    out = Path(out) if out else env.state_dir / ("graph.html" if mode == "day" else "graph-{}.html".format(mode))
-    html = GRAPH_HTML.replace("/*__DATA__*/null", json.dumps(graph, ensure_ascii=False).replace("</", "<\\/"))
+    # one dashboard page for every installed mode (toggle in the page); `mode` is the one it opens on
+    html = None if classic else skm_dashboard(env, state, mode, inv)
+    default = env.state_dir / ("graph.html" if html is not None or mode == "day" else "graph-{}.html".format(mode))
+    out = Path(out) if out else default
+    if html is None:
+        html = GRAPH_HTML.replace("/*__DATA__*/null", json.dumps(graph, ensure_ascii=False).replace("</", "<\\/"))
     if env.dry:
         return out, graph
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html, encoding="utf-8")
+    if html is not None and out == default:
+        for m in MODES:  # per-mode pages from before the toggle would only go stale
+            old = env.state_dir / "graph-{}.html".format(m)
+            if old.is_file():
+                old.unlink()
     if not quiet:
         counts = {}
         for n in graph["nodes"]:
@@ -1484,6 +1582,48 @@ def write_graph(env, state, out=None, quiet=False, mode="day"):
         say("Graph: {} ({} skills, {} subagents, {} MCP servers, {} links)".format(
             out, counts.get("skill", 0), counts.get("agent", 0), counts.get("mcp", 0), len(graph["edges"])))
     return out, graph
+
+
+# ---------------------------------------------------------------- skm (analysis, dashboard, sub-modes)
+
+def skm_nodes(env, state, mode, inv=None):
+    """Installed skills/agents/MCP of `mode` in the skm node schema (skm/bridge.py)."""
+    import skm
+    from skm import bridge
+    skm.configure(env.state_dir)
+    inv = inv or Inventory(env, state, mode_homes(env, state, mode), mode).scan()
+    return bridge.from_inventory(inv.nodes.values(), state.data["items"])
+
+
+def skm_report(env, state, mode, nodes, use_llm=False, limit=None, log=None):
+    from skm import analysis
+    _, lines = mode_check_lines(env, load_catalog(), state, mode)
+    rep = analysis.analyze(nodes, mode, use_llm=use_llm, cache_only=not use_llm, limit=limit,
+                           extra_issues=analysis.install_check_issues(lines), log=log or (lambda *_: None))
+    if not env.dry:
+        analysis.save_report(rep)
+    return rep
+
+
+def installed_modes(state):
+    return [m for m in MODES if any(k.split(":", 1)[0] == m for k in state.data["items"])]
+
+
+def skm_dashboard(env, state, mode, inv=None):
+    """skm dashboard HTML with every installed mode (cached LLM verdicts only, never calls claude),
+    or None if skm fails. `inv` is the already-scanned inventory of `mode`."""
+    try:
+        from skm import dashboard
+        views = {}
+        for m in [x for x in MODES if x in installed_modes(state) or x == mode]:
+            nodes = skm_nodes(env, state, m, inv if m == mode else None)
+            rep = skm_report(env, state, m, nodes)
+            rep["fixes"], rep["manual"] = doctor_plan(env, load_catalog(), state, m, rep)
+            views[m] = (nodes, rep)
+        return dashboard.render(views, mode)
+    except Exception as exc:  # the installer must keep working even if the dashboard breaks
+        warn("skm dashboard failed ({}: {}); wrote the classic graph instead".format(type(exc).__name__, exc))
+        return None
 
 
 GRAPH_HTML = r"""<!doctype html>
@@ -1602,6 +1742,283 @@ for(let i=0;i<350;i++)tick();fit();loop();
 
 # ---------------------------------------------------------------- commands
 
+# ---------------------------------------------------------------- dependency check
+
+SKILL_NAME = r"[a-z0-9][a-z0-9-]*"
+
+
+def skill_files(directory, limit=TEXT_LIMIT):
+    """(path relative to the skill, text) of each Markdown file in a skill folder, links followed."""
+    out, budget = [], limit
+    for root, dirs, names in os.walk(str(directory), followlinks=True):
+        dirs[:] = sorted(d for d in dirs if d not in SKIP_NAMES)
+        for n in sorted(names):
+            if n.endswith(".md") and budget > 0:
+                path = Path(root) / n
+                text = read_text(path, budget)
+                out.append((path.relative_to(directory).as_posix(), text))
+                budget -= len(text)
+    return out
+
+
+def skill_calls(text, known):
+    """Skills this text calls. A known name counts as `name`, `/name`, /name or ../name/SKILL.md;
+    any name counts as ../name/SKILL.md or when quoted on a line that mentions the Skill tool."""
+    found = set(re.findall(r"(?<![\w.-])\.\./({})/SKILL\.md".format(SKILL_NAME), text))
+    for line in text.splitlines():
+        if re.search(r"\bskill tool\b", line, re.I):
+            found.update(re.findall(r"[`\"']/?({})[`\"']".format(SKILL_NAME), line))
+        for name in (re.findall(r"`/?({})`".format(SKILL_NAME), line)
+                     + re.findall(r"(?<![\w./-])/({})(?![\w/.-])".format(SKILL_NAME), line)):
+            if name in known:
+                found.add(name)
+    return found
+
+
+def catalog_providers(env, cat):
+    """Skill name -> ids of the catalog packages that ship it (glob packages once fetched)."""
+    out = {}
+    for pkg in cat["packages"]:
+        names = [it["dest"].split("/")[1] for it in pkg.get("items", []) if it["dest"].count("/") == 1
+                 and it["dest"].startswith("skills/")]
+        names += [s["name"] for s in pkg.get("skills", [])]
+        glob = pkg.get("skills_glob")
+        base = vendor_dir(env, pkg["source"]) / glob["path"] if glob else None
+        if base and base.is_dir():
+            names += [d.name for d in base.iterdir() if (d / "SKILL.md").is_file()]
+        for n in names:
+            out.setdefault(n, set()).add(pkg["id"])
+    return out
+
+
+def mode_skills(env, state, mode, harness):
+    """Skill name -> package that owns it in `mode` ('unmanaged' for folders put there by hand)."""
+    skills_dir = item_path(env, harness, "skills", mode)
+    out = {}
+    for rec in state.data["items"].values():
+        if (rec["harness"] == harness and rec["dest"].count("/") == 1 and rec["dest"].startswith("skills/")
+                and item_path(env, harness, rec["dest"], rec.get("mode")).parent == skills_dir):
+            out[rec["dest"].split("/")[1]] = rec["package"]
+    for d in sorted(skills_dir.iterdir()) if skills_dir.is_dir() else []:
+        if d.name not in out and not d.name.startswith(".") and (d / "SKILL.md").is_file():
+            out[d.name] = "unmanaged"
+    return out
+
+
+def install_hint(cat, providers, name):
+    picks = [pid if "source" not in cat["by_id"][pid] else pid + ":" + name for pid in sorted(providers)]
+    return "; install " + " or ".join(picks) if picks else ""
+
+
+def dependency_report(env, cat, state, mode, skills, rebasing=False):
+    """Problems `skills` [(harness, name, package, folder)] would have in `mode`, one line each:
+    a name another package already holds, a called skill the mode lacks, a call that lands on
+    another package's skill of the same name, and links that leave the skills folder
+    (`rebasing`: about to be installed, so links rebase_links can point at a fetched file are fine)."""
+    known = catalog_providers(env, cat)
+    have = {h: mode_skills(env, state, mode, h) for h in {s[0] for s in skills}}
+    problems = {}
+
+    def note(msg, harness):
+        problems.setdefault(msg, set()).add(harness)
+
+    checked = []
+    for h, name, pkg, folder in skills:
+        owner = have[h].setdefault(name, pkg)
+        if owner not in (pkg, "unmanaged"):
+            note("{} ({}): not installed, '{}' already provides a skill with this name".format(name, pkg, owner), h)
+        else:
+            have[h][name] = pkg
+            checked.append((h, name, pkg, folder))
+    for h, name, pkg, folder in checked:
+        files = skill_files(Path(folder))
+        external = "source" in cat["by_id"].get(pkg, {})
+        for ref in sorted(skill_calls("\n".join(t for _, t in files), set(known) | set(have[h])) - {name}):
+            owner = have[h].get(ref)
+            if owner is None:
+                note("{} ({}) calls '{}', which mode '{}' does not have{}".format(
+                    name, pkg, ref, mode, install_hint(cat, known.get(ref, ()), ref)), h)
+            elif external and owner != pkg and pkg in known.get(ref, ()):
+                note("{} ({}) calls its own '{}', but mode '{}' has the one from '{}'".format(
+                    name, pkg, ref, mode, owner), h)
+        vendor = env.state_dir / "vendor"
+        for rel, text in files:
+            real = Path(os.path.realpath(str(Path(folder) / rel))).parent
+            fixable = rebasing and external and vendor in real.parents
+            for target in sorted({t for t in RELATIVE_LINK.findall(text) if climbs_out(name, rel, t)
+                                  and not (fixable and (real / t).exists())}):
+                note("{} ({}): {} links to {}, which is outside the skills folder and will not resolve".format(
+                    name, pkg, rel, target), h)
+    return ["{}  [{}]".format(msg, ",".join(sorted(hs))) for msg, hs in problems.items()]
+
+
+def print_report(mode, issues):
+    say("\nDependency check for mode '{}':".format(mode))
+    for line in issues:
+        say("  ! " + line)
+
+
+def mode_check_lines(env, cat, state, mode):
+    skills = []
+    for h in env.harnesses:
+        skills_dir = item_path(env, h, "skills", mode)
+        for name, pkg in sorted(mode_skills(env, state, mode, h).items()):
+            skills.append((h, name, pkg, skills_dir / name))
+    return skills, dependency_report(env, cat, state, mode, skills)
+
+
+def cmd_check(env, cat, state, mode, llm=False, limit=None, submode=None):
+    skills, issues = mode_check_lines(env, cat, state, mode)
+    if issues:
+        print_report(mode, issues)
+    else:
+        say("Dependency check for mode '{}': {} skills, no problems".format(mode, len(skills)))
+    if llm or submode:
+        cmd_check_skm(env, state, mode, llm, limit, submode)
+    return 1 if issues else 0
+
+
+def cmd_check_skm(env, state, mode, llm, limit, submode):
+    """skm pass: rule checks over the whole graph + LLM trigger_overlap / instruction_conflict
+    (warn at most, so the exit code stays the rule check's). Verdicts are cached in
+    <state>/skm/judgments.json; a re-run makes 0 calls."""
+    from skm import analysis, audit, modes
+    nodes = skm_nodes(env, state, mode)
+    say("\nskm check for mode '{}'{}:".format(mode, " (LLM)" if llm else " (cached verdicts only)"))
+    rep = skm_report(env, state, mode, nodes, use_llm=llm, limit=limit, log=lambda m: say(m))
+    issues = [i for i in rep["issues"] if i["check"] != "install_check"]  # already printed above
+    if submode:
+        res = modes.resolve(submode, modes.load_config(), nodes, rep["categories"], rep["edges"])
+        say("  sub-mode {}: {} items".format(submode, len(res["members"])))
+        issues = analysis.mode_issues(rep, nodes, res["members"])
+    order = {"error": 0, "warn": 1, "info": 2}
+    for i in sorted(issues, key=lambda i: (order[i["severity"]], i["check"])):
+        say("  [{}] {}: {}".format(i["severity"], i["check"], i["message"]))
+    l = rep["llm"]
+    say("  {} · LLM calls {} (cached {}, deferred {})".format(audit.summarize(issues), l["calls"],
+                                                             l["cache_hits"], l["deferred"]))
+
+
+def doctor_plan(env, cat, state, mode, rep=None):
+    """What is broken in `mode` and how to fix it.
+
+    Returns (fixes, manual):
+      fixes  [{harness, package, refs, reasons}] — one catalog package provides the missing piece,
+             so `install --mode <mode> --harness <h> <package>` fixes it (undo: uninstall)
+      manual [str] — needs a person: nothing in the catalog provides it, several packages do,
+             a broken file link, a duplicate install, or an LLM warning."""
+    known = catalog_providers(env, cat)
+    # (harness, name) -> packages that ship it FOR THAT HARNESS (many packages are claude-only)
+    skill_for, agent_pkgs, mcp_pkgs = {}, {}, {}
+    for pkg in cat["packages"]:
+        for it in pkg.get("items", []):
+            if it["dest"].count("/") == 1 and it["dest"].startswith("skills/"):
+                skill_for.setdefault((it["harness"], it["dest"].split("/")[1]), set()).add(pkg["id"])
+            m = re.match(r"agents/([\w.-]+?)(?:-claude|-codex)?\.(?:md|toml)$", it["dest"])
+            if m and it["harness"] == "claude":
+                agent_pkgs.setdefault(m.group(1), set()).add(pkg["id"])
+        for sk in pkg.get("skills", []):
+            for h in sk.get("harness", ["claude", "codex"]):
+                skill_for.setdefault((h, sk["name"]), set()).add(pkg["id"])
+        glob = pkg.get("skills_glob")
+        base = vendor_dir(env, pkg["source"]) / glob["path"] if glob else None
+        if base and base.is_dir():
+            for d in base.iterdir():
+                if (d / "SKILL.md").is_file():
+                    for h in glob.get("harness", ["claude", "codex"]):
+                        skill_for.setdefault((h, d.name), set()).add(pkg["id"])
+        for srv in pkg.get("mcp", []):
+            if "claude" in srv.get("harness", ["claude"]):
+                mcp_pkgs.setdefault(srv.get("name"), set()).add(pkg["id"])
+    fixes, manual = {}, []
+
+    def want(harness, ref, providers, why, per_skill=True):
+        picks = sorted(providers)
+        others = sorted(known.get(ref, ())) if per_skill and not picks else []
+        if others:  # the catalog has it, just not for this harness: installing cannot fix it
+            manual.append("{} — {} ships '{}' for other harnesses only, not {}; drop the call from the {} copy "
+                          "or ignore it".format(why, ", ".join(others), ref, harness, harness))
+        elif len(picks) == 1:
+            pid = picks[0]
+            token = pid + ":" + ref if per_skill and "source" in cat["by_id"][pid] else pid
+            f = fixes.setdefault((harness, token), {"refs": set(), "reasons": []})
+            f["refs"].add(ref)
+            f["reasons"].append(why)
+        elif picks:
+            manual.append("{} — several packages provide '{}': {}; install one".format(why, ref, ", ".join(picks)))
+        else:
+            manual.append("{} — no catalog package provides '{}'; remove the call or add a package".format(why, ref))
+
+    for h in env.harnesses:  # 1. skills a skill calls that this mode does not have
+        have = mode_skills(env, state, mode, h)
+        skills_dir = item_path(env, h, "skills", mode)
+        for name in sorted(have):
+            text = "\n".join(t for _, t in skill_files(skills_dir / name))
+            for ref in sorted(skill_calls(text, set(known) | set(have)) - {name}):
+                if ref not in have:
+                    want(h, ref, skill_for.get((h, ref), ()), "{} calls skill '{}' [{}]".format(name, ref, h))
+    if rep is None:
+        rep = skm_report(env, state, mode, skm_nodes(env, state, mode))
+    for b in rep.get("broken", []):  # 2. subagents / MCP servers / files the skm rules found missing
+        src = b["source"].split(":", 1)[-1]
+        if b["kind"] == "agent":
+            want("claude", b["label"], agent_pkgs.get(b["label"], ()), "{} uses subagent '{}'".format(src, b["label"]), False)
+        elif b["kind"] == "mcp":
+            want("claude", b["label"], mcp_pkgs.get(b["label"], ()), "{} uses MCP '{}'".format(src, b["label"]), False)
+        elif b["kind"] == "file":
+            manual.append("{}: fix or remove the link to '{}' in its SKILL.md".format(src, b["label"]))
+    for i in rep.get("issues", []):  # 3. warnings only a person can settle
+        if i["severity"] == "warn":
+            hint = ("uninstall one copy" if i["check"] == "name_conflict" else
+                    "make the descriptions distinct, or add it to submodes.json \"ignore\"")
+            manual.append("[{}] {} — {}".format(i["check"], i["message"], hint))
+    out = [{"harness": h, "package": t, "refs": sorted(f["refs"]), "reasons": f["reasons"]}
+           for (h, t), f in sorted(fixes.items())]
+    skip = doctor_skip()
+    manual += ["skipped (submodes.json doctor.skip): install {} --harness {} ({})".format(
+        f["package"], f["harness"], "; ".join(f["reasons"])) for f in out if f["package"].split(":")[0] in skip]
+    return [f for f in out if f["package"].split(":")[0] not in skip], manual
+
+
+def doctor_skip():
+    """Packages never offered as a fix, kept in submodes.json so the CLI and the dashboard agree."""
+    from skm import modes
+    return set((modes.load_config().get("doctor") or {}).get("skip") or [])
+
+
+def cmd_doctor(env, cat, state, mode, fix, skip=()):
+    """Find what is broken in `mode`; with fix=True install the packages that repair it.
+    `skip`: package ids never to install (e.g. ones retired on purpose); they are listed as manual."""
+    fixes, manual = doctor_plan(env, cat, state, mode)
+    skipped = [f for f in fixes if f["package"].split(":")[0] in skip]
+    fixes = [f for f in fixes if f not in skipped]
+    manual += ["skipped on request: install {} --harness {} ({})".format(
+        f["package"], f["harness"], "; ".join(f["reasons"])) for f in skipped]
+    say("Doctor for mode '{}': {} automatic fix(es), {} item(s) for you to decide".format(mode, len(fixes), len(manual)))
+    for f in fixes:
+        say("  + install {} --mode {} --harness {}   ({})".format(f["package"], mode, f["harness"],
+                                                                 short("; ".join(f["reasons"]), 160)))
+    for m in manual:
+        say("  ? " + short(m, 220))
+    if not fixes:
+        return 1 if manual else 0
+    if not fix:
+        say("\nPreview only. Apply the automatic fixes with: python3 {} doctor --mode {} --fix{}".format(
+            REPO / "install.py", mode, "".join(" --skip " + p for p in skip)))
+        return 1
+    harnesses = env.harnesses
+    try:
+        for h in sorted({f["harness"] for f in fixes}):
+            env.harnesses, env.target_mode = [h], mode
+            cmd_install(env, cat, state, [f["package"] for f in fixes if f["harness"] == h], None)
+    finally:
+        env.harnesses = harnesses
+    left, manual = doctor_plan(env, cat, state, mode)
+    left = [f for f in left if f["package"].split(":")[0] not in skip]
+    say("\nDoctor after fixing: {} automatic fix(es) left, {} item(s) for you to decide".format(len(left), len(manual)))
+    return 1 if left else 0
+
+
 def refresh_homes(env, state, mode):
     """Re-sync existing session homes of `mode` (new links, regenerated Codex config)."""
     if env.dry or mode == "day":
@@ -1631,6 +2048,14 @@ def cmd_install(env, cat, state, tokens, preset):
         raise Abort("cancelled")
     legacy = load_legacy_backups(env)
     units = expand(env, cat, selection)
+    issues = dependency_report(env, cat, state, env.target_mode, [
+        (u.harness, u.dest.split("/")[1], u.package, u.src) for u in units
+        if u.kind == "path" and u.dest.count("/") == 1 and u.dest.startswith("skills/") and Path(u.src).is_dir()],
+        rebasing=True)
+    if issues:
+        print_report(env.target_mode, issues)
+        if not confirm(env, "Install anyway?"):
+            raise Abort("cancelled")
     changed = 0
     cache = {}
     seen = set()
@@ -1772,11 +2197,27 @@ def main(argv=None):
     p_home.add_argument("session_mode", choices=MODES)
     p_home.add_argument("tool", choices=["claude", "codex"])
     p_home.add_argument("--account", help="Codex account home suffix (~/.codex-<account>); omit or 'main' for ~/.codex")
+    p_ck = sub.add_parser("check", help="report missing, crossed or same-name skill dependencies in a mode")
+    p_ck.add_argument("--mode", choices=MODES, default="day")
+    p_ck.add_argument("--harness")
+    p_ck.add_argument("--llm", action="store_true", help="also ask `claude -p` about trigger overlap / instruction conflicts (cached)")
+    p_ck.add_argument("--limit", type=int, help="LLM window: top-N candidate pairs by rule score (default 100)")
+    p_ck.add_argument("--submode", help="only issues inside this skm sub-mode (e.g. paper or paper+office)")
+    p_dr = sub.add_parser("doctor", help="find broken skill links in a mode and (with --fix) install what repairs them")
+    p_dr.add_argument("--mode", choices=MODES, default="day")
+    p_dr.add_argument("--fix", action="store_true", help="install the packages that fix the problems (asks first unless -y)")
+    p_dr.add_argument("--skip", action="append", default=[], metavar="PACKAGE",
+                      help="never install this package as a fix (repeatable), e.g. one you retired")
+    common(p_dr)
     p_gr = sub.add_parser("graph", help="write an Obsidian-style dependency graph of what is installed")
-    p_gr.add_argument("--mode", choices=MODES, default="day")
+    p_gr.add_argument("--mode", choices=MODES, default="day", help="mode the page opens on (all modes are in it)")
     p_gr.add_argument("--out", help="output HTML path (default: ~/.agent-skills/graph.html)")
     p_gr.add_argument("--open", action="store_true", help="open it in the browser")
     p_gr.add_argument("--json", action="store_true", help="print the graph data as JSON instead")
+    p_gr.add_argument("--classic", action="store_true", help="the previous single-view graph page")
+    p_skm = sub.add_parser("skm", help="sub-modes on top of day/night: run / switch / modes / sync / prune",
+                           add_help=False)
+    p_skm.add_argument("rest", nargs=argparse.REMAINDER)
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv or (argv[0].startswith("-") and argv[0] not in ("-h", "--help")):
         argv = ["install"] + argv  # bare `install.py [--flags]` opens the picker
@@ -1805,16 +2246,28 @@ def main(argv=None):
             finally:
                 sys.stdout = out
             print(home)
+        elif args.cmd == "check":
+            return cmd_check(env, cat, state, args.mode, args.llm, args.limit, args.submode)
+        elif args.cmd == "doctor":
+            ensure_wiring(env, state)
+            return cmd_doctor(env, cat, state, args.mode, args.fix, set(args.skip))
         elif args.cmd == "graph":
             ensure_wiring(env, state)
             if args.json:
                 print(json.dumps(build_graph(Inventory(env, state, mode_homes(env, state, args.mode), args.mode).scan()),
                                  ensure_ascii=False, indent=2))
             else:
-                out, _ = write_graph(env, state, args.out, mode=args.mode)
+                out, _ = write_graph(env, state, args.out, mode=args.mode, classic=args.classic)
                 if args.open:
                     import webbrowser
                     webbrowser.open(out.resolve().as_uri())
+        elif args.cmd == "skm":
+            import skm
+            from skm import cli as skm_cli
+            skm.configure(env.state_dir)
+            ensure_wiring(env, state)
+            rest = argv[argv.index("skm") + 1:]  # verbatim, so `-- claude ...` survives argparse
+            return skm_cli.main(rest, lambda m: skm_nodes(env, state, m))
         return 0
     except Abort as exc:
         print("agent-skills: " + str(exc), file=sys.stderr)

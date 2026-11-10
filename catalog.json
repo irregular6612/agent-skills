@@ -42,6 +42,7 @@
       "autoresearch",
       "book-qa-note",
       "vault-wiki",
+      "research-deck",
       "korean-scholarship-search",
       "gist-library-room-booking",
       "research-proposal",
@@ -69,6 +70,7 @@
       "autoresearch",
       "book-qa-note",
       "vault-wiki",
+      "research-deck",
       "korean-scholarship-search",
       "gist-library-room-booking",
       "research-proposal",
@@ -94,31 +96,9 @@
       "ralph-loop",
       "learning-output-style",
       "cloudflare-mcp",
-      "pstack:principle-attack-the-premise",
-      "pstack:principle-boundary-discipline",
-      "pstack:principle-build-the-lever",
-      "pstack:principle-encode-lessons-in-structure",
-      "pstack:principle-experience-first",
-      "pstack:principle-explain-the-number",
-      "pstack:principle-foundational-thinking",
-      "pstack:principle-guard-the-context-window",
-      "pstack:principle-make-operations-idempotent",
-      "pstack:principle-migrate-callers-then-delete-legacy-apis",
-      "pstack:principle-minimize-reader-load",
-      "pstack:principle-model-the-domain",
-      "pstack:principle-outcome-oriented-execution",
-      "pstack:principle-prove-it-works",
-      "pstack:principle-redesign-from-first-principles",
-      "pstack:principle-separate-before-serializing-shared-state",
-      "pstack:principle-sequence-verifiable-units",
-      "pstack:principle-type-system-discipline",
-      "pstack:benchmark-checklist",
-      "pstack:blast-radius",
-      "pstack:correct",
-      "pstack:sharpen",
-      "pstack:show-me-your-work",
       "aside-browser",
-      "agent-browser"
+      "agent-browser",
+      "kordoc"
     ],
     "night": [
       "ditto-writer",
@@ -137,6 +117,7 @@
       "autoresearch",
       "book-qa-note",
       "vault-wiki",
+      "research-deck",
       "korean-scholarship-search",
       "gist-library-room-booking",
       "research-proposal",
@@ -148,7 +129,8 @@
       "portfolio-agents",
       "pstack",
       "aside-browser",
-      "agent-browser"
+      "agent-browser",
+      "kordoc"
     ]
   },
   "packages": [
@@ -315,7 +297,12 @@
         {
           "harness": "claude",
           "dest": "skills/paper-radar",
-          "src": "sources/skills/paper-radar-claude"
+          "src": "sources/skills/paper-radar"
+        },
+        {
+          "harness": "codex",
+          "dest": "skills/paper-radar",
+          "src": "sources/skills/paper-radar"
         }
       ]
     },
@@ -411,7 +398,12 @@
         {
           "harness": "claude",
           "dest": "skills/paper-understand",
-          "src": "sources/skills/paper-understand-claude"
+          "src": "sources/skills/paper-understand"
+        },
+        {
+          "harness": "codex",
+          "dest": "skills/paper-understand",
+          "src": "sources/skills/paper-understand"
         }
       ]
     },
@@ -562,7 +554,12 @@
         {
           "harness": "claude",
           "dest": "skills/aha",
-          "src": "sources/skills/aha-claude"
+          "src": "sources/skills/aha"
+        },
+        {
+          "harness": "codex",
+          "dest": "skills/aha",
+          "src": "sources/skills/aha"
         }
       ]
     },
@@ -575,7 +572,12 @@
         {
           "harness": "claude",
           "dest": "skills/autoresearch",
-          "src": "sources/skills/autoresearch-claude"
+          "src": "sources/skills/autoresearch"
+        },
+        {
+          "harness": "codex",
+          "dest": "skills/autoresearch",
+          "src": "sources/skills/autoresearch"
         }
       ]
     },
@@ -588,7 +590,12 @@
         {
           "harness": "claude",
           "dest": "skills/book-qa-note",
-          "src": "sources/skills/book-qa-note-claude"
+          "src": "sources/skills/book-qa-note"
+        },
+        {
+          "harness": "codex",
+          "dest": "skills/book-qa-note",
+          "src": "sources/skills/book-qa-note"
         }
       ]
     },
@@ -616,6 +623,24 @@
       ]
     },
     {
+      "id": "research-deck",
+      "group": "mine",
+      "title": "research-deck",
+      "description": "논문 여러 편으로 연구 발표 덱(.pptx)을 만든다. 질문(RQ) 원장 서사, 한 슬라이드 한 아이디어, 그림 위 편집 가능한 강조 도형, 발표 시간 예산, 슬라이드별 발표 대본(노트), 사용자 템플릿 적용. 트리거 — 연구 발표 PPT, 논문 발표 슬라이드, 발표 대본, research-deck.",
+      "items": [
+        {
+          "harness": "claude",
+          "dest": "skills/research-deck",
+          "src": "sources/skills/research-deck"
+        },
+        {
+          "harness": "codex",
+          "dest": "skills/research-deck",
+          "src": "sources/skills/research-deck"
+        }
+      ]
+    },
+    {
       "id": "korean-scholarship-search",
       "group": "mine",
       "title": "korean-scholarship-search",
@@ -624,7 +649,12 @@
         {
           "harness": "claude",
           "dest": "skills/korean-scholarship-search",
-          "src": "sources/skills/korean-scholarship-search-claude"
+          "src": "sources/skills/korean-scholarship-search"
+        },
+        {
+          "harness": "codex",
+          "dest": "skills/korean-scholarship-search",
+          "src": "sources/skills/korean-scholarship-search"
         }
       ]
     },
@@ -637,7 +667,12 @@
         {
           "harness": "claude",
           "dest": "skills/gist-library-room-booking",
-          "src": "sources/skills/gist-library-room-booking-claude"
+          "src": "sources/skills/gist-library-room-booking"
+        },
+        {
+          "harness": "codex",
+          "dest": "skills/gist-library-room-booking",
+          "src": "sources/skills/gist-library-room-booking"
         }
       ]
     },
@@ -650,7 +685,12 @@
         {
           "harness": "claude",
           "dest": "skills/research-proposal",
-          "src": "sources/skills/research-proposal-claude"
+          "src": "sources/skills/research-proposal"
+        },
+        {
+          "harness": "codex",
+          "dest": "skills/research-proposal",
+          "src": "sources/skills/research-proposal"
         }
       ]
     },
@@ -661,9 +701,14 @@
       "description": "Automatically generate academic-style weekly research reports by analyzing Git changes in the current project directory with iterative quality improvement",
       "items": [
         {
+          "harness": "claude",
+          "dest": "skills/weekly-report-writer",
+          "src": "sources/skills/weekly-report-writer"
+        },
+        {
           "harness": "codex",
           "dest": "skills/weekly-report-writer",
-          "src": "sources/skills/weekly-report-writer-codex"
+          "src": "sources/skills/weekly-report-writer"
         }
       ]
     },
@@ -708,6 +753,87 @@
           "harness": "codex",
           "dest": "skills/aside-browser",
           "src": "sources/skills/aside-browser"
+        }
+      ]
+    },
+    {
+      "id": "skm",
+      "group": "mine",
+      "title": "skm",
+      "description": "Prompt templates and rules behind `install.py doctor`, `check --llm`, the graph dashboard and `install.py skm` sub-modes: dependency judging (skm-dep-judge), conflict audit (skm-conflict-audit) and graph style (skm-graph-style).",
+      "items": [
+        {
+          "harness": "claude",
+          "dest": "skills/skm-dep-judge",
+          "src": "sources/skills/skm-dep-judge"
+        },
+        {
+          "harness": "codex",
+          "dest": "skills/skm-dep-judge",
+          "src": "sources/skills/skm-dep-judge"
+        },
+        {
+          "harness": "claude",
+          "dest": "skills/skm-conflict-audit",
+          "src": "sources/skills/skm-conflict-audit"
+        },
+        {
+          "harness": "codex",
+          "dest": "skills/skm-conflict-audit",
+          "src": "sources/skills/skm-conflict-audit"
+        },
+        {
+          "harness": "claude",
+          "dest": "skills/skm-graph-style",
+          "src": "sources/skills/skm-graph-style"
+        },
+        {
+          "harness": "codex",
+          "dest": "skills/skm-graph-style",
+          "src": "sources/skills/skm-graph-style"
+        }
+      ]
+    },
+    {
+      "id": "lost-me",
+      "group": "mine",
+      "title": "lost-me (+5 agents)",
+      "description": "AI가 쓴 학술 산문을 독자가 떨어져 나간 지점으로 고치는 스킬. 격리된 독자 시뮬레이터 셋(학술·읽힘·사람다움)이 초안을 읽고 \"여기서 멈췄다\"의 좌표를 내고, writer 가 그 좌표만 보고 다시 쓴다. 논문 섹션·연구 제안서·SoP·기술 리포트, KO/EN.",
+      "items": [
+        {
+          "harness": "claude",
+          "dest": "skills/lost-me",
+          "src": "sources/skills/lost-me"
+        },
+        {
+          "harness": "codex",
+          "dest": "skills/lost-me",
+          "src": "sources/skills/lost-me"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/lost-me-auditor.md",
+          "src": "sources/skills/lost-me/agents/lost-me-auditor.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/lost-me-judge-academic.md",
+          "src": "sources/skills/lost-me/agents/lost-me-judge-academic.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/lost-me-judge-humanness.md",
+          "src": "sources/skills/lost-me/agents/lost-me-judge-humanness.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/lost-me-judge-readability.md",
+          "src": "sources/skills/lost-me/agents/lost-me-judge-readability.md"
+        },
+        {
+          "harness": "claude",
+          "dest": "agents/lost-me-writer.md",
+          "src": "sources/skills/lost-me/agents/lost-me-writer.md"
         }
       ]
     },
@@ -1009,6 +1135,38 @@
             "claude",
             "codex"
           ]
+        },
+        {
+          "name": "gpt-taste",
+          "path": "skills/gpt-tasteskill",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        },
+        {
+          "name": "high-end-visual-design",
+          "path": "skills/soft-skill",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        },
+        {
+          "name": "imagegen-frontend-web",
+          "path": "skills/imagegen-frontend-web",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        },
+        {
+          "name": "stitch-design-taste",
+          "path": "skills/stitch-skill",
+          "harness": [
+            "claude",
+            "codex"
+          ]
         }
       ]
     },
@@ -1067,6 +1225,7 @@
           "name": "pptx-posters",
           "path": "skills/pptx-posters",
           "harness": [
+            "claude",
             "codex"
           ]
         },
@@ -1074,7 +1233,8 @@
           "name": "research-grants",
           "path": "skills/research-grants",
           "harness": [
-            "claude"
+            "claude",
+            "codex"
           ]
         },
         {
@@ -1099,7 +1259,7 @@
       "id": "pstack",
       "group": "external",
       "title": "pstack (poteto, Cursor official plugin) — engineering principles & workflows",
-      "description": "poteto's pstack from cursor/plugins (MIT): principle-* skills, benchmark-checklist, blast-radius, correct, sharpen, show-me-your-work, /poteto-mode with playbooks such as hillclimb. Most skills only run when called by name. Pick single skills with pstack:<name>.",
+      "description": "poteto's pstack from cursor/plugins (MIT): principle-* skills, benchmark-checklist, blast-radius, correct, sharpen, show-me-your-work, /poteto-mode with playbooks such as hillclimb. Most skills only run when called by name. Pick single skills with pstack:<name>. Also installs its subagents (poteto-agent, comment-sicko) and the docs its skills link to.",
       "source": {
         "repo": "cursor/plugins",
         "ref": "ae5650febf4320793844c12c4adaa937f417f8da",
@@ -1112,7 +1272,21 @@
           "codex"
         ]
       },
-      "codex_explicit_only": true
+      "codex_explicit_only": true,
+      "files_glob": [
+        {
+          "path": "pstack/agents",
+          "dest": "agents",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        }
+      ],
+      "support_paths": [
+        "pstack/docs",
+        "pstack/README.md"
+      ]
     },
     {
       "id": "cloudflare-skills",
@@ -1195,7 +1369,8 @@
             "SKILL.md"
           ],
           "harness": [
-            "claude"
+            "claude",
+            "codex"
           ]
         }
       ]
@@ -1215,7 +1390,8 @@
           "name": "eli5",
           "path": "skills/eli5",
           "harness": [
-            "claude"
+            "claude",
+            "codex"
           ]
         }
       ]
@@ -1268,8 +1444,8 @@
     {
       "id": "mattpocock-skills",
       "group": "external",
-      "title": "Matt Pocock skills — engineering (per skill)",
-      "description": "Grilling, spec/ticket flows, TDD, code review, domain modelling, prototype, wizard ...",
+      "title": "Matt Pocock skills — engineering + productivity (per skill)",
+      "description": "Grilling, spec/ticket flows, TDD, code review, domain modelling, prototype, wizard ... plus the productivity skills the engineering ones call (grilling, writing-for-agents, ...).",
       "source": {
         "repo": "mattpocock/skills",
         "ref": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
@@ -1281,7 +1457,65 @@
           "claude",
           "codex"
         ]
-      }
+      },
+      "skills": [
+        {
+          "name": "grill-me",
+          "path": "skills/productivity/grill-me",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        },
+        {
+          "name": "grilling",
+          "path": "skills/productivity/grilling",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        },
+        {
+          "name": "handoff",
+          "path": "skills/productivity/handoff",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        },
+        {
+          "name": "teach",
+          "path": "skills/productivity/teach",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        },
+        {
+          "name": "to-questionnaire",
+          "path": "skills/productivity/to-questionnaire",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        },
+        {
+          "name": "wait-what",
+          "path": "skills/productivity/wait-what",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        },
+        {
+          "name": "writing-for-agents",
+          "path": "skills/productivity/writing-for-agents",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        }
+      ]
     },
     {
       "id": "claude-official-skills",
@@ -1458,6 +1692,48 @@
         {
           "name": "agent-browser",
           "path": "skills/agent-browser",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "kordoc",
+      "group": "external",
+      "title": "kordoc (chrisryugj) — Korean HWP/HWPX/PDF document toolkit",
+      "description": "Read, fill, patch, compare, validate and render .hwp/.hwpx/.hml and convert PDF/DOCX/XLSX to Markdown; Markdown → 공문서 HWPX. The skill runs `npx -y kordoc@<version>`, so it needs Node.js 20+.",
+      "source": {
+        "repo": "chrisryugj/kordoc",
+        "ref": "6c17bf110731007f65e6151844b49a5f63e207d6",
+        "license": "MIT"
+      },
+      "skills": [
+        {
+          "name": "kordoc",
+          "path": "plugins/kordoc/skills/kordoc",
+          "harness": [
+            "claude",
+            "codex"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "find-skills",
+      "group": "external",
+      "title": "find-skills (vercel-labs/skills)",
+      "description": "Helps users discover and install agent skills when they ask \"how do I do X\", \"find a skill for X\", or \"is there a skill that…\".",
+      "source": {
+        "repo": "vercel-labs/skills",
+        "ref": "773fb2c7bbf16781670a3520affc4abd0c6151ae",
+        "license": "MIT"
+      },
+      "skills": [
+        {
+          "name": "find-skills",
+          "path": "skills/find-skills",
           "harness": [
             "claude",
             "codex"

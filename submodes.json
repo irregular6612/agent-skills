@@ -1,0 +1,182 @@
+{
+  "_comment": "skm sub-modes on top of day/night. Names without a prefix mean skill:<name>; use agent:<name> for subagents. Combine add-ons with + (install.py skm run paper+office). See README '세부 모드'.",
+  "base": [
+    "pdf",
+    "handoff",
+    "eli5"
+  ],
+  "submodes": {
+    "paper": {
+      "description": "논문 읽기·쓰기·인용·그림",
+      "categories": [
+        "research"
+      ],
+      "include": [
+        "docx",
+        "markdown-mermaid-writing"
+      ],
+      "exclude": [
+        "research-grants",
+        "korean-scholarship-search"
+      ]
+    },
+    "autopilot-code": {
+      "description": "스펙→티켓→TDD→리뷰 자동 코딩 루프",
+      "categories": [
+        "dev"
+      ],
+      "include": [
+        "agent-browser",
+        "agent:code-reviewer",
+        "agent:debugger",
+        "agent:test-writer",
+        "agent:security-reviewer"
+      ],
+      "exclude": [
+        "ask-matt",
+        "setup-matt-pocock-skills"
+      ]
+    },
+    "cloud": {
+      "description": "Cloudflare 배포·운영",
+      "categories": [
+        "cloud"
+      ]
+    },
+    "design": {
+      "description": "프런트엔드·브랜드 디자인",
+      "categories": [
+        "design"
+      ]
+    },
+    "office": {
+      "description": "문서 파일(docx/pptx/xlsx/hwpx) — add-on 용",
+      "categories": [
+        "docs"
+      ]
+    }
+  },
+  "categories": {
+    "research": {
+      "color": "#0072B2",
+      "description": "reading, writing, reviewing or citing academic papers; research planning; scholarly figures, slides and notes",
+      "keywords": [
+        "paper",
+        "논문",
+        "citation",
+        "academic",
+        "literature",
+        "scholar",
+        "arxiv",
+        "bibtex",
+        "학술",
+        "연구"
+      ]
+    },
+    "dev": {
+      "color": "#009E73",
+      "description": "writing, testing, debugging, reviewing or designing software code and its architecture, specs and tickets",
+      "keywords": [
+        "codebase",
+        "tdd",
+        "bug",
+        "debug",
+        "refactor",
+        "code review",
+        "pull request",
+        "ticket",
+        "코드"
+      ]
+    },
+    "cloud": {
+      "color": "#E69F00",
+      "description": "Cloudflare products, Workers, deployment and cloud infrastructure",
+      "keywords": [
+        "cloudflare",
+        "workers",
+        "wrangler",
+        "durable objects",
+        "zero trust"
+      ]
+    },
+    "design": {
+      "color": "#CC79A7",
+      "description": "visual / UI / frontend / brand design of websites and apps",
+      "keywords": [
+        "frontend",
+        "landing page",
+        "brand",
+        "ui design",
+        "website design"
+      ]
+    },
+    "docs": {
+      "color": "#56B4E9",
+      "description": "office document files (Word, PowerPoint, Excel, PDF, Korean HWP) and their formats",
+      "keywords": [
+        "docx",
+        "pptx",
+        "xlsx",
+        "hwpx",
+        "hwp",
+        "pdf",
+        "spreadsheet",
+        "powerpoint"
+      ]
+    },
+    "automation": {
+      "color": "#D55E00",
+      "description": "driving a web browser or desktop apps, booking, scraping, screen-history automation",
+      "keywords": [
+        "browser",
+        "automation",
+        "screenpipe",
+        "playwright",
+        "booking",
+        "예약"
+      ]
+    },
+    "meta": {
+      "color": "#9467BD",
+      "description": "working with Claude itself — creating skills/agents, planning sessions, explaining, handoff, writing prompts",
+      "keywords": [
+        "skill creator",
+        "handoff",
+        "explain",
+        "prompt"
+      ]
+    }
+  },
+  "category_aliases": {
+    "academic": "research",
+    "education": "research",
+    "writing": "research",
+    "development": "dev",
+    "engineering": "dev"
+  },
+  "overrides": {
+    "pdf": "docs",
+    "eli5": "meta",
+    "handoff": "meta",
+    "skm-dep-judge": "meta",
+    "skm-conflict-audit": "meta",
+    "skm-graph-style": "meta",
+    "wizard": "meta",
+    "ditto-writer": "research",
+    "vault-wiki": "research",
+    "agent:lost-me-auditor": "research",
+    "agent:lost-me-judge-humanness": "research",
+    "agent:lost-me-judge-readability": "research"
+  },
+  "ignore": [],
+  "llm": {
+    "model": "haiku",
+    "limit": 100,
+    "workers": 4
+  },
+  "doctor": {
+    "skip": [
+      "humanize"
+    ]
+  }
+}

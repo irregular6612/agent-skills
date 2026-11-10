@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>agent-skills 그래프</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js"></script>
+<style>
+/* Visual rules: .claude/skills/skm-graph-style/SKILL.md */
+:root {
+  --bg: #fcfcfb; --panel: #ffffff; --ink: #1d1d1f; --ink2: #555; --muted: #8a8a8a;
+  --line: #e3e3e0; --edge: #9a9a9a; --accent: #0072B2;
+  --err: #b00020; --warn: #9a5b00; --info: #6b6b6b;
+  --alert-bg: #fde7ea; --alert-ink: #5c0011;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #161618; --panel: #1f1f22; --ink: #ececec; --ink2: #b8b8b8; --muted: #8d8d8d;
+          --line: #333338; --edge: #77777d; --accent: #56B4E9;
+          --err: #ff6b7f; --warn: #f0b04a; --info: #a0a0a0;
+          --alert-bg: #3a0d14; --alert-ink: #ffd6dc; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+       font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Segoe UI", sans-serif; }
+header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 12px 16px;
+         border-bottom: 1px solid var(--line); background: var(--panel); }
+header h1 { font-size: 16px; margin: 0 8px 0 0; }
+select, input[type=search] { font: inherit; padding: 4px 8px; border: 1px solid var(--line);
+         border-radius: 6px; background: var(--bg); color: var(--ink); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg[hidden] { display: none; }
+.seg button { font: inherit; border: none; background: transparent; color: var(--ink2); padding: 4px 14px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed=true] { background: var(--accent); color: var(--panel); font-weight: 600; }
+label.chk { color: var(--ink2); font-size: 13px; display: inline-flex; gap: 4px; align-items: center; }
+#alert { margin: 0; padding: 12px 16px; background: var(--alert-bg); color: var(--alert-ink);
+         border-bottom: 3px solid var(--err); font-size: 14px; }
+#alert[hidden] { display: none; }
+#alert strong { font-size: 15px; }
+#alert ul { margin: 6px 0 0; padding-left: 18px; max-height: 132px; overflow: auto; }
+#alert li { margin: 2px 0; }
+#alert button.lnk { font: inherit; background: none; border: none; padding: 0; color: inherit;
+         text-decoration: underline; cursor: pointer; font-weight: 600; }
+#alert .ghost { font-family: ui-monospace, Menlo, monospace; background: var(--panel); color: var(--err);
+         border: 1px dashed var(--err); border-radius: 4px; padding: 0 4px; }
+#alert .why { color: var(--alert-ink); opacity: .8; font-size: 12px; }
+#summary { padding: 8px 16px; color: var(--ink2); font-size: 13px; border-bottom: 1px solid var(--line); margin: 0; }
+[role=tablist] { display: flex; gap: 4px; padding: 8px 16px 0; }
+[role=tab] { font: inherit; border: 1px solid var(--line); border-bottom: none; background: transparent;
+             color: var(--ink2); padding: 6px 14px; border-radius: 8px 8px 0 0; cursor: pointer; }
+[role=tab][aria-selected=true] { background: var(--panel); color: var(--ink); font-weight: 600; }
+[role=tab]:focus-visible, #cy:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tabpanel { border-top: 1px solid var(--line); background: var(--panel); }
+#graphwrap { display: grid; grid-template-columns: 1fr 320px; height: calc(100vh - 170px); min-height: 420px; }
+#cy { width: 100%; height: 100%; }
+aside { border-left: 1px solid var(--line); overflow: auto; padding: 12px 14px; font-size: 13px; }
+aside h2 { font-size: 15px; margin: 0 0 4px; word-break: break-all; }
+aside h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 14px 0 4px; }
+aside ul { padding-left: 16px; margin: 4px 0; }
+.legend { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+.pkgbtn { font: inherit; display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; background: none;
+          border: 1px solid transparent; border-radius: 6px; padding: 2px 6px; color: var(--ink); cursor: pointer; }
+.pkgbtn:hover, .pkgbtn[aria-pressed=true] { border-color: var(--line); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.pkgbtn .cnt { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+.pkglist { max-height: 260px; overflow: auto; }
+.sev-error { color: var(--err); font-weight: 600; } .sev-warn { color: var(--warn); font-weight: 600; } .sev-info { color: var(--info); }
+.tablewrap { overflow: auto; max-height: calc(100vh - 170px); }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { position: sticky; top: 0; background: var(--panel); cursor: pointer; user-select: none; color: var(--ink2); }
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+tr:hover td { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+a.nodelink { color: var(--accent); text-decoration: none; cursor: pointer; }
+.muted { color: var(--muted); }
+code { font-size: 12px; }
+@media (max-width: 760px) {
+  #graphwrap { grid-template-columns: 1fr; height: auto; }
+  #cy { height: 60vh; }
+  aside { border-left: none; border-top: 1px solid var(--line); }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">agent-skills 그래프</h1>
+  <div id="viewmode" class="seg" role="group" aria-label="모드 (day / night)"></div>
+  <label>세부 모드 <select id="mode"></select></label>
+  <input type="search" id="q" placeholder="검색 ( / )" aria-label="노드 검색">
+  <label class="chk"><input type="checkbox" id="showPkg" checked> 패키지</label>
+  <label class="chk"><input type="checkbox" id="showMention" checked> 언급(mentions)</label>
+  <label>색 기준 <select id="colorBy"><option value="cat">카테고리</option><option value="pkg">패키지·플러그인</option></select></label>
+  <span class="muted" id="gen"></span>
+</header>
+<section id="alert" role="alert" hidden></section>
+<p id="summary" aria-live="polite"></p>
+<div role="tablist" aria-label="보기">
+  <button role="tab" id="tab-graph" aria-controls="p-graph" aria-selected="true">그래프</button>
+  <button role="tab" id="tab-list" aria-controls="p-list" aria-selected="false" tabindex="-1">목록</button>
+  <button role="tab" id="tab-issues" aria-controls="p-issues" aria-selected="false" tabindex="-1">문제</button>
+</div>
+<section class="tabpanel" id="p-graph" role="tabpanel" aria-labelledby="tab-graph">
+  <div id="graphwrap">
+    <div id="cy" tabindex="0" role="application"
+         aria-label="의존성 그래프. ←/→ 로 노드 이동, Enter 로 상세, Esc 로 해제"></div>
+    <aside id="detail" aria-live="polite"></aside>
+  </div>
+</section>
+<section class="tabpanel" id="p-list" role="tabpanel" aria-labelledby="tab-list" hidden>
+  <div class="tablewrap"><table id="list"></table></div>
+</section>
+<section class="tabpanel" id="p-issues" role="tabpanel" aria-labelledby="tab-issues" hidden>
+  <div class="tablewrap"><table id="issues"></table></div>
+</section>
+
+<script>
+const ALL = /*__SKM_DATA__*/null;
+// day/night toggle: the mode lives in the URL hash (#night), so a reload keeps it
+const MODE_NAMES = Object.keys(ALL.views);
+const VIEW_MODE = MODE_NAMES.includes(location.hash.slice(1)) ? location.hash.slice(1) : ALL.initial;
+const DATA = ALL.views[VIEW_MODE];
+const inv = DATA.inventory, rep = DATA.report;
+{
+  const box = document.getElementById("viewmode");
+  box.hidden = MODE_NAMES.length < 2;
+  for (const m of MODE_NAMES) {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = m; b.setAttribute("aria-pressed", m === VIEW_MODE);
+    b.onclick = () => { if (m !== VIEW_MODE) { location.hash = m; location.reload(); } };
+    box.appendChild(b);
+  }
+}
+const nodes = inv.nodes, edges = rep.edges, issues = rep.issues || [];
+const cats = rep.categories || {}, pal = rep.palette || {};
+const byId = Object.fromEntries(nodes.map(n => [n.id, n]));
+const SEV_RANK = { error: 3, warn: 2, info: 1 };
+const KIND_LABEL = { skill: "스킬", agent: "에이전트", mcp: "MCP", package: "패키지", missing: "없는 대상" };
+const REL_LABEL = { requires: "필요", uses: "사용", overlaps: "트리거 겹침", mentions: "언급", part_of: "패키지 소속", broken: "끊긴 연결" };
+
+// severity per node (max over issues that touch it)
+const nodeSev = {}, nodeIssues = {};
+for (const i of issues) for (const id of i.nodes) {
+  (nodeIssues[id] = nodeIssues[id] || []).push(i);
+  if ((SEV_RANK[i.severity] || 0) > (SEV_RANK[nodeSev[id]] || 0)) nodeSev[id] = i.severity;
+}
+const deg = {};
+for (const e of edges) if (e.relation !== "part_of") { deg[e.source] = (deg[e.source] || 0) + 1; deg[e.target] = (deg[e.target] || 0) + 1; }
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+// ---------- package / plugin groups (second color scheme) ----------
+// group = agent-skills package (mattpocock-skills, pstack, ...) or "plugin: <name>" for Claude plugins
+const groupOf = n => !n ? "" : n.kind === "package" ? n.name : n.package || (n.plugin ? "plugin: " + n.plugin
+                    : n.kind === "mcp" ? "MCP 설정" : "(패키지 없음)");
+const groupCount = {};
+for (const n of nodes) if (n.kind === "skill" || n.kind === "agent") groupCount[groupOf(n)] = (groupCount[groupOf(n)] || 0) + 1;
+const groups = Object.keys(groupCount).sort((a, b) => groupCount[b] - groupCount[a] || a.localeCompare(b));
+const GROUP_PAL = ["#0072B2", "#E69F00", "#009E73", "#CC79A7", "#56B4E9", "#D55E00", "#9467BD"];  // validated set
+const groupColor = Object.fromEntries(groups.map((g, i) => [g, GROUP_PAL[i] || "#BBBBBB"]));
+
+// ---------- mode dropdown ----------
+const modeSel = document.getElementById("mode");
+const modeSets = { "": null };
+modeSel.add(new Option(`전체 (${nodes.filter(n => n.kind === "skill" || n.kind === "agent").length})`, ""));
+for (const [name, members] of Object.entries(rep.modes || {})) {
+  const set = name === "base" ? new Set(members) : new Set([...(rep.modes.base || []), ...members]);
+  modeSets[name] = set;
+  const desc = (rep.mode_descriptions || {})[name];
+  modeSel.add(new Option(`${name} (${set.size})${desc ? " — " + desc : ""}`, name));
+}
+
+// ---------- cytoscape ----------
+const elements = [];
+for (const n of nodes) {
+  const id = n.id;
+  elements.push({ data: {
+    id, label: n.name, kind: n.kind, cat: cats[id] || "other",
+    color: pal[cats[id]] || pal.other || "#bbb", sev: nodeSev[id] || "none",
+    catColor: pal[cats[id]] || pal.other || "#bbb", group: groupOf(n), pkgColor: groupColor[groupOf(n)] || "#BBBBBB",
+    size: n.kind === "package" ? 8 : Math.min(48, 22 + 3 * Math.sqrt(deg[id] || 0) * 2),
+  }});
+}
+edges.forEach((e, k) => {
+  if (!byId[e.source] || !byId[e.target]) return;
+  elements.push({ data: { id: "e" + k, source: e.source, target: e.target, rel: e.relation,
+    origin: e.origin, conf: e.confidence || 0.5, w: 1 + 4 * (e.confidence || 0.5), ev: e.evidence || "" } });
+});
+
+// broken connections: ghost nodes for targets that do not exist, red edges to them
+const broken = rep.broken || [];
+const ghostIds = new Set();
+broken.forEach((b, k) => {
+  if (!b.target || !byId[b.source]) return;
+  if (!ghostIds.has(b.target)) {
+    ghostIds.add(b.target);
+    elements.push({ data: { id: b.target, label: "⚠ 없음: " + b.label, kind: "missing", cat: "missing",
+                            color: "#ffffff", sev: "error", size: 30 } });
+  }
+  elements.push({ data: { id: "b" + k, source: b.source, target: b.target, rel: "broken", origin: "rule",
+                          conf: 1, w: 4, ev: b.message } });
+});
+
+const cy = cytoscape({
+  container: document.getElementById("cy"),
+  elements, wheelSensitivity: 0.3, minZoom: 0.15, maxZoom: 3,
+  style: [
+    { selector: "node", style: {
+      "background-color": "data(color)", width: "data(size)", height: "data(size)",
+      label: "data(label)", "font-size": 10, color: css("--ink"),
+      "text-valign": "bottom", "text-margin-y": 3, "text-outline-color": css("--bg"), "text-outline-width": 2,
+      "border-width": 1, "border-color": css("--panel"), "border-style": "solid" } },
+    { selector: "node[kind='skill']", style: { shape: "ellipse" } },
+    { selector: "node[kind='agent']", style: { shape: "round-rectangle" } },
+    { selector: "node[kind='mcp']", style: { shape: "hexagon" } },
+    { selector: "node[kind='package']", style: { shape: "ellipse", label: "", "background-color": css("--muted") } },
+    { selector: "node[kind='package'].showlabel", style: { label: "data(label)", "font-size": 8, color: css("--muted") } },
+    { selector: "node[kind='package'].pkgmode", style: { "background-color": "data(pkgColor)", width: 12, height: 12,
+      label: "data(label)", "font-size": 9, color: css("--ink2") } },
+    // border = severity (shape of the line carries it, not only the color)
+    { selector: "node[sev='error']", style: { "border-width": 6, "border-style": "double", "border-color": css("--err") } },
+    { selector: "node[sev='warn']",  style: { "border-width": 4, "border-style": "dashed", "border-color": css("--warn") } },
+    { selector: "node[sev='info']",  style: { "border-width": 2, "border-style": "dotted", "border-color": css("--info") } },
+    { selector: "edge", style: { width: "data(w)", "line-color": css("--edge"), "curve-style": "bezier",
+      "target-arrow-color": css("--edge"), "arrow-scale": 0.8, opacity: 0.75 } },
+    { selector: "edge[rel='requires'], edge[rel='uses']", style: { "line-style": "solid", "target-arrow-shape": "triangle" } },
+    { selector: "edge[rel='overlaps']", style: { "line-style": "dotted", "target-arrow-shape": "none", "line-color": css("--warn") } },
+    { selector: "edge[rel='mentions']", style: { "line-style": "dashed", "target-arrow-shape": "vee", width: 1, opacity: 0.45 } },
+    { selector: "edge[rel='part_of']", style: { width: 0.5, opacity: 0.25, "target-arrow-shape": "none" } },
+    // broken connection: dashed thick red edge ending in a bar (tee), ghost node with a red dashed ring
+    { selector: "node[kind='missing']", style: { shape: "diamond", "background-color": css("--alert-bg"),
+      "border-width": 4, "border-style": "dashed", "border-color": css("--err"), color: css("--err"),
+      "font-weight": 700, "font-size": 11 } },
+    { selector: "edge[rel='broken'], edge.outside", style: { "line-color": css("--err"), "target-arrow-color": css("--err"),
+      "line-style": "dashed", width: 4, opacity: 1, "target-arrow-shape": "tee", "arrow-scale": 1.4, "z-index": 90 } },
+    { selector: "node.outside", style: { "border-width": 4, "border-style": "dashed", "border-color": css("--err"),
+      opacity: 0.9 } },
+    { selector: "node.brokensrc", style: { "underlay-color": css("--err"), "underlay-opacity": 0.35, "underlay-padding": 7 } },
+    { selector: ".faded", style: { opacity: 0.08 } },
+    { selector: "node.focus", style: { "overlay-color": css("--accent"), "overlay-opacity": 0.25, "overlay-padding": 6, "z-index": 99 } },
+    { selector: "edge.hl", style: { opacity: 1, "line-color": css("--accent"), "target-arrow-color": css("--accent"), "z-index": 98 } },
+  ],
+});
+
+function runLayout() {
+  cy.layout({ name: "cose", animate: false, nodeRepulsion: () => 9000, idealEdgeLength: () => 70,
+              gravity: 0.3, numIter: 1500, componentSpacing: 60, nodeDimensionsIncludeLabels: true,
+              eles: cy.elements(":visible") }).run();
+  cy.fit(cy.elements(":visible"), 30);
+}
+
+// ---------- filtering ----------
+function activeSet() { return modeSets[modeSel.value]; }
+function visibleNodeIds() {
+  const set = activeSet(), q = document.getElementById("q").value.trim().toLowerCase();
+  const showPkg = document.getElementById("showPkg").checked;
+  const ids = new Set();
+  for (const n of nodes) {
+    if (n.kind === "skill" || n.kind === "agent") {
+      if (set && !set.has(n.id)) continue;
+      if (q && !(n.name.toLowerCase().includes(q) || (n.description || "").toLowerCase().includes(q))) continue;
+      ids.add(n.id);
+    }
+  }
+  // MCP / packages: only when connected to a visible member
+  for (const e of edges) {
+    if (!ids.has(e.source)) continue;
+    const t = byId[e.target]; if (!t) continue;
+    if (t.kind === "mcp" || (t.kind === "package" && showPkg)) ids.add(t.id);
+  }
+  for (const b of broken) if (b.target && ids.has(b.source)) ids.add(b.target);
+  return ids;
+}
+function applyFilter(relayout = true) {
+  const ids = visibleNodeIds(), showMention = document.getElementById("showMention").checked;
+  const out = outsideLinks(ids);  // sub-mode members that need something the sub-mode lacks
+  const outT = new Set(out.map(e => e.target)), outE = new Set(out.map(e => e._k));
+  const src = new Set([...brokenFor(ids).map(b => b.source), ...out.map(e => e.source)]);
+  cy.batch(() => {
+    cy.elements().removeClass("outside brokensrc");
+    cy.nodes().forEach(n => {
+      const on = ids.has(n.id()) || outT.has(n.id());
+      n.style("display", on ? "element" : "none");
+      if (outT.has(n.id()) && !ids.has(n.id())) n.addClass("outside");
+      if (src.has(n.id())) n.addClass("brokensrc");
+    });
+    cy.edges().forEach(e => {
+      const isOut = outE.has(e.id());
+      const ok = isOut || (ids.has(e.data("source")) && ids.has(e.data("target")) && (showMention || e.data("rel") !== "mentions"));
+      e.style("display", ok ? "element" : "none");
+      if (isOut) e.addClass("outside");
+    });
+  });
+  renderAlert(ids, out);
+  if (relayout) runLayout();
+  renderSummary(ids); renderList(ids); renderIssues(ids);
+}
+
+// ---------- broken connections ----------
+function brokenFor(ids) { return broken.filter(b => ids.has(b.source)); }
+function outsideLinks(ids) {
+  // in a sub-mode: a member requires/uses a skill/agent that exists but is not in the sub-mode
+  if (!activeSet()) return [];
+  const out = [];
+  edges.forEach((e, k) => {
+    if ((e.relation === "requires" || e.relation === "uses") && (e.confidence || 0) >= 0.6 &&
+        ids.has(e.source) && !ids.has(e.target) && byId[e.target] && !byId[e.target].plugin &&
+        (byId[e.target].kind === "skill" || byId[e.target].kind === "agent"))
+      out.push({ ...e, _k: "e" + k });
+  });
+  return out;
+}
+const fixes = rep.fixes || [];
+function fixFor(x) {  // the doctor's automatic fix for a broken item, if one catalog package provides it
+  const ref = (x.label || "").split(" · ")[0];
+  const h = /· ([\w,]+)에 없음/.exec(x.label || "");
+  return fixes.filter(f => f.refs.includes(ref) && (!h || h[1].split(",").includes(f.harness)));
+}
+function renderAlert(ids, out) {
+  const b = brokenFor(ids), el = document.getElementById("alert");
+  const n = b.length + out.length;
+  if (!n) { el.hidden = true; el.innerHTML = ""; return; }
+  const where = modeSel.value ? `세부 모드 ${esc(modeSel.value)}` : "전체";
+  const items = [
+    ...b.map(x => `<li>⛔ <button class="lnk" data-id="${esc(x.source)}">${esc(byId[x.source] ? byId[x.source].name : x.source)}</button>
+       → ${x.label ? `<span class="ghost">${esc(x.label)}</span>${x.label.includes("없음") ? "" : " 없음"}` : "연결 문제"}
+       ${fixFor(x).length ? `<b>[자동 해결: ${fixFor(x).map(f => `install ${esc(f.package)} · ${esc(f.harness)}`).join(", ")}]</b>` : `<b>[수동 조치]</b>`}
+       <span class="why">${esc(x.message)}</span></li>`),
+    ...out.map(e => `<li>⛔ <button class="lnk" data-id="${esc(e.source)}">${esc(byId[e.source].name)}</button>
+       → <span class="ghost">${esc(byId[e.target].name)}</span> 이 세부 모드에 없음
+       <span class="why">${REL_LABEL[e.relation]} · ${e.origin} ${(+e.confidence).toFixed(2)} — 켜려면 submodes.json include 에 추가</span></li>`),
+  ];
+  const auto = b.filter(x => fixFor(x).length).length;
+  el.innerHTML = `<strong>⛔ 끊긴 연결 ${n}개 (${where})</strong> — 이 스킬들은 부르려는 대상이 없어 실행 중 실패할 수 있습니다.
+    그래프에서 빨간 점선(끝이 막힌 선)과 ◇ 유령 노드로 표시됩니다.
+    ${auto ? `<br>자동 해결 가능 ${auto}개: <code>python3 install.py doctor --mode ${esc(inv.mode || "day")} --fix</code> (설치 전에 확인을 묻고, uninstall 로 되돌릴 수 있음)` : ""}
+    <ul>${items.join("")}</ul>`;
+  el.hidden = false;
+}
+document.getElementById("alert").addEventListener("click", ev => {
+  const btn = ev.target.closest("button.lnk"); if (btn) focusNode(btn.dataset.id);
+});
+
+// ---------- summary (text alternative of the graph) ----------
+function renderSummary(ids) {
+  const vis = [...ids].map(i => byId[i]).filter(Boolean);
+  const c = k => vis.filter(n => n.kind === k).length;
+  const dep = edges.filter(e => (e.relation === "requires" || e.relation === "uses") && ids.has(e.source) && ids.has(e.target));
+  const iss = issuesFor(ids);
+  const s = k => iss.filter(i => i.severity === k).length;
+  const indeg = {};
+  for (const e of dep) indeg[e.target] = (indeg[e.target] || 0) + 1;
+  const top = Object.entries(indeg).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([id, k]) => `${byId[id].name}(${k})`);
+  const m = modeSel.value ? `모드 ${modeSel.value}: ` : "전체: ";
+  document.getElementById("summary").textContent =
+    `${m}노드 ${vis.length}개(스킬 ${c("skill")}, 에이전트 ${c("agent")}, MCP ${c("mcp")}, 패키지 ${c("package")}), ` +
+    `의존 엣지 ${dep.length}개, 끊긴 연결 ${brokenFor(ids).length + outsideLinks(ids).length}개, 문제 error ${s("error")} · warn ${s("warn")} · info ${s("info")}.` +
+    (top.length ? ` 가장 많이 의존받는 것: ${top.join(", ")}.` : "");
+}
+function issuesFor(ids) { return issues.filter(i => i.nodes.some(n => ids.has(n))); }
+
+// ---------- detail panel ----------
+const detail = document.getElementById("detail");
+function legendHTML() {
+  const catRows = Object.entries(pal).filter(([k]) => !["mcp", "package"].includes(k))
+    .map(([k, v]) => `<span><span class="sw" style="background:${v}"></span>${k}</span>`).join("");
+  const pkgRows = groups.map(g => `<button class="pkgbtn" data-group="${esc(g)}" aria-pressed="${g === activeGroup}">
+      <span class="sw" style="background:${groupColor[g]}"></span>${esc(g)}<span class="cnt">${groupCount[g]}</span></button>`).join("");
+  const colorPart = colorBy() === "pkg"
+    ? `<h3>색 = 패키지·플러그인 (위 ${Math.min(groups.length, GROUP_PAL.length)}개, 나머지 회색)</h3>
+       <div class="muted">눌러서 그 패키지만 강조, 다시 누르면 해제</div><div class="pkglist">${pkgRows}</div>`
+    : `<h3>색 = 카테고리</h3><div class="legend">${catRows}</div>
+       <h3>패키지·플러그인</h3><div class="muted">눌러서 그 패키지만 강조</div><div class="pkglist">${pkgRows}</div>`;
+  return `<h2>범례</h2>
+  <h3>모양 = 종류</h3><div>● 스킬 · ▢ 에이전트 · ⬡ MCP · · 패키지(점)</div>
+  ${colorPart}
+  <h3>테두리 = 심각도</h3><div><span class="sev-error">══ 이중선 error</span> ·
+    <span class="sev-warn">- - 점선 warn</span> · <span class="sev-info">··· info</span></div>
+  <h3>선 = 관계 (굵기 = confidence)</h3>
+  <div><span class="sev-error">━ ━ ┤ 빨간 굵은 점선, 끝이 막힘: 끊긴 연결</span><br>
+  <span class="sev-error">◇ 유령 노드: 없는 대상 · 빨간 점선 테두리: 세부 모드 밖</span><br>── 실선+화살표: 필요(requires/uses)<br>··· 점선: 트리거 겹침(LLM)<br>- - 파선: 이름 언급(규칙)<br>얇은 선: 패키지 소속</div>
+  <h3>키보드</h3><div>그래프 클릭/Tab 후 ←/→ 이동 · Enter 상세 · Esc 해제 · / 검색</div>
+  <p class="muted">LLM ${rep.llm ? `${rep.llm.model}, 판정 ${rep.llm.judged_pairs}쌍, 보류 ${rep.llm.deferred}쌍` : "미사용"}</p>`;
+}
+function esc(s) { return String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]); }
+function link(id) { return `<a class="nodelink" data-id="${esc(id)}">${esc(byId[id] ? byId[id].name : id)}</a>`; }
+function showDetail(id) {
+  if (id && id.startsWith("missing:")) {
+    const from = broken.filter(b => b.target === id);
+    detail.innerHTML = `<h2 class="sev-error">⚠ 없는 대상: ${esc(id.split(":").slice(2).join(":"))}</h2>
+      <div class="muted">${esc(id.split(":")[1])} · 설치되어 있지 않거나 설정에 없음</div>
+      <h3>이것을 부르는 곳 ${from.length}</h3><ul>${from.map(b => `<li>${link(b.source)} <span class="muted">${esc(b.message)}</span></li>`).join("")}</ul>`;
+    return;
+  }
+  const n = byId[id]; if (!n) { detail.innerHTML = legendHTML(); return; }
+  const out = edges.filter(e => e.source === id && e.relation !== "part_of");
+  const inc = edges.filter(e => e.target === id && e.relation !== "part_of");
+  const li = (e, other) => `<li>${REL_LABEL[e.relation] || e.relation} ${link(other)} <span class="muted">${e.origin} ${(+e.confidence).toFixed(2)}</span></li>`;
+  const iss = nodeIssues[id] || [];
+  detail.innerHTML = `<h2>${esc(n.name)}</h2>
+    <div class="muted">${KIND_LABEL[n.kind]} · ${esc(cats[id] || "")} · ${esc(n.source)} · <span class="sw" style="background:${groupColor[groupOf(n)] || "#bbb"}"></span>${esc(groupOf(n))}${(n.harness || []).length ? " · " + esc(n.harness.join(", ")) : ""}</div>
+    <p>${esc(n.description || "")}</p>
+    ${n.path ? `<div class="muted"><code>${esc(n.path)}</code></div>` : ""}
+    <h3>문제 ${iss.length}</h3><ul>${iss.map(i => `<li class="sev-${i.severity}">[${i.severity}] ${esc(i.check)}: <span style="color:var(--ink);font-weight:400">${esc(i.message)}</span></li>`).join("") || "<li class='muted'>없음</li>"}</ul>
+    <h3>나가는 연결 ${out.length}</h3><ul>${out.map(e => li(e, e.target)).join("") || "<li class='muted'>없음</li>"}</ul>
+    <h3>들어오는 연결 ${inc.length}</h3><ul>${inc.map(e => li(e, e.source)).join("") || "<li class='muted'>없음</li>"}</ul>`;
+}
+detail.addEventListener("click", ev => {
+  const a = ev.target.closest("a.nodelink"); if (a) focusNode(a.dataset.id);
+  const b = ev.target.closest(".pkgbtn"); if (b) highlightGroup(b.dataset.group);
+});
+
+function focusNode(id) {
+  const n = cy.getElementById(id);
+  cy.elements().removeClass("faded hl focus");
+  if (!n.length || n.style("display") === "none") { showDetail(id); return; }
+  const hood = n.closedNeighborhood();
+  cy.elements(":visible").not(hood).addClass("faded");
+  n.addClass("focus"); n.connectedEdges().addClass("hl");
+  cy.animate({ fit: { eles: hood, padding: 80 }, duration: 250 });
+  showDetail(id); current = id;
+  selectTab("graph");
+}
+function clearFocus() { cy.elements().removeClass("faded hl focus"); current = null; activeGroup = null; detail.innerHTML = legendHTML(); }
+let activeGroup = null;
+function colorBy() { return document.getElementById("colorBy").value; }
+function applyColors() {
+  const pkg = colorBy() === "pkg";
+  cy.batch(() => cy.nodes().forEach(n => {
+    if (n.data("kind") === "missing") return;
+    n.data("color", pkg ? n.data("pkgColor") : n.data("catColor"));
+    n.toggleClass("pkgmode", pkg);
+  }));
+  if (!current) detail.innerHTML = legendHTML();
+}
+function highlightGroup(g) {
+  cy.elements().removeClass("faded hl focus");
+  current = null;
+  activeGroup = activeGroup === g ? null : g;
+  if (activeGroup) {
+    const inG = cy.nodes(":visible").filter(n => n.data("group") === activeGroup);
+    const keep = inG.union(inG.connectedEdges()).union(inG.connectedEdges().connectedNodes());
+    cy.elements(":visible").not(keep).addClass("faded");
+    inG.addClass("focus");
+    if (inG.length) cy.animate({ fit: { eles: inG, padding: 60 }, duration: 250 });
+  }
+  detail.innerHTML = legendHTML();
+  const btn = detail.querySelector(`.pkgbtn[data-group="${CSS.escape(activeGroup || "")}"]`);
+  document.getElementById("summary").textContent = activeGroup
+    ? `패키지 ${activeGroup}: ${groupCount[activeGroup]}개 강조 (다시 누르면 해제)` : document.getElementById("summary").textContent;
+  if (btn) btn.focus();
+}
+cy.on("tap", "node", ev => focusNode(ev.target.id()));
+cy.on("tap", ev => { if (ev.target === cy) clearFocus(); });
+cy.on("mouseover", "node[kind='package']", ev => ev.target.addClass("showlabel"));
+cy.on("mouseout", "node[kind='package']", ev => ev.target.removeClass("showlabel"));
+cy.on("mouseover", "edge", ev => { document.getElementById("cy").title = `${REL_LABEL[ev.target.data("rel")]} (${ev.target.data("origin")}): ${ev.target.data("ev")}`; });
+
+// ---------- keyboard ----------
+let current = null;
+document.getElementById("cy").addEventListener("keydown", ev => {
+  const order = cy.nodes(":visible").filter(n => n.data("kind") !== "package").map(n => n.id())
+    .sort((a, b) => cy.getElementById(a).data("label").localeCompare(cy.getElementById(b).data("label")));
+  if (!order.length) return;
+  const i = Math.max(0, order.indexOf(current));
+  if (ev.key === "ArrowRight" || ev.key === "ArrowDown") { focusNode(order[(i + (current ? 1 : 0)) % order.length]); ev.preventDefault(); }
+  else if (ev.key === "ArrowLeft" || ev.key === "ArrowUp") { focusNode(order[(i - 1 + order.length) % order.length]); ev.preventDefault(); }
+  else if (ev.key === "Enter" && current) { detail.focus?.(); showDetail(current); }
+  else if (ev.key === "Escape") clearFocus();
+});
+document.addEventListener("keydown", ev => {
+  if (ev.key === "/" && document.activeElement.tagName !== "INPUT") { ev.preventDefault(); document.getElementById("q").focus(); }
+});
+
+// ---------- tabs ----------
+const tabs = ["graph", "list", "issues"];
+function selectTab(name) {
+  for (const t of tabs) {
+    const b = document.getElementById("tab-" + t), on = t === name;
+    b.setAttribute("aria-selected", on); b.tabIndex = on ? 0 : -1;
+    document.getElementById("p-" + t).hidden = !on;
+  }
+  if (name === "graph") cy.resize();
+}
+document.querySelector("[role=tablist]").addEventListener("click", ev => {
+  const b = ev.target.closest("[role=tab]"); if (b) selectTab(b.id.slice(4));
+});
+document.querySelector("[role=tablist]").addEventListener("keydown", ev => {
+  const i = tabs.indexOf(document.activeElement.id.slice(4));
+  if (ev.key === "ArrowRight" || ev.key === "ArrowLeft") {
+    const n = tabs[(i + (ev.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
+    selectTab(n); document.getElementById("tab-" + n).focus();
+  }
+});
+
+// ---------- tables (sortable) ----------
+function table(el, cols, rows, sortState) {
+  const th = cols.map((c, k) => `<th scope="col" data-k="${k}" aria-sort="${sortState.k === k ? (sortState.dir > 0 ? "ascending" : "descending") : "none"}">${c.label}${sortState.k === k ? (sortState.dir > 0 ? " ▲" : " ▼") : ""}</th>`).join("");
+  const sorted = [...rows].sort((a, b) => {
+    const x = cols[sortState.k].sort(a), y = cols[sortState.k].sort(b);
+    return (x > y ? 1 : x < y ? -1 : 0) * sortState.dir;
+  });
+  el.innerHTML = `<thead><tr>${th}</tr></thead><tbody>${sorted.map(r => `<tr>${cols.map(c => `<td class="${c.num ? "num" : ""}">${c.html(r)}</td>`).join("")}</tr>`).join("")}</tbody>`;
+  el.querySelectorAll("th").forEach(h => h.onclick = () => {
+    const k = +h.dataset.k; sortState.dir = sortState.k === k ? -sortState.dir : 1; sortState.k = k; applyFilter(false);
+  });
+  el.onclick = ev => { const a = ev.target.closest("a.nodelink"); if (a) focusNode(a.dataset.id); };
+}
+const listSort = { k: 0, dir: 1 }, issueSort = { k: 0, dir: -1 };
+function renderList(ids) {
+  const rows = [...ids].map(i => byId[i]).filter(n => n && (n.kind === "skill" || n.kind === "agent"));
+  const depOut = id => edges.filter(e => e.source === id && (e.relation === "requires" || e.relation === "uses")).length;
+  const depIn = id => edges.filter(e => e.target === id && (e.relation === "requires" || e.relation === "uses")).length;
+  table(document.getElementById("list"), [
+    { label: "이름", sort: n => n.name, html: n => link(n.id) },
+    { label: "종류", sort: n => n.kind, html: n => KIND_LABEL[n.kind] },
+    { label: "카테고리", sort: n => cats[n.id] || "", html: n => `<span class="sw" style="background:${pal[cats[n.id]] || "#bbb"}"></span>${esc(cats[n.id] || "")}` },
+    { label: "출처", sort: n => n.source, html: n => esc(n.source.startsWith("extra:") ? "extra" : n.source) },
+    { label: "패키지", sort: n => n.package || n.plugin || "", html: n => esc(n.package || (n.plugin ? "plugin: " + n.plugin : "")) },
+    { label: "하네스", sort: n => (n.harness || []).join(","), html: n => esc((n.harness || []).join(", ")) },
+    { label: "필요로 함", num: true, sort: n => depOut(n.id), html: n => depOut(n.id) },
+    { label: "필요로 됨", num: true, sort: n => depIn(n.id), html: n => depIn(n.id) },
+    { label: "문제", sort: n => SEV_RANK[nodeSev[n.id]] || 0, html: n => nodeSev[n.id] ? `<span class="sev-${nodeSev[n.id]}">${nodeSev[n.id]} ${(nodeIssues[n.id] || []).length}</span>` : "" },
+    { label: "설명", sort: n => n.description || "", html: n => `<span class="muted">${esc((n.description || "").slice(0, 140))}</span>` },
+  ], rows, listSort);
+}
+function renderIssues(ids) {
+  table(document.getElementById("issues"), [
+    { label: "심각도", sort: i => SEV_RANK[i.severity], html: i => `<span class="sev-${i.severity}">${i.severity === "error" ? "⛔ " : i.severity === "warn" ? "⚠ " : "ℹ "}${i.severity}</span>` },
+    { label: "검사", sort: i => i.check, html: i => esc(i.check) },
+    { label: "대상", sort: i => i.nodes.join(","), html: i => i.nodes.map(link).join(", ") },
+    { label: "내용", sort: i => i.message, html: i => esc(i.message) },
+    { label: "근거", sort: i => i.origin, html: i => esc(i.origin) + (i.confidence != null ? ` ${(+i.confidence).toFixed(2)}` : "") },
+  ], issuesFor(ids), issueSort);
+  const n = issuesFor(ids).length;
+  document.getElementById("tab-issues").textContent = `문제 (${n})`;
+}
+
+// ---------- wire up ----------
+document.getElementById("gen").textContent = `생성 ${rep.generated_at || ""}`;
+if (inv.mode) { document.getElementById("title").textContent = `agent-skills 그래프 · ${inv.mode}`; document.title = `agent-skills ${inv.mode}`; }
+window.addEventListener("hashchange", () => {
+  const m = location.hash.slice(1);
+  if (MODE_NAMES.includes(m) && m !== VIEW_MODE) location.reload();
+});
+modeSel.onchange = () => { clearFocus(); applyFilter(true); };
+let qTimer; document.getElementById("q").oninput = () => { clearTimeout(qTimer); qTimer = setTimeout(() => applyFilter(true), 250); };
+document.getElementById("showPkg").onchange = () => applyFilter(true);
+document.getElementById("showMention").onchange = () => applyFilter(false);
+document.getElementById("colorBy").onchange = applyColors;
+detail.innerHTML = legendHTML();
+applyFilter(true);
+</script>
+</body>
+</html>

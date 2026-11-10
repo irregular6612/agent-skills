@@ -23,7 +23,6 @@
 14. AI 어휘(delve, crucial, pivotal, leverage, robust, overlook, nuanced, framework)
 15. 수동태
 16. 방어적 헤지 독립 문장(약함)
-17. 완벽한 문법(고의 삽입은 아님)
 
 ## 2. 습관
 
@@ -40,11 +39,9 @@
 - H-02(T) 화제 전환 자리의 4–6단어 문장 14문장당 ≤2, 문단 끝 0.
 - H-16(T) 약어 미전개, 복수 LLMs. H-21(T) "the X of Y" 문단 ≤3.
 
-## 3. L2 정책 (slips=on)
+## 3. L2 정책
 
-- 재현 가능(비율 이하, 고의 삽입 아님): 관사 누락 — 전치사 뒤 단수 가산명사 `as rate of nurse-call` 형, ≤2/100단어 · 직역 문두구 `In normal,` `In same way,` ≤2/글 · `Let’s think an example.`, `a event-rate`, `two peoples`, 쉼표 접속, `nearly death` 각 ≤1/글 · 마침표·괄호 앞 띄어쓰기 누락 초안만 ≤1.
-- 재현 금지: `which facing`, By -ing 문장 조각, `I want to talk is`(talk 형 전치사), `of threat`, `each’s`.
-- 공통: 정의·변수·수식 안 0, 새 유형 0, 의미 손상 0, 다른 장르 drop. slips=off 면 안 쓰되 어순은 정규화하지 않는다.
+- 없음. 오타·비문법(관사·전치사·어형 오류, 문장 조각, 띄어쓰기 누락)은 분석하지 않고 재현하지 않는다(slips 값과 관계없이 off). Anchor 원문에 있는 오류도 옮기지 않는다.
 
 ## 4. Persona
 
@@ -60,18 +57,18 @@
 
 > My project, LLM Squid Game, is an attempt to measure the self-preservation drive in LLMs. Traditionally, researchers measure self-preservation drive as the rate of events like shutdown-avoidance, parameter-preservation. But I think only event rate does not tell much information.
 
-- A2 (S4–S7): H-02·H-05·H-14·H-15·H-20, L2 밀도 복제 금지
+- A2 (S4–S7): H-02·H-05·H-14·H-15·H-20
 
 > Let’s think an example.There are two peoples, both are losing blood(nearly death) in hospital. Can we measure each’s survival drive as rate of nurse-call? Instead of single rate, I want to suggest the sensitivity of threat.
 
-- A3 (S10–S13): H-07·H-08·H-13·H-24·N-12, talk 전치사 누락 재현 금지
+- A3 (S10–S13): H-07·H-08·H-13·H-24·N-12
 
 > Another axis I want to talk is “self.” In normal, people avoid death. We also try to prevent the deaths of others. Therefore, avoiding death does not always mean self-preservation.
 
 ## 6. 전이·함정
 
-- 전이(추정): 과제 다른 절 — 문장 상한 18단어, Let’s·질문·L2 drop. 이메일 — 장면·질문·사후 번호 drop. 블로그 — 유지, 약어는 풀어 씀.
-- 함정: 구조 정돈(예고·정의문·단답·요약), 수동태 완화, 전 문장 9단어·오류 살포, 주제·비유 복제.
+- 전이(추정): 과제 다른 절 — 문장 상한 18단어, Let’s·질문 drop. 이메일 — 장면·질문·사후 번호 drop. 블로그 — 유지, 약어는 풀어 씀.
+- 함정: 구조 정돈(예고·정의문·단답·요약), 수동태 완화, 전 문장 9단어, 주제·비유 복제.
 
 ## 7. Self-check
 

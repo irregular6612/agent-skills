@@ -77,6 +77,91 @@ class Overlay(Sandbox):
         self.assertEqual(src.joinpath("agents", "openai.yaml").read_text().count("true"), 1)  # upstream untouched
 
 
+class DependencyCheck(Sandbox):
+    def env(self, harness="claude"):
+        sys.path.insert(0, str(REPO))
+        import install, argparse
+        os.environ["AGENT_SKILLS_STATE"] = str(self.home / ".agent-skills")
+        try:
+            return install, install.Env(argparse.Namespace(harness=harness, dry_run=False, force=False,
+                                                           mode=None, method=None))
+        finally:
+            del os.environ["AGENT_SKILLS_STATE"]
+
+    def skill(self, root, text):
+        root.mkdir(parents=True)
+        (root / "SKILL.md").write_text("---\nname: {}\n---\n{}\n".format(root.name, text))
+        return root
+
+    def test_install_reports_a_called_skill_the_mode_lacks(self):
+        out = self.run_cli("install", "paper-section-rewrite", "--harness", "claude", "-y").stdout
+        self.assertIn("paper-section-rewrite (paper-section-rewrite) calls 'ditto-writer'", out)
+        self.run_cli("install", "ditto-writer", "--harness", "claude", "-y")
+        out = self.run_cli("check", "--harness", "claude", ok=False).stdout
+        self.assertNotIn("calls 'ditto-writer'", out)
+
+    def test_report_flags_same_name_crossed_call_and_escaping_link(self):
+        install, env = self.env()
+        src = {"repo": "o/r", "ref": "0" * 40}
+        a = {"id": "a", "source": src, "skills": [{"name": "tdd", "path": "a/tdd", "harness": ["claude"]},
+                                                  {"name": "x", "path": "a/x", "harness": ["claude"]}]}
+        b = {"id": "b", "source": src, "skills": [{"name": "tdd", "path": "b/tdd", "harness": ["claude"]}]}
+        cat = {"packages": [a, b], "by_id": {"a": a, "b": b}}
+        state = install.State(env)
+        state.data["items"]["day:claude:skills/tdd"] = {"package": "b", "harness": "claude",
+                                                       "dest": "skills/tdd", "mode": "day"}
+        work = self.home / "work"
+        tdd = self.skill(work / "tdd", "red, green")
+        x = self.skill(work / "x", "Drive `/tdd` first, then read [the guide](../../docs/guide.md).")
+        issues = "\n".join(install.dependency_report(env, cat, state, "day",
+                                                     [("claude", "tdd", "a", tdd), ("claude", "x", "a", x)]))
+        self.assertIn("tdd (a): not installed, 'b' already provides a skill with this name", issues)
+        self.assertIn("x (a) calls its own 'tdd', but mode 'day' has the one from 'b'", issues)
+        self.assertIn("x (a): SKILL.md links to ../../docs/guide.md", issues)
+
+    def test_rebase_links_points_climbing_links_at_fetched_files(self):
+        install, env = self.env()
+        pkg = self.home / ".agent-skills" / "vendor" / "o__r" / "abc" / "pack"
+        (pkg / "docs").mkdir(parents=True)
+        (pkg / "docs" / "guide.md").write_text("guide")
+        src = self.skill(pkg / "skills" / "help", "[g](../../docs/guide.md) [s](../sib/SKILL.md)")
+        (src / "references").mkdir()
+        (src / "references" / "r.md").write_text("[s](../../sib/SKILL.md)")
+        out = install.rebase_links(env, src)
+        self.assertNotEqual(out, src)
+        text = (out / "SKILL.md").read_text()
+        self.assertIn("(" + str(pkg.resolve() / "docs" / "guide.md") + ")", text)
+        self.assertIn("(../sib/SKILL.md)", text)  # a sibling skill resolves from skills/ as it is
+        self.assertTrue((out / "references").is_symlink())
+        plain = self.skill(pkg / "skills" / "plain", "nothing to fix")
+        self.assertEqual(install.rebase_links(env, plain), plain)
+
+    def test_codex_agent_is_built_from_markdown(self):
+        install, env = self.env("codex")
+        md = self.home / ".agent-skills" / "vendor" / "o__r" / "abc" / "agents" / "helper.md"
+        md.parent.mkdir(parents=True)
+        md.write_text('---\nname: helper\ndescription: Does "things" — well.\n---\n\n# Helper\nBe brief.\n')
+        out = install.codex_agent(env, md)
+        text = out.read_text()
+        self.assertIn('name = "helper"', text)
+        self.assertIn('description = "Does \\"things\\" \\u2014 well."', text)
+        self.assertIn('developer_instructions = "# Helper\\nBe brief.\\n"', text)
+
+
+class CodexAccountHome(Sandbox):
+    def test_runtime_state_stays_per_home(self):
+        for name in ("app-server-daemon", "app-server-control", "ipc"):
+            (self.home / ".codex" / name).mkdir()
+        alt = self.home / ".codex-alt"
+        alt.mkdir()
+        (alt / "app-server-daemon").symlink_to(self.home / ".codex" / "app-server-daemon")  # stale link
+        for mode in ("day", "night"):
+            out = Path(self.run_cli("home", mode, "codex", "--account", "alt").stdout.strip())
+            for name in ("app-server-daemon", "app-server-control", "ipc"):
+                self.assertFalse((out / name).is_symlink(), "{} {}".format(mode, name))
+            self.assertTrue((out / "config.toml").is_symlink() or mode == "night")
+
+
 class HermesHome(Sandbox):
     def test_skill_links_into_real_home_in_every_mode(self):
         skills = self.home / ".hermes" / "skills"

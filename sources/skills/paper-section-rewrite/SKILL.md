@@ -50,7 +50,7 @@ Level 4 [문장]         단문 게이트 + 자연스러움 + 논리적 비약 +
 - 논문 PDF 전체에 마진 코멘트 달기 → `paper-readability-review`
 - 처음부터 단계적으로 작성하며 학습 → `academic-writing-trainer` (사용자가 직접 작성, Coach 코칭)
 - 단일 단락 social-share 요약 → `paper-digest`
-- 일반적 humanize → `humanize` (KO/EN 자동 분기)
+- 내 문체로 사람이 쓴 것처럼 다시 쓰기 → `ditto-writer` (KO/EN 프로필)
 
 ## References
 
@@ -260,7 +260,7 @@ S2 [혼합:비교+평가]    ✗ "X는 Y와 달리 Z를 더 잘 처리한다"
 
 #### Step 4.i.2 — 자연스러움 게이트 ★ NEW
 
-`humanize` 스킬(en-patterns / ko-taxonomy)의 핵심 패턴 검출. **em-dash 0은 정량 게이트지만, 자연스러움은 다음 패턴들의 누적으로 본다.**
+AI 문체 핵심 패턴 검출(예전 humanize 스킬의 en-patterns / ko-taxonomy 에서 가져와 아래 표와 `references/` 에 통합). **em-dash 0은 정량 게이트지만, 자연스러움은 다음 패턴들의 누적으로 본다.**
 
 | 패턴 | 한국어 시그널 | 영어 시그널 |
 |---|---|---|
