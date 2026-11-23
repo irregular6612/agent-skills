@@ -130,7 +130,7 @@ grep_has "$SKILL" "초록부터 다시 시작하지 않는다"
 # --- 라우팅 경계 ---
 grep_has "$SKILL" "paper-radar"
 grep_has "$SKILL" "paper-driller"
-grep_has "$SKILL" "--mode preread"
+grep_has "$SKILL" "/paper-driller {대상}"
 
 # --- 참조 파일 계약 ---
 TP="$SKILL_DIR/references/teaching-protocol.md"

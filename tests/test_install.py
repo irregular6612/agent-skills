@@ -283,11 +283,10 @@ class OwnPackages(Sandbox):
         self.assertNotIn("code-reviewer", (night / "config.toml").read_text())
 
     def test_graph_links_skills_to_their_subagents(self):
-        self.run_cli("install", "humanize", "paper-driller", "-y", "--harness", "claude")
+        self.run_cli("install", "humanize", "-y", "--harness", "claude")
         data = json.loads(self.run_cli("graph", "--json").stdout)
         edges = {(e["source"], e["target"]) for e in data["edges"]}
         self.assertIn(("skill:humanize", "agent:humanize-ko-detector"), edges)
-        self.assertIn(("skill:paper-driller", "agent:paper-spine"), edges)
 
 
 @unittest.skipUnless(NETWORK, "set AGENT_SKILLS_NETWORK_TESTS=1 to fetch from GitHub")

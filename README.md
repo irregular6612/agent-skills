@@ -174,7 +174,7 @@ claude --setting-sources project,local --settings ~/.claude/settings.json --add-
 | `humanize` | claude + codex | AI(ChatGPT·Claude·Gemini)가 쓴 한글·영문 텍스트를 사람이 쓴 것처럼 윤문(한글 Fast/Strict 듀얼 모드, 영문 voice 기반). 내용·사실·수치·인용은 한 글자도 안 … |
 | `iterative-academic-writer` | claude + codex | Use when writing academic documents — 논문 섹션(Introduction, Methods, Results, Discussion), 연구 제안서, SoP, 학업계획서, 기… |
 | `paper-radar` | claude + codex | 개인 관심 트랙 기반 논문 발굴·선별 레이더. 반복 실행(daily/weekly)해 여러 트랙에서 후보를 모으고, 이전 radar state와 기존 Wiki에 대해 중복 제거한 뒤 학습 가치로 랭킹… |
-| `paper-driller` | claude + codex | 논문 1편을 원문 옆에 띄워 놓고 읽기 위한 근거 추적 노트를 만든다. 사용자가 고른 템플릿(기본 general-v1: paper-digest 개요 + 배경 + 지표 + 방법 + 결과 + take-… |
+| `paper-driller` | claude + codex | 논문 1편으로 짧은 동반 노트(general-v2)를 만든다. 읽기 전에 훑고, 원문과 같이 읽으며 절마다 메모를 덧붙이고, 정리되면 블로그에 올리는… |
 | `paper-understand` | claude + codex | 선택한 논문 1편을 질문·응답으로 이해시키는 다회차 튜터. 원문 근거에 묶인 채로 개념 지도를 세우고, 예측→피드백→teach-back→전이 질문 루프로 숙달을 올리며, 학습 상태를 비공개로 저장해… |
 | `lost-me` | claude + codex | AI가 쓴 학술 산문을 독자가 떨어져 나간 지점으로 고치는 스킬. 격리된 독자 시뮬레이터 셋(학술·읽힘·사람다움)이 초안을 읽고 "여기서 멈췄다"의 좌표를 내고, writer 가 그 좌표만 보고 다시 쓴다(subagent 5개는 claude 만)… |
 | `paper-section-rewrite` | claude + codex | 학술 논문 한 섹션을 4-Level critic loop(내용→문단 간 구성→문단 내 구성→문장)로 분석·개선하는 윤문 스킬. 두괄식·한 문장 한 역할·단문 비율 ≥ 60%·ML 비전공자 가독성 게… |

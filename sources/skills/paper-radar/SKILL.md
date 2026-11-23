@@ -1,7 +1,7 @@
 ---
 name: paper-radar
 description: >-
-  개인 관심 트랙 기반 논문 발굴·선별 레이더. 반복 실행(daily/weekly)해 여러 트랙에서 후보를 모으고, 이전 radar state와 기존 Wiki에 대해 중복 제거한 뒤 학습 가치로 랭킹해 비공개 digest를 남긴다. TRIGGERS - 오늘의 논문, 논문 레이더, paper radar, 새 논문 추천해줘, 이번 주 뭐 나왔어, 관심 분야 논문 훑어줘, mech interp 새 논문, lab watch, Anthropic 새 논문, 논문 뭐 읽을지 골라줘, radar 피드백, 3 드릴.  논문 1편의 근거추적 프리리드 노트는 /paper-driller.
+  개인 관심 트랙 기반 논문 발굴·선별 레이더. 반복 실행(daily/weekly)해 여러 트랙에서 후보를 모으고, 이전 radar state와 기존 Wiki에 대해 중복 제거한 뒤 학습 가치로 랭킹해 비공개 digest를 남긴다. TRIGGERS - 오늘의 논문, 논문 레이더, paper radar, 새 논문 추천해줘, 이번 주 뭐 나왔어, 관심 분야 논문 훑어줘, mech interp 새 논문, lab watch, Anthropic 새 논문, 논문 뭐 읽을지 골라줘, radar 피드백, 3 드릴.  논문 1편의 짧은 동반 노트(general-v2)는 /paper-driller.
 user-invocable: true
 allowed-tools:
   - Read
@@ -29,7 +29,7 @@ allowed-tools:
 | 스킬 | 입력 | 산출물 | 성격 |
 |---|---|---|---|
 | **`paper-radar`** (이 스킬) | 관심 프로파일 + 날짜 | `_wiki/radar/daily/YYYY-MM-DD.md` **비공개** digest, 카드 6–8장 | 반복 실행, 다중 트랙 추천·선별. abstract/metadata 수준 카드 |
-| `/paper-driller` | 선택된 논문 1편 | `Public/.../{제목}.md` canonical preread 노트 | 근거 추적 가능한 정식 노트 |
+| `/paper-driller` | 선택된 논문 1편 | `Public/.../{제목}.md` canonical 노트(general-v2) | 근거 추적 가능한 정식 노트 |
 
 **`paper-radar`는 canonical paper 노트를 만들지 않는다.** 읽기로 결정된 논문은 반드시 `/paper-driller`로 넘긴다. `paper-radar`가 `Public/` 아래에 파일을 쓰는 경우는 없다.
 
@@ -321,12 +321,12 @@ vault_root, candidate_rationale, selected_action
 ## 액션별 경로
 
 ```text
-드릴  → /paper-driller <source_url 또는 arXiv-ID> --mode preread
+드릴  → /paper-driller <source_url 또는 arXiv-ID>
         paper-radar는 canonical 노트를 직접 쓰지 않는다.
         driller가 끝나면 state.json에 노트 경로를 기록한다.
 
-공부  → canonical preread 노트가 있는가?
-          없음 → 먼저 /paper-driller ... --mode preread
+공부  → canonical paper 노트가 있는가?
+          없음 → 먼저 /paper-driller <source_url 또는 arXiv-ID>
           있음 → /paper-understand <노트 경로>
         radar 카드(초록 수준)를 전문 소스로 넘기지 않는다.
 

@@ -59,8 +59,8 @@ unresolved-seeds: [J-Lens]
 ## 다음 행동
 
 ```text
-N 드릴   → /paper-driller ... --mode preread
-N 공부   → preread 노트 확인 후 /paper-understand
+N 드릴   → /paper-driller <source_url 또는 arXiv-ID>
+N 공부   → canonical paper 노트 확인 후 /paper-understand
 N 보류   → state만 갱신
 N 제외 — 이유
 ```

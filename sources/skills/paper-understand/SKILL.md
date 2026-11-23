@@ -1,7 +1,7 @@
 ---
 name: paper-understand
 description: >-
-  선택한 논문 1편을 질문·응답으로 이해시키는 다회차 튜터. 원문 근거에 묶인 채로 개념 지도를 세우고, 예측→피드백→teach-back→전이 질문 루프로 숙달을 올리며, 학습 상태를 비공개로 저장해 다음 세션에 이어간다. TRIGGERS - 이 논문 공부하고 싶어, 논문 이해 안 돼, 설명해주면서 질문해줘, 튜터, 논문 스터디, 이 노트로 공부, 어제 하던 공부 이어서, 복습 문제 내줘, paper understand, study coach, 3 공부. 논문 발굴·추천은 /paper-radar, 근거추적 프리리드 노트 생성은 /paper-driller.
+  선택한 논문 1편을 질문·응답으로 이해시키는 다회차 튜터. 원문 근거에 묶인 채로 개념 지도를 세우고, 예측→피드백→teach-back→전이 질문 루프로 숙달을 올리며, 학습 상태를 비공개로 저장해 다음 세션에 이어간다. TRIGGERS - 이 논문 공부하고 싶어, 논문 이해 안 돼, 설명해주면서 질문해줘, 튜터, 논문 스터디, 이 노트로 공부, 어제 하던 공부 이어서, 복습 문제 내줘, paper understand, study coach, 3 공부. 논문 발굴·추천은 /paper-radar, 논문 노트(general-v2) 생성은 /paper-driller.
 user-invocable: true
 allowed-tools:
   - Read
@@ -23,7 +23,7 @@ allowed-tools:
 | 스킬 | 역할 |
 |---|---|
 | `/paper-radar` | 무엇을 읽을지 고른다 (초록 수준 카드) |
-| `/paper-driller` | 고른 논문의 canonical preread 노트를 만든다 (근거 추적) |
+| `/paper-driller` | 고른 논문의 canonical paper 노트(general-v2)를 만든다 (근거 추적) |
 | **`paper-understand`** (이 스킬) | 그 노트와 원문으로 **이해시킨다** (다회차 질문·응답) |
 
 이 스킬은 강의를 쏟아내지 않는다. **질문하고 사용자의 답을 받아 그 답에 맞춰 다음 질문을 만든다.**
@@ -75,7 +75,7 @@ allowed-tools:
 1. **명시된 논문 노트 경로** — 그대로 사용
 2. **radar handoff의 식별자** — `paper-radar`가 넘긴 handoff 페이로드에서 `arxiv_id` / `doi` / `source_url` / `existing_note_path`를 읽는다 (계약은 `paper-radar` 스킬의 `handoff-schema.yaml`)
 3. **canonical Wiki 검색** — `arXiv-ID` → `DOI` → 정규화 URL → 정규화 제목 순으로 `Public/**/*.md` frontmatter를 조회 (`_wiki/catalog/*.md`를 먼저 훑으면 싸다)
-4. **source URL만 있고 preread 노트가 없으면** — `/paper-driller {대상} --mode preread`를 제안하고, 사용자가 동의하면 먼저 실행한 뒤 학습 세션을 시작한다
+4. **source URL만 있고 canonical paper 노트가 없으면** — `/paper-driller {대상}`을 제안하고, 사용자가 동의하면 먼저 실행한 뒤 학습 세션을 시작한다
 
 **radar 카드를 전문 소스로 취급하지 않는다.** radar 카드는 `source_coverage: abstract-only`다. 노트 없이 카드만으로 시작하면 그 사실을 사용자에게 알리고, 다룰 수 있는 범위(개념 오리엔테이션까지)를 먼저 합의한다.
 
@@ -96,7 +96,7 @@ allowed-tools:
 
 # NotebookLM 연동 (선택적 가속기)
 
-canonical preread 노트와 **원문**을 사용자 본인의 Gemini Notebook에 올려두고, 인용이 붙은 합성 답변을 튜터링 보조 자료로 쓴다. 상세 계약은 **`references/notebooklm-integration.md`**.
+canonical paper 노트와 **원문**을 사용자 본인의 Gemini Notebook에 올려두고, 인용이 붙은 합성 답변을 튜터링 보조 자료로 쓴다. 상세 계약은 **`references/notebooklm-integration.md`**.
 
 **노트 + 원문 이중 소스 규칙**: 노트북에 올리는 것은 정확히 두 가지다 — `Canonical preread — {제목}`와 `Original paper — {제목}`. 원문은 로컬 PDF/전문 파일을 우선하고, 없으면 식별자가 일치하는 검증된 canonical URL만 쓴다. **초록 페이지는 원문이 아니다.** 해결 실패 시 preread만 올리고 `preread-only`로 기록하며, 노트북에 원문이 있다고 말하지 않는다.
 
@@ -132,7 +132,7 @@ CLI 부재 / 미인증·만료 / rate limit / 엔드포인트 파손 — **어�
 
 ```text
 1. 원문 논문 / 공식 부록
-2. paper-driller canonical preread
+2. paper-driller canonical paper 노트
 3. NotebookLM 답변과 인용   ← 파생 합성물
 4. 관련 Wiki 노트
 5. 튜터 배경 지식
@@ -199,7 +199,11 @@ unseen → recognized → explained → discriminated → applied → retained
 
 # Phase 1 — Orient / Resume
 
-1. 대상 논문의 노트를 읽는다 (`source-coverage`, `reading-decision`, claim ledger, reading map).
+1. 대상 논문의 노트를 읽는다. general-v2 노트에서 볼 곳은 다음과 같다.
+   - `source-coverage`: frontmatter 키 그대로.
+   - 주장: `## 주요 결과` 표의 행(주장 · 근거 · 수치·조건).
+   - 원문 지도: 본문의 위치 표기 `(§…)`·`(Fig. …)`·`(Table …)`, 핵심 도표 소절, `### 나머지 도표` 목록.
+   - 읽기 판정 필드는 없다. 노트에 없는 판정을 만들어 내지 않는다.
 2. `_wiki/study/papers/{paper-slug}/state.yaml`이 있으면 읽는다.
 3. `_wiki/study/learner-profile.md`가 있으면 읽는다.
 4. 관련 Wiki 노트를 1–3개 찾아 둔다 (전이·대조 질문에 쓴다).
@@ -233,7 +237,7 @@ unseen → recognized → explained → discriminated → applied → retained
 학습 목표 **3–7개**를 만든다. 선수 관계 순으로 정렬한다.
 
 - 각 목표는 "…를 설명할 수 있다 / 구별할 수 있다 / 적용할 수 있다" 형태의 검증 가능한 문장이다.
-- 목표마다 근거가 되는 원문 위치(Section/Figure/Table) 또는 노트의 claim을 붙인다. 확인 불가면 `[위치 미확인]`.
+- 목표마다 근거가 되는 원문 위치(Section/Figure/Table) 또는 노트 `## 주요 결과` 표의 행을 붙인다. 확인 불가면 `[위치 미확인]`.
 - 지도를 사용자에게 보여주고 **순서에 동의하는지, 이미 아는 것이 있는지 1개 질문**으로 확인한다.
 
 완료 기준:
@@ -383,14 +387,15 @@ vault_root 해결은 `/paper-radar`와 동일한 순서를 쓴다: 사용자 지
 ## 손대지 않는 것
 
 - 기존 파일과 사용자가 직접 쓴 메모는 보존한다. 덮어쓰기 전에 읽는다.
-- **canonical paper 노트의 `Reading-Status` 변경, 또는 공개 내용 추가는 사용자의 명시적 확인이 필요하다.** 확인 없이는 하지 않는다.
+- **canonical paper 노트는 메모 칸 밖을 고치지 않는다.** `Reading-Status`를 포함한 frontmatter와 본문은 확인을 받아도 바꾸지 않는다.
+- 배운 내용을 노트에 남기고 싶어 하면 해당 절 끝 메모 칸(`<!-- 메모 -->`와 `<!-- /메모 -->` 사이)에 사용자가 직접 쓰도록 권한다. 문안을 제안할 수는 있다. 사용자가 명시적으로 넣어 달라고 하면 그 메모 칸 두 표시 사이에만 쓰고, 기존 메모는 지우지 않는다.
 - `Public/` 아래 어떤 파일도 자동으로 만들지 않는다.
 
 완료 기준:
 - [ ] state.yaml이 유효한 YAML이고 스키마 필수 필드를 채운다
 - [ ] 전체 대화록이 저장되지 않았다
 - [ ] 기존 사용자 메모가 보존됐다
-- [ ] canonical 노트를 확인 없이 수정하지 않았다
+- [ ] canonical 노트의 메모 칸 밖을 수정하지 않았다
 
 ---
 
@@ -462,7 +467,7 @@ vault_root 해결은 `/paper-radar`와 동일한 순서를 쓴다: 사용자 지
 - `abstract-only` 소스로 방법·근거 튜터링을 하지 않는다.
 - 빈 격려로 숙달을 부풀리지 않는다.
 - 자동 복습 스케줄링을 한다고 말하지 않는다.
-- 확인 없이 canonical 노트를 고치지 않는다.
+- canonical 노트의 메모 칸 밖을 고치지 않는다.
 - NotebookLM 답변을 1차 근거로 쓰지 않는다. 수치·식별자는 원문에서 재확인한다.
 - 학습 상태·프로필·세션 노트·사용자 답변을 NotebookLM에 업로드하지 않는다.
 - NotebookLM 인용을 두고 "환각 없음"이라고 말하지 않는다.

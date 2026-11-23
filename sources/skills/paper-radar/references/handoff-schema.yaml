@@ -113,22 +113,22 @@ routing:
 
   드릴:
     target: "/paper-driller"
-    command: "/paper-driller {arxiv_id 또는 source_url} --mode preread"
+    command: "/paper-driller {arxiv_id 또는 source_url}"
     contract:
       - "paper-radar는 canonical paper 노트를 직접 쓰지 않는다."
       - "driller가 노트를 만든 뒤 그 경로를 state.json 의 해당 radar_id 아래 note_path 로 기록한다."
-      - "wiki_relation이 existing/update면 driller에 update-existing 의도를 함께 전달한다."
+      - "wiki_relation이 existing/update면 driller가 URL 중복 확인으로 기존 노트를 찾아 갱신한다. 따로 플래그를 넘기지 않는다."
 
   공부:
     target: "/paper-understand"
-    precondition: "canonical preread 노트가 존재해야 한다."
+    precondition: "canonical paper 노트가 존재해야 한다."
     command_when_note_exists: "/paper-understand {existing_note_path}"
     command_when_note_missing:
-      - "1. /paper-driller {arxiv_id 또는 source_url} --mode preread"
+      - "1. /paper-driller {arxiv_id 또는 source_url}"
       - "2. /paper-understand {새로 만들어진 노트 경로}"
     contract:
       - "radar 카드(abstract-only)를 전문 소스로 넘기지 않는다."
-      - "preread 노트 없이 튜터링을 시작하지 않는다."
+      - "canonical paper 노트 없이 튜터링을 시작하지 않는다."
 
   보류:
     target: null

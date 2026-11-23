@@ -77,7 +77,7 @@ NotebookLM 연동은 지금 쓸 수 없습니다 ({짧은 사유}). 노트와 �
 
 ```text
 1. 원문 논문 / 공식 부록
-2. paper-driller canonical preread
+2. paper-driller canonical paper 노트
 3. NotebookLM 답변과 인용        ← 파생 합성물
 4. 관련 Wiki 노트
 5. 튜터 배경 지식

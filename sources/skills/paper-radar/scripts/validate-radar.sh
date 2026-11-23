@@ -122,7 +122,7 @@ HO="$SKILL_DIR/references/handoff-schema.yaml"
 for f in radar_id source_url vault_root candidate_rationale selected_action arxiv_id doi; do
   grep_has "$HO" "$f"
 done
-grep_has "$HO" "--mode preread"
+grep_has "$HO" "/paper-driller {arxiv_id 또는 source_url}\""
 grep_has "$HO" "/paper-understand"
 
 echo "----"

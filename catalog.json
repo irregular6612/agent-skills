@@ -308,7 +308,7 @@
       "id": "paper-driller",
       "group": "mine",
       "title": "paper-driller (+7 paper-* agents)",
-      "description": "논문 1편을 원문 옆에 띄워 놓고 읽기 위한 근거 추적 노트를 만든다. 사용자가 고른 템플릿(기본 general-v1: paper-digest 개요 + 배경 + 지표 + 방법 + 결과 + take-home + 본문 도표 전부)로 쓴다. TRIGGERS: 논문 요약, paper drill, arxiv 정리, 논문 노트, 논문 읽기 전 요약, deep pape",
+      "description": "논문 1편으로 짧은 동반 노트(general-v2)를 만든다. 본문 5,000자 상한, 핵심 도표 이미지, 절마다 메모 칸. 검사는 vault의 paper_note.py 하나.",
       "items": [
         {
           "harness": "claude",
@@ -319,71 +319,6 @@
           "harness": "codex",
           "dest": "skills/paper-driller",
           "src": "sources/skills/paper-driller"
-        },
-        {
-          "harness": "claude",
-          "dest": "agents/paper-comparison.md",
-          "src": "sources/agents/paper-comparison-claude.md"
-        },
-        {
-          "harness": "claude",
-          "dest": "agents/paper-digest-composer.md",
-          "src": "sources/agents/paper-digest-composer-claude.md"
-        },
-        {
-          "harness": "claude",
-          "dest": "agents/paper-evidence.md",
-          "src": "sources/agents/paper-evidence-claude.md"
-        },
-        {
-          "harness": "claude",
-          "dest": "agents/paper-meta.md",
-          "src": "sources/agents/paper-meta-claude.md"
-        },
-        {
-          "harness": "claude",
-          "dest": "agents/paper-preread-analyst.md",
-          "src": "sources/agents/paper-preread-analyst-claude.md"
-        },
-        {
-          "harness": "claude",
-          "dest": "agents/paper-section-driller.md",
-          "src": "sources/agents/paper-section-driller-claude.md"
-        },
-        {
-          "harness": "claude",
-          "dest": "agents/paper-spine.md",
-          "src": "sources/agents/paper-spine-claude.md"
-        },
-        {
-          "harness": "codex",
-          "dest": "agents/paper-comparison.toml",
-          "src": "sources/agents/paper-comparison-codex.toml"
-        },
-        {
-          "harness": "codex",
-          "dest": "agents/paper-digest-composer.toml",
-          "src": "sources/agents/paper-digest-composer-codex.toml"
-        },
-        {
-          "harness": "codex",
-          "dest": "agents/paper-evidence.toml",
-          "src": "sources/agents/paper-evidence-codex.toml"
-        },
-        {
-          "harness": "codex",
-          "dest": "agents/paper-meta.toml",
-          "src": "sources/agents/paper-meta-codex.toml"
-        },
-        {
-          "harness": "codex",
-          "dest": "agents/paper-section-driller.toml",
-          "src": "sources/agents/paper-section-driller-codex.toml"
-        },
-        {
-          "harness": "codex",
-          "dest": "agents/paper-spine.toml",
-          "src": "sources/agents/paper-spine-codex.toml"
         }
       ]
     },
@@ -617,6 +552,19 @@
           "harness": "hermes",
           "dest": "skills/vault-wiki",
           "src": "sources/skills/vault-wiki"
+        }
+      ]
+    },
+    {
+      "id": "lab-claude",
+      "group": "mine",
+      "title": "lab-claude",
+      "description": "공부·연구 작업을 연구실 Claude Code 계정에 헤드리스 `claude -p`로 맡기고 결과 파일을 받아 온다. Hermes(개인 비서)용.",
+      "items": [
+        {
+          "harness": "hermes",
+          "dest": "skills/lab-claude",
+          "src": "sources/skills/lab-claude"
         }
       ]
     },
@@ -1027,8 +975,8 @@
     {
       "id": "juhyeon-hooks",
       "group": "config",
-      "title": "My Claude hooks (paper format validator, driller log)",
-      "description": "Links hook scripts and registers PostToolUse/SubagentStop hooks in ~/.claude/settings.json.",
+      "title": "My Claude hooks (paper note checker)",
+      "description": "Links hook scripts and registers the PostToolUse paper-note checker in ~/.claude/settings.json.",
       "items": [
         {
           "harness": "claude",
@@ -1048,19 +996,8 @@
             "hooks": [
               {
                 "type": "command",
-                "command": "bash \"${CLAUDE_HOME}/hooks/ssot/paper-format-validator.sh\"",
+                "command": "bash \"${CLAUDE_HOME}/hooks/ssot/paper-note-check.sh\"",
                 "timeout": 20
-              }
-            ]
-          }
-        ],
-        "SubagentStop": [
-          {
-            "hooks": [
-              {
-                "type": "command",
-                "command": "bash \"${CLAUDE_HOME}/hooks/ssot/paper-driller-subagent-log.sh\"",
-                "timeout": 5
               }
             ]
           }
